@@ -1,19 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "DialogueAssetEditor/AssetEditor_Dialogue.h"
-#include "DialogueAssetEditor/EdSchema_Dialogue.h"
-#include "DialogueSession.h"
-
-#include "DialogueAssetEditor/EdGraph_DialogueSession.h"
-#include "DialogueAssetEditor/EdGraphNode_Dialogue.h"
-#include "DialogueAssetEditor/EdGraphNode_DialogueEdge.h"
-
-#include "Nodes/DialogueNode_Start.h"
-#include "Framework/Commands/GenericCommands.h"
-#include "DialogueAssetEditor/AssetEditorToolbar_Dialogue.h"
-
-#include "DialogueAssetEditor/EditorCommands_Dialogue.h"
+#include "SkillTreeAssetEditor/AssetEditor_SkillTree.h"
+#include "SkillTreeEditor.h"
+#include "SkillTreeAssetEditor/AssetEditorToolbar_SkillTree.h"
+#include "SkillTreeAssetEditor/EdGraphSchema_SkillTree.h"
+#include "SkillTreeAssetEditor/EditorCommands_SkillTree.h"
+#include "SkillTreeAssetEditor/EdGraph_SkillTree.h"
 #include "AssetToolsModule.h"
 #include "HAL/PlatformApplicationMisc.h"
 #include "Framework/Commands/GenericCommands.h"
@@ -23,51 +16,48 @@
 #include "Editor/UnrealEd/Public/Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "EdGraphUtilities.h"
-#include "AutoLayout/TreeLayoutStrategy_DE.h"
-#include "AutoLayout/ForceDirectedLayoutStrategy_DE.h"
+#include "SkillTreeAssetEditor/EdGraphNode_SkillNode.h"
+#include "SkillTreeAssetEditor/EdGraphNode_SkillTreeEdge.h"
+#include "AutoLayout/TreeLayoutStrategy_STE.h"
+#include "AutoLayout/ForceDirectedLayoutStrategy_STE.h"
 
-#include "DialogueEditor.h"
-#
+#define LOCTEXT_NAMESPACE "AssetEditor_SkillTree"
 
-
-#define LOCTEXT_NAMESPACE "AssetEditor_Dialogue"
-
-const FName DialogueEditorAppName = FName(TEXT("DialogueEditorApp"));
+const FName SkillTreeEditorAppName = FName(TEXT("SkillTreeEditorApp"));
 
 //////////////////////////////////////////////////////////////////////////
 
-struct FDialogueAssetEditorTabs
+struct FSkillTreeAssetEditorTabs
 {
 	// Tab identifiers
-	static const FName DialoguePropertyID;
+	static const FName SkillTreePropertyID;
 	static const FName ViewportID;
-	static const FName DialogueEditorSettingsID;
+	static const FName SkillTreeEditorSettingsID;
 };
 
-const FName FDialogueAssetEditorTabs::DialoguePropertyID(TEXT("DialogueProperty"));
-const FName FDialogueAssetEditorTabs::ViewportID(TEXT("Viewport"));
-const FName FDialogueAssetEditorTabs::DialogueEditorSettingsID(TEXT("DialogueEditorSettings"));
+const FName FSkillTreeAssetEditorTabs::SkillTreePropertyID(TEXT("SkillTreeProperty"));
+const FName FSkillTreeAssetEditorTabs::ViewportID(TEXT("Viewport"));
+const FName FSkillTreeAssetEditorTabs::SkillTreeEditorSettingsID(TEXT("SkillTreeEditorSettings"));
 
 //////////////////////////////////////////////////////////////////////////
 
-FAssetEditor_Dialogue::FAssetEditor_Dialogue()
+FAssetEditor_SkillTree::FAssetEditor_SkillTree()
 {
 	EditingGraph = nullptr;
+	
+	EdGraphSubclass = UEdGraph_SkillTree::StaticClass();
+	EdGraphSchemaSubclass = UEdGraphSchema_SkillTree::StaticClass();
 
-	EdGraphSubclass = UEdGraph_DialogueSession::StaticClass();
-	EdGraphSchemaSubclass = UEdSchema_Dialogue::StaticClass();
-
-	DialogueEditorSettings = NewObject<UDialogueEditorSettings>(UDialogueEditorSettings::StaticClass());
-	DialogueEditorSettings->AssetEditor = this;
+	SkillTreeEditorSettings = NewObject<USkillTreeEditorSettings>(USkillTreeEditorSettings::StaticClass());
 
 #if ENGINE_MAJOR_VERSION < 5
-	OnPackageSavedDelegateHandle = UPackage::PackageSavedEvent.AddRaw(this, &FAssetEditor_Dialogue::OnPackageSaved);
+	OnPackageSavedDelegateHandle = UPackage::PackageSavedEvent.AddRaw(this, &FAssetEditor_SkillTree::OnPackageSaved);
 #else // #if ENGINE_MAJOR_VERSION < 5
-	OnPackageSavedDelegateHandle = UPackage::PackageSavedWithContextEvent.AddRaw(this, &FAssetEditor_Dialogue::OnPackageSavedWithContext);
+	OnPackageSavedDelegateHandle = UPackage::PackageSavedWithContextEvent.AddRaw(this, &FAssetEditor_SkillTree::OnPackageSavedWithContext);
 #endif // #else // #if ENGINE_MAJOR_VERSION < 5
 }
 
-FAssetEditor_Dialogue::~FAssetEditor_Dialogue()
+FAssetEditor_SkillTree::~FAssetEditor_SkillTree()
 {
 #if ENGINE_MAJOR_VERSION < 5
 	UPackage::PackageSavedEvent.Remove(OnPackageSavedDelegateHandle);
@@ -76,19 +66,18 @@ FAssetEditor_Dialogue::~FAssetEditor_Dialogue()
 #endif // #else // #if ENGINE_MAJOR_VERSION < 5
 }
 
-
-void FAssetEditor_Dialogue::InitDialogueAssetEditor(const EToolkitMode::Type Mode, const TSharedPtr< IToolkitHost >& InitToolkitHost, UDialogueSession* Graph)
+void FAssetEditor_SkillTree::InitSkillTreeAssetEditor(const EToolkitMode::Type Mode, const TSharedPtr< IToolkitHost >& InitToolkitHost, USkillTree* Graph)
 {
 	EditingGraph = Graph;
 	CreateEdGraph();
 
 	FGenericCommands::Register();
 	FGraphEditorCommands::Register();
-	FEditorCommands_Dialogue::Register();
+	FEditorCommands_SkillTree::Register();
 
 	if (!ToolbarBuilder.IsValid())
 	{
-		ToolbarBuilder = MakeShareable(new FAssetEditorToolbar_Dialogue(SharedThis(this)));
+		ToolbarBuilder = MakeShareable(new FAssetEditorToolbar_SkillTree(SharedThis(this)));
 	}
 
 	BindCommands();
@@ -97,10 +86,10 @@ void FAssetEditor_Dialogue::InitDialogueAssetEditor(const EToolkitMode::Type Mod
 
 	TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
 
-	ToolbarBuilder->AddDialogueToolbar(ToolbarExtender);
+	ToolbarBuilder->AddSkillTreeToolbar(ToolbarExtender);
 
 	// Layout
-	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_DialogueEditor_Layout_v1")
+	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_SkillTreeEditor_Layout_v1")
 		->AddArea
 		(
 			FTabManager::NewPrimaryArea()->SetOrientation(Orient_Vertical)
@@ -119,7 +108,7 @@ void FAssetEditor_Dialogue::InitDialogueAssetEditor(const EToolkitMode::Type Mod
 				(
 					FTabManager::NewStack()
 					->SetSizeCoefficient(0.65f)
-					->AddTab(FDialogueAssetEditorTabs::ViewportID, ETabState::OpenedTab)->SetHideTabWell(true)
+					->AddTab(FSkillTreeAssetEditorTabs::ViewportID, ETabState::OpenedTab)->SetHideTabWell(true)
 				)
 				->Split
 				(
@@ -128,13 +117,13 @@ void FAssetEditor_Dialogue::InitDialogueAssetEditor(const EToolkitMode::Type Mod
 					(
 						FTabManager::NewStack()
 						->SetSizeCoefficient(0.7f)
-						->AddTab(FDialogueAssetEditorTabs::DialoguePropertyID, ETabState::OpenedTab)->SetHideTabWell(true)
+						->AddTab(FSkillTreeAssetEditorTabs::SkillTreePropertyID, ETabState::OpenedTab)->SetHideTabWell(true)
 					)
 					->Split
 					(
 						FTabManager::NewStack()
 						->SetSizeCoefficient(0.3f)
-						->AddTab(FDialogueAssetEditorTabs::DialogueEditorSettingsID, ETabState::OpenedTab)
+						->AddTab(FSkillTreeAssetEditorTabs::SkillTreeEditorSettingsID, ETabState::OpenedTab)
 					)
 				)
 			)
@@ -142,107 +131,107 @@ void FAssetEditor_Dialogue::InitDialogueAssetEditor(const EToolkitMode::Type Mod
 
 	const bool bCreateDefaultStandaloneMenu = true;
 	const bool bCreateDefaultToolbar = true;
-	FAssetEditorToolkit::InitAssetEditor(Mode, InitToolkitHost, DialogueEditorAppName, StandaloneDefaultLayout, bCreateDefaultStandaloneMenu, bCreateDefaultToolbar, EditingGraph, false);
+	FAssetEditorToolkit::InitAssetEditor(Mode, InitToolkitHost, SkillTreeEditorAppName, StandaloneDefaultLayout, bCreateDefaultStandaloneMenu, bCreateDefaultToolbar, EditingGraph, false);
 
 	RegenerateMenusAndToolbars();
 }
 
-void FAssetEditor_Dialogue::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
+void FAssetEditor_SkillTree::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
 {
-	WorkspaceMenuCategory = InTabManager->AddLocalWorkspaceMenuCategory(LOCTEXT("WorkspaceMenu_DialogueEditor", "Custom Graph Editor"));
+	WorkspaceMenuCategory = InTabManager->AddLocalWorkspaceMenuCategory(LOCTEXT("WorkspaceMenu_SkillTreeEditor", "Skill Tree Editor"));
 	auto WorkspaceMenuCategoryRef = WorkspaceMenuCategory.ToSharedRef();
 
 	FAssetEditorToolkit::RegisterTabSpawners(InTabManager);
 
-	InTabManager->RegisterTabSpawner(FDialogueAssetEditorTabs::ViewportID, FOnSpawnTab::CreateSP(this, &FAssetEditor_Dialogue::SpawnTab_Viewport))
+	InTabManager->RegisterTabSpawner(FSkillTreeAssetEditorTabs::ViewportID, FOnSpawnTab::CreateSP(this, &FAssetEditor_SkillTree::SpawnTab_Viewport))
 		.SetDisplayName(LOCTEXT("GraphCanvasTab", "Viewport"))
 		.SetGroup(WorkspaceMenuCategoryRef)
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "GraphEditor.EventGraph_16x"));
 
-	InTabManager->RegisterTabSpawner(FDialogueAssetEditorTabs::DialoguePropertyID, FOnSpawnTab::CreateSP(this, &FAssetEditor_Dialogue::SpawnTab_Details))
+	InTabManager->RegisterTabSpawner(FSkillTreeAssetEditorTabs::SkillTreePropertyID, FOnSpawnTab::CreateSP(this, &FAssetEditor_SkillTree::SpawnTab_Details))
 		.SetDisplayName(LOCTEXT("DetailsTab", "Property"))
 		.SetGroup(WorkspaceMenuCategoryRef)
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Details"));
 
-	InTabManager->RegisterTabSpawner(FDialogueAssetEditorTabs::DialogueEditorSettingsID, FOnSpawnTab::CreateSP(this, &FAssetEditor_Dialogue::SpawnTab_EditorSettings))
+	InTabManager->RegisterTabSpawner(FSkillTreeAssetEditorTabs::SkillTreeEditorSettingsID, FOnSpawnTab::CreateSP(this, &FAssetEditor_SkillTree::SpawnTab_EditorSettings))
 		.SetDisplayName(LOCTEXT("EditorSettingsTab", "Custom Graph Editor Setttings"))
 		.SetGroup(WorkspaceMenuCategoryRef)
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Details"));
 }
 
-void FAssetEditor_Dialogue::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
+void FAssetEditor_SkillTree::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
 {
 	FAssetEditorToolkit::UnregisterTabSpawners(InTabManager);
 
-	InTabManager->UnregisterTabSpawner(FDialogueAssetEditorTabs::ViewportID);
-	InTabManager->UnregisterTabSpawner(FDialogueAssetEditorTabs::DialoguePropertyID);
-	InTabManager->UnregisterTabSpawner(FDialogueAssetEditorTabs::DialogueEditorSettingsID);
+	InTabManager->UnregisterTabSpawner(FSkillTreeAssetEditorTabs::ViewportID);
+	InTabManager->UnregisterTabSpawner(FSkillTreeAssetEditorTabs::SkillTreePropertyID);
+	InTabManager->UnregisterTabSpawner(FSkillTreeAssetEditorTabs::SkillTreeEditorSettingsID);
 }
 
-FName FAssetEditor_Dialogue::GetToolkitFName() const
+FName FAssetEditor_SkillTree::GetToolkitFName() const
 {
-	return FName("FDialogueEditor");
+	return FName("FSkillTreeEditor");
 }
 
-FText FAssetEditor_Dialogue::GetBaseToolkitName() const
+FText FAssetEditor_SkillTree::GetBaseToolkitName() const
 {
-	return LOCTEXT("DialogueEditorAppLabel", "Custom Graph Editor");
+	return LOCTEXT("SkillTreeEditorAppLabel", "Custom Graph Editor");
 }
 
-FText FAssetEditor_Dialogue::GetToolkitName() const
+FText FAssetEditor_SkillTree::GetToolkitName() const
 {
 	const bool bDirtyState = EditingGraph->GetOutermost()->IsDirty();
 
 	FFormatNamedArguments Args;
-	Args.Add(TEXT("DialogueName"), FText::FromString(EditingGraph->GetName()));
+	Args.Add(TEXT("SkillTreeName"), FText::FromString(EditingGraph->GetName()));
 	Args.Add(TEXT("DirtyState"), bDirtyState ? FText::FromString(TEXT("*")) : FText::GetEmpty());
-	return FText::Format(LOCTEXT("DialogueEditorToolkitName", "{DialogueName}{DirtyState}"), Args);
+	return FText::Format(LOCTEXT("SkillTreeEditorToolkitName", "{SkillTreeName}{DirtyState}"), Args);
 }
 
-FText FAssetEditor_Dialogue::GetToolkitToolTipText() const
+FText FAssetEditor_SkillTree::GetToolkitToolTipText() const
 {
 	return FAssetEditorToolkit::GetToolTipTextForObject(EditingGraph);
 }
 
-FLinearColor FAssetEditor_Dialogue::GetWorldCentricTabColorScale() const
+FLinearColor FAssetEditor_SkillTree::GetWorldCentricTabColorScale() const
 {
 	return FLinearColor::White;
 }
 
-FString FAssetEditor_Dialogue::GetWorldCentricTabPrefix() const
+FString FAssetEditor_SkillTree::GetWorldCentricTabPrefix() const
 {
-	return TEXT("DialogueEditor");
+	return TEXT("SkillTreeEditor");
 }
 
-FString FAssetEditor_Dialogue::GetDocumentationLink() const
+FString FAssetEditor_SkillTree::GetDocumentationLink() const
 {
 	return TEXT("");
 }
 
-void FAssetEditor_Dialogue::SaveAsset_Execute()
+void FAssetEditor_SkillTree::SaveAsset_Execute()
 {
 	if (EditingGraph != nullptr)
 	{
-		RebuildDialogue();
+		RebuildSkillTree();
 	}
 
 	FAssetEditorToolkit::SaveAsset_Execute();
 }
 
-void FAssetEditor_Dialogue::AddReferencedObjects(FReferenceCollector& Collector)
+void FAssetEditor_SkillTree::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(EditingGraph);
 	Collector.AddReferencedObject(EditingGraph->EdGraph);
 }
 
-UDialogueEditorSettings* FAssetEditor_Dialogue::GetSettings() const
+USkillTreeEditorSettings* FAssetEditor_SkillTree::GetSettings() const
 {
-	return DialogueEditorSettings;
+	return SkillTreeEditorSettings;
 }
 
-TSharedRef<SDockTab> FAssetEditor_Dialogue::SpawnTab_Viewport(const FSpawnTabArgs& Args)
+TSharedRef<SDockTab> FAssetEditor_SkillTree::SpawnTab_Viewport(const FSpawnTabArgs& Args)
 {
-	check(Args.GetTabId() == FDialogueAssetEditorTabs::ViewportID);
+	check(Args.GetTabId() == FSkillTreeAssetEditorTabs::ViewportID);
 
 	TSharedRef<SDockTab> SpawnedTab = SNew(SDockTab)
 		.Label(LOCTEXT("ViewportTab_Title", "Viewport"));
@@ -255,9 +244,9 @@ TSharedRef<SDockTab> FAssetEditor_Dialogue::SpawnTab_Viewport(const FSpawnTabArg
 	return SpawnedTab;
 }
 
-TSharedRef<SDockTab> FAssetEditor_Dialogue::SpawnTab_Details(const FSpawnTabArgs& Args)
+TSharedRef<SDockTab> FAssetEditor_SkillTree::SpawnTab_Details(const FSpawnTabArgs& Args)
 {
-	check(Args.GetTabId() == FDialogueAssetEditorTabs::DialoguePropertyID);
+	check(Args.GetTabId() == FSkillTreeAssetEditorTabs::SkillTreePropertyID);
 
 	return SNew(SDockTab)
 #if ENGINE_MAJOR_VERSION < 5
@@ -269,26 +258,26 @@ TSharedRef<SDockTab> FAssetEditor_Dialogue::SpawnTab_Details(const FSpawnTabArgs
 		];
 }
 
-TSharedRef<SDockTab> FAssetEditor_Dialogue::SpawnTab_EditorSettings(const FSpawnTabArgs& Args)
+TSharedRef<SDockTab> FAssetEditor_SkillTree::SpawnTab_EditorSettings(const FSpawnTabArgs& Args)
 {
-	check(Args.GetTabId() == FDialogueAssetEditorTabs::DialogueEditorSettingsID);
+	check(Args.GetTabId() == FSkillTreeAssetEditorTabs::SkillTreeEditorSettingsID);
 
 	return SNew(SDockTab)
 #if ENGINE_MAJOR_VERSION < 5
 		.Icon(FEditorStyle::GetBrush("LevelEditor.Tabs.Details"))
 #endif // #if ENGINE_MAJOR_VERSION < 5
-		.Label(LOCTEXT("EditorSettings_Title", "Dialogue Editor Setttings"))
+		.Label(LOCTEXT("EditorSettings_Title", "Custom Graph Editor Setttings"))
 		[
 			EditorSettingsWidget.ToSharedRef()
 		];
 }
 
-FText FAssetEditor_Dialogue::GetCornerText()
+FText FAssetEditor_SkillTree::GetCornerText()
 {
-	return LOCTEXT("AppearanceCornerText_Dialogue", "Dialogue Session");
+	return LOCTEXT("AppearanceCornerText_SkillTree", "Custom Graph");
 }
 
-void FAssetEditor_Dialogue::CreateInternalWidgets()
+void FAssetEditor_SkillTree::CreateInternalWidgets()
 {
 	ViewportWidget = CreateViewportWidget();
 
@@ -299,13 +288,13 @@ void FAssetEditor_Dialogue::CreateInternalWidgets()
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyWidget = PropertyModule.CreateDetailView(Args);
 	PropertyWidget->SetObject(EditingGraph);
-	PropertyWidget->OnFinishedChangingProperties().AddSP(this, &FAssetEditor_Dialogue::OnFinishedChangingProperties);
+	PropertyWidget->OnFinishedChangingProperties().AddSP(this, &FAssetEditor_SkillTree::OnFinishedChangingProperties);
 
 	EditorSettingsWidget = PropertyModule.CreateDetailView(Args);
-	EditorSettingsWidget->SetObject(DialogueEditorSettings);
+	EditorSettingsWidget->SetObject(SkillTreeEditorSettings);
 }
 
-TSharedRef<SGraphEditor> FAssetEditor_Dialogue::CreateViewportWidget()
+TSharedRef<SGraphEditor> FAssetEditor_SkillTree::CreateViewportWidget()
 {
 	FGraphAppearanceInfo AppearanceInfo;
 	AppearanceInfo.CornerText = GetCornerText();
@@ -313,8 +302,8 @@ TSharedRef<SGraphEditor> FAssetEditor_Dialogue::CreateViewportWidget()
 	CreateCommandList();
 
 	SGraphEditor::FGraphEditorEvents InEvents;
-	InEvents.OnSelectionChanged = SGraphEditor::FOnSelectionChanged::CreateSP(this, &FAssetEditor_Dialogue::OnSelectedNodesChanged);
-	InEvents.OnNodeDoubleClicked = FSingleNodeEvent::CreateSP(this, &FAssetEditor_Dialogue::OnNodeDoubleClicked);
+	InEvents.OnSelectionChanged = SGraphEditor::FOnSelectionChanged::CreateSP(this, &FAssetEditor_SkillTree::OnSelectedNodesChanged);
+	InEvents.OnNodeDoubleClicked = FSingleNodeEvent::CreateSP(this, &FAssetEditor_SkillTree::OnNodeDoubleClicked);
 
 	return SNew(SGraphEditor)
 		.AdditionalCommands(GraphEditorCommands)
@@ -326,24 +315,24 @@ TSharedRef<SGraphEditor> FAssetEditor_Dialogue::CreateViewportWidget()
 		.ShowGraphStateOverlay(false);
 }
 
-void FAssetEditor_Dialogue::BindCommands()
+void FAssetEditor_SkillTree::BindCommands()
 {
-	ToolkitCommands->MapAction(FEditorCommands_Dialogue::Get().DialogueSettings,
-		FExecuteAction::CreateSP(this, &FAssetEditor_Dialogue::GraphSettings),
-		FCanExecuteAction::CreateSP(this, &FAssetEditor_Dialogue::CanGraphSettings)
+	ToolkitCommands->MapAction(FEditorCommands_SkillTree::Get().GraphSettings,
+		FExecuteAction::CreateSP(this, &FAssetEditor_SkillTree::GraphSettings),
+		FCanExecuteAction::CreateSP(this, &FAssetEditor_SkillTree::CanGraphSettings)
 	);
 
-	ToolkitCommands->MapAction(FEditorCommands_Dialogue::Get().AutoArrange,
-		FExecuteAction::CreateSP(this, &FAssetEditor_Dialogue::AutoArrange),
-		FCanExecuteAction::CreateSP(this, &FAssetEditor_Dialogue::CanAutoArrange)
+	ToolkitCommands->MapAction(FEditorCommands_SkillTree::Get().AutoArrange,
+		FExecuteAction::CreateSP(this, &FAssetEditor_SkillTree::AutoArrange),
+		FCanExecuteAction::CreateSP(this, &FAssetEditor_SkillTree::CanAutoArrange)
 	);
 }
 
-void FAssetEditor_Dialogue::CreateEdGraph()
+void FAssetEditor_SkillTree::CreateEdGraph()
 {
 	if (EditingGraph->EdGraph == nullptr)
 	{
-		EditingGraph->EdGraph = CastChecked<UEdGraph_DialogueSession>(FBlueprintEditorUtils::CreateNewGraph(EditingGraph, NAME_None, EdGraphSubclass, EdGraphSchemaSubclass));
+		EditingGraph->EdGraph = CastChecked<UEdGraph_SkillTree>(FBlueprintEditorUtils::CreateNewGraph(EditingGraph, NAME_None, EdGraphSubclass, EdGraphSchemaSubclass));
 		EditingGraph->EdGraph->bAllowDeletion = false;
 
 		// Give the schema a chance to fill out any required nodes (like the results node)
@@ -352,7 +341,7 @@ void FAssetEditor_Dialogue::CreateEdGraph()
 	}
 }
 
-void FAssetEditor_Dialogue::CreateCommandList()
+void FAssetEditor_SkillTree::CreateCommandList()
 {
 	if (GraphEditorCommands.IsValid())
 	{
@@ -365,56 +354,56 @@ void FAssetEditor_Dialogue::CreateCommandList()
 	// however it should be safe, since commands are being used only within this editor
 	// if it ever crashes, this function will have to go away and be reimplemented in each derived class
 
-	GraphEditorCommands->MapAction(FEditorCommands_Dialogue::Get().DialogueSettings,
-		FExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::GraphSettings),
-		FCanExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CanGraphSettings));
+	GraphEditorCommands->MapAction(FEditorCommands_SkillTree::Get().GraphSettings,
+		FExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::GraphSettings),
+		FCanExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::CanGraphSettings));
 
-	GraphEditorCommands->MapAction(FEditorCommands_Dialogue::Get().AutoArrange,
-		FExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::AutoArrange),
-		FCanExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CanAutoArrange));
+	GraphEditorCommands->MapAction(FEditorCommands_SkillTree::Get().AutoArrange,
+		FExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::AutoArrange),
+		FCanExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::CanAutoArrange));
 
 	GraphEditorCommands->MapAction(FGenericCommands::Get().SelectAll,
-		FExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::SelectAllNodes),
-		FCanExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CanSelectAllNodes)
+		FExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::SelectAllNodes),
+		FCanExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::CanSelectAllNodes)
 	);
 
 	GraphEditorCommands->MapAction(FGenericCommands::Get().Delete,
-		FExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::DeleteSelectedNodes),
-		FCanExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CanDeleteNodes)
+		FExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::DeleteSelectedNodes),
+		FCanExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::CanDeleteNodes)
 	);
 
 	GraphEditorCommands->MapAction(FGenericCommands::Get().Copy,
-		FExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CopySelectedNodes),
-		FCanExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CanCopyNodes)
+		FExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::CopySelectedNodes),
+		FCanExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::CanCopyNodes)
 	);
 
 	GraphEditorCommands->MapAction(FGenericCommands::Get().Cut,
-		FExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CutSelectedNodes),
-		FCanExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CanCutNodes)
+		FExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::CutSelectedNodes),
+		FCanExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::CanCutNodes)
 	);
 
 	GraphEditorCommands->MapAction(FGenericCommands::Get().Paste,
-		FExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::PasteNodes),
-		FCanExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CanPasteNodes)
+		FExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::PasteNodes),
+		FCanExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::CanPasteNodes)
 	);
 
 	GraphEditorCommands->MapAction(FGenericCommands::Get().Duplicate,
-		FExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::DuplicateNodes),
-		FCanExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CanDuplicateNodes)
+		FExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::DuplicateNodes),
+		FCanExecuteAction::CreateRaw(this, &FAssetEditor_SkillTree::CanDuplicateNodes)
 	);
 
 	GraphEditorCommands->MapAction(FGenericCommands::Get().Rename,
-		FExecuteAction::CreateSP(this, &FAssetEditor_Dialogue::OnRenameNode),
-		FCanExecuteAction::CreateSP(this, &FAssetEditor_Dialogue::CanRenameNodes)
+		FExecuteAction::CreateSP(this, &FAssetEditor_SkillTree::OnRenameNode),
+		FCanExecuteAction::CreateSP(this, &FAssetEditor_SkillTree::CanRenameNodes)
 	);
 }
 
-TSharedPtr<SGraphEditor> FAssetEditor_Dialogue::GetCurrGraphEditor() const
+TSharedPtr<SGraphEditor> FAssetEditor_SkillTree::GetCurrGraphEditor() const
 {
 	return ViewportWidget;
 }
 
-FGraphPanelSelectionSet FAssetEditor_Dialogue::GetSelectedNodes() const
+FGraphPanelSelectionSet FAssetEditor_SkillTree::GetSelectedNodes() const
 {
 	FGraphPanelSelectionSet CurrentSelection;
 	TSharedPtr<SGraphEditor> FocusedGraphEd = GetCurrGraphEditor();
@@ -426,21 +415,21 @@ FGraphPanelSelectionSet FAssetEditor_Dialogue::GetSelectedNodes() const
 	return CurrentSelection;
 }
 
-void FAssetEditor_Dialogue::RebuildDialogue()
+void FAssetEditor_SkillTree::RebuildSkillTree()
 {
 	if (EditingGraph == nullptr)
 	{
-		LOG_WARNING(TEXT("Rebuild Dialogue EditingGraph is nullptr"));
+		LOG_WARNING(TEXT("RebuildSkillTree EditingGraph is nullptr"));
 		return;
 	}
 
-	UEdGraph_DialogueSession* EdGraph = Cast<UEdGraph_DialogueSession>(EditingGraph->EdGraph);
+	UEdGraph_SkillTree* EdGraph = Cast<UEdGraph_SkillTree>(EditingGraph->EdGraph);
 	check(EdGraph != nullptr);
 
-	EdGraph->RebuildDialogueSession();
+	EdGraph->RebuildSkillTree();
 }
 
-void FAssetEditor_Dialogue::SelectAllNodes()
+void FAssetEditor_SkillTree::SelectAllNodes()
 {
 	TSharedPtr<SGraphEditor> CurrentGraphEditor = GetCurrGraphEditor();
 	if (CurrentGraphEditor.IsValid())
@@ -449,12 +438,12 @@ void FAssetEditor_Dialogue::SelectAllNodes()
 	}
 }
 
-bool FAssetEditor_Dialogue::CanSelectAllNodes()
+bool FAssetEditor_SkillTree::CanSelectAllNodes()
 {
 	return true;
 }
 
-void FAssetEditor_Dialogue::DeleteSelectedNodes()
+void FAssetEditor_SkillTree::DeleteSelectedNodes()
 {
 	TSharedPtr<SGraphEditor> CurrentGraphEditor = GetCurrGraphEditor();
 	if (!CurrentGraphEditor.IsValid())
@@ -475,7 +464,7 @@ void FAssetEditor_Dialogue::DeleteSelectedNodes()
 		if (EdNode == nullptr || !EdNode->CanUserDeleteNode())
 			continue;;
 
-		if (UEdGraphNode_Dialogue* EdNode_Node = Cast<UEdGraphNode_Dialogue>(EdNode))
+		if (UEdGraphNode_SkillNode* EdNode_Node = Cast<UEdGraphNode_SkillNode>(EdNode))
 		{
 			EdNode_Node->Modify();
 
@@ -495,7 +484,7 @@ void FAssetEditor_Dialogue::DeleteSelectedNodes()
 	}
 }
 
-bool FAssetEditor_Dialogue::CanDeleteNodes()
+bool FAssetEditor_SkillTree::CanDeleteNodes()
 {
 	// If any of the nodes can be deleted then we should allow deleting
 	const FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes();
@@ -511,7 +500,7 @@ bool FAssetEditor_Dialogue::CanDeleteNodes()
 	return false;
 }
 
-void FAssetEditor_Dialogue::DeleteSelectedDuplicatableNodes()
+void FAssetEditor_SkillTree::DeleteSelectedDuplicatableNodes()
 {
 	TSharedPtr<SGraphEditor> CurrentGraphEditor = GetCurrGraphEditor();
 	if (!CurrentGraphEditor.IsValid())
@@ -545,18 +534,18 @@ void FAssetEditor_Dialogue::DeleteSelectedDuplicatableNodes()
 	}
 }
 
-void FAssetEditor_Dialogue::CutSelectedNodes()
+void FAssetEditor_SkillTree::CutSelectedNodes()
 {
 	CopySelectedNodes();
 	DeleteSelectedDuplicatableNodes();
 }
 
-bool FAssetEditor_Dialogue::CanCutNodes()
+bool FAssetEditor_SkillTree::CanCutNodes()
 {
 	return CanCopyNodes() && CanDeleteNodes();
 }
 
-void FAssetEditor_Dialogue::CopySelectedNodes()
+void FAssetEditor_SkillTree::CopySelectedNodes()
 {
 	// Export the selected nodes and place the text on the clipboard
 	FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes();
@@ -572,10 +561,10 @@ void FAssetEditor_Dialogue::CopySelectedNodes()
 			continue;
 		}
 
-		if (UEdGraphNode_DialogueEdge* EdNode_Edge = Cast<UEdGraphNode_DialogueEdge>(*SelectedIter))
+		if (UEdGraphNode_SkillTreeEdge* EdNode_Edge = Cast<UEdGraphNode_SkillTreeEdge>(*SelectedIter))
 		{
-			UEdGraphNode_Dialogue* StartNode = EdNode_Edge->GetStartNode();
-			UEdGraphNode_Dialogue* EndNode = EdNode_Edge->GetEndNode();
+			UEdGraphNode_SkillNode* StartNode = EdNode_Edge->GetStartNode();
+			UEdGraphNode_SkillNode* EndNode = EdNode_Edge->GetEndNode();
 
 			if (!SelectedNodes.Contains(StartNode) || !SelectedNodes.Contains(EndNode))
 			{
@@ -591,7 +580,7 @@ void FAssetEditor_Dialogue::CopySelectedNodes()
 	FPlatformApplicationMisc::ClipboardCopy(*ExportedText);
 }
 
-bool FAssetEditor_Dialogue::CanCopyNodes()
+bool FAssetEditor_SkillTree::CanCopyNodes()
 {
 	// If any of the nodes can be duplicated then we should allow copying
 	const FGraphPanelSelectionSet SelectedNodes = GetSelectedNodes();
@@ -607,7 +596,7 @@ bool FAssetEditor_Dialogue::CanCopyNodes()
 	return false;
 }
 
-void FAssetEditor_Dialogue::PasteNodes()
+void FAssetEditor_SkillTree::PasteNodes()
 {
 	TSharedPtr<SGraphEditor> CurrentGraphEditor = GetCurrGraphEditor();
 	if (CurrentGraphEditor.IsValid())
@@ -616,7 +605,7 @@ void FAssetEditor_Dialogue::PasteNodes()
 	}
 }
 
-void FAssetEditor_Dialogue::PasteNodesHere(const FVector2D& Location)
+void FAssetEditor_SkillTree::PasteNodesHere(const FVector2D& Location)
 {
 	// Find the graph editor with focus
 	TSharedPtr<SGraphEditor> CurrentGraphEditor = GetCurrGraphEditor();
@@ -682,7 +671,7 @@ void FAssetEditor_Dialogue::PasteNodesHere(const FVector2D& Location)
 	}
 }
 
-bool FAssetEditor_Dialogue::CanPasteNodes()
+bool FAssetEditor_SkillTree::CanPasteNodes()
 {
 	TSharedPtr<SGraphEditor> CurrentGraphEditor = GetCurrGraphEditor();
 	if (!CurrentGraphEditor.IsValid())
@@ -696,44 +685,44 @@ bool FAssetEditor_Dialogue::CanPasteNodes()
 	return FEdGraphUtilities::CanImportNodesFromText(CurrentGraphEditor->GetCurrentGraph(), ClipboardContent);
 }
 
-void FAssetEditor_Dialogue::DuplicateNodes()
+void FAssetEditor_SkillTree::DuplicateNodes()
 {
 	CopySelectedNodes();
 	PasteNodes();
 }
 
-bool FAssetEditor_Dialogue::CanDuplicateNodes()
+bool FAssetEditor_SkillTree::CanDuplicateNodes()
 {
 	return CanCopyNodes();
 }
 
-void FAssetEditor_Dialogue::GraphSettings()
+void FAssetEditor_SkillTree::GraphSettings()
 {
 	PropertyWidget->SetObject(EditingGraph);
 }
 
-bool FAssetEditor_Dialogue::CanGraphSettings() const
+bool FAssetEditor_SkillTree::CanGraphSettings() const
 {
 	return true;
 }
 
-void FAssetEditor_Dialogue::AutoArrange()
+void FAssetEditor_SkillTree::AutoArrange()
 {
-	UEdGraph_DialogueSession* EdGraph = Cast<UEdGraph_DialogueSession>(EditingGraph->EdGraph);
+	UEdGraph_SkillTree* EdGraph = Cast<UEdGraph_SkillTree>(EditingGraph->EdGraph);
 	check(EdGraph != nullptr);
 
-	const FScopedTransaction Transaction(LOCTEXT("DialogueEditorAutoArrange", "Custom Graph Editor: Auto Arrange"));
+	const FScopedTransaction Transaction(LOCTEXT("SkillTreeEditorAutoArrange", "Custom Graph Editor: Auto Arrange"));
 
 	EdGraph->Modify();
 
-	UAutoLayoutStrategy_DE* LayoutStrategy = nullptr;
-	switch (DialogueEditorSettings->AutoLayoutStrategy)
+	UAutoLayoutStrategy_STE* LayoutStrategy = nullptr;
+	switch (SkillTreeEditorSettings->AutoLayoutStrategy)
 	{
-	case EAutoLayoutStrategy_DE::Tree:
-		LayoutStrategy = NewObject<UAutoLayoutStrategy_DE>(EdGraph, UTreeLayoutStrategy_DE::StaticClass());
+	case EAutoLayoutStrategy_STE::Tree:
+		LayoutStrategy = NewObject<UAutoLayoutStrategy_STE>(EdGraph, UTreeLayoutStrategy_STE::StaticClass());
 		break;
-	case EAutoLayoutStrategy_DE::ForceDirected:
-		LayoutStrategy = NewObject<UAutoLayoutStrategy_DE>(EdGraph, UForceDirectedLayoutStrategy_DE::StaticClass());
+	case EAutoLayoutStrategy_STE::ForceDirected:
+		LayoutStrategy = NewObject<UAutoLayoutStrategy_STE>(EdGraph, UForceDirectedLayoutStrategy_STE::StaticClass());
 		break;
 	default:
 		break;
@@ -741,22 +730,22 @@ void FAssetEditor_Dialogue::AutoArrange()
 
 	if (LayoutStrategy != nullptr)
 	{
-		LayoutStrategy->Settings = DialogueEditorSettings;
+		LayoutStrategy->Settings = SkillTreeEditorSettings;
 		LayoutStrategy->Layout(EdGraph);
 		LayoutStrategy->ConditionalBeginDestroy();
 	}
 	else
 	{
-		LOG_ERROR(TEXT("FAssetEditor_Dialogue::AutoArrange LayoutStrategy is null."));
+		LOG_ERROR(TEXT("FAssetEditor_SkillTree::AutoArrange LayoutStrategy is null."));
 	}
 }
 
-bool FAssetEditor_Dialogue::CanAutoArrange() const
+bool FAssetEditor_SkillTree::CanAutoArrange() const
 {
-	return EditingGraph != nullptr && Cast<UEdGraph_DialogueSession>(EditingGraph->EdGraph) != nullptr;
+	return EditingGraph != nullptr && Cast<UEdGraph_SkillTree>(EditingGraph->EdGraph) != nullptr;
 }
 
-void FAssetEditor_Dialogue::OnRenameNode()
+void FAssetEditor_SkillTree::OnRenameNode()
 {
 	TSharedPtr<SGraphEditor> CurrentGraphEditor = GetCurrGraphEditor();
 	if (CurrentGraphEditor.IsValid())
@@ -774,18 +763,18 @@ void FAssetEditor_Dialogue::OnRenameNode()
 	}
 }
 
-bool FAssetEditor_Dialogue::CanRenameNodes() const
+bool FAssetEditor_SkillTree::CanRenameNodes() const
 {
-	UEdGraph_DialogueSession* EdGraph = Cast<UEdGraph_DialogueSession>(EditingGraph->EdGraph);
+	UEdGraph_SkillTree* EdGraph = Cast<UEdGraph_SkillTree>(EditingGraph->EdGraph);
 	check(EdGraph != nullptr);
 
-	UDialogueSession* Graph = EdGraph->GetDialogueSession();
+	USkillTree* Graph = EdGraph->GetSkillTree();
 	check(Graph != nullptr)
 
-		return Graph->bCanRenameNode && GetSelectedNodes().Num() == 1;
+		return false;//Graph->bCanRenameNode && GetSelectedNodes().Num() == 1;
 }
 
-void FAssetEditor_Dialogue::OnSelectedNodesChanged(const TSet<class UObject*>& NewSelection)
+void FAssetEditor_SkillTree::OnSelectedNodesChanged(const TSet<class UObject*>& NewSelection)
 {
 	TArray<UObject*> Selection;
 
@@ -805,12 +794,12 @@ void FAssetEditor_Dialogue::OnSelectedNodesChanged(const TSet<class UObject*>& N
 	}
 }
 
-void FAssetEditor_Dialogue::OnNodeDoubleClicked(UEdGraphNode* Node)
+void FAssetEditor_SkillTree::OnNodeDoubleClicked(UEdGraphNode* Node)
 {
 
 }
 
-void FAssetEditor_Dialogue::OnFinishedChangingProperties(const FPropertyChangedEvent& PropertyChangedEvent)
+void FAssetEditor_SkillTree::OnFinishedChangingProperties(const FPropertyChangedEvent& PropertyChangedEvent)
 {
 	if (EditingGraph == nullptr)
 		return;
@@ -819,22 +808,22 @@ void FAssetEditor_Dialogue::OnFinishedChangingProperties(const FPropertyChangedE
 }
 
 #if ENGINE_MAJOR_VERSION < 5
-void FAssetEditor_Dialogue::OnPackageSaved(const FString& PackageFileName, UObject* Outer)
+void FAssetEditor_SkillTree::OnPackageSaved(const FString& PackageFileName, UObject* Outer)
 {
-	RebuildDialogue();
+	RebuildSkillTree();
 }
 #else // #if ENGINE_MAJOR_VERSION < 5
-void FAssetEditor_Dialogue::OnPackageSavedWithContext(const FString& PackageFileName, UPackage* Package, FObjectPostSaveContext ObjectSaveContext)
+void FAssetEditor_SkillTree::OnPackageSavedWithContext(const FString& PackageFileName, UPackage* Package, FObjectPostSaveContext ObjectSaveContext)
 {
-	RebuildDialogue();
+	RebuildSkillTree();
 }
-
-
 #endif // #else // #if ENGINE_MAJOR_VERSION < 5
 
-void FAssetEditor_Dialogue::RegisterToolbarTab(const TSharedRef<class FTabManager>& InTabManager)
+void FAssetEditor_SkillTree::RegisterToolbarTab(const TSharedRef<class FTabManager>& InTabManager)
 {
 	FAssetEditorToolkit::RegisterTabSpawners(InTabManager);
 }
 
+
 #undef LOCTEXT_NAMESPACE
+

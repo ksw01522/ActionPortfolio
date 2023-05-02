@@ -1,32 +1,29 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "DialogueAssetEditor/DialogueEditorRichTextBlock.h"
-#include "Settings_DialogueEditor.generated.h"
+#include "Settings_SkillTreeEditor.generated.h"
 
 UENUM(BlueprintType)
-enum class EAutoLayoutStrategy_DE : uint8
+enum class EAutoLayoutStrategy_STE : uint8
 {
 	Tree,
 	ForceDirected,
 };
 
-UCLASS(Config = DialogueEditor)
-class UDialogueEditorSettings : public UObject
+UCLASS(Config = DefaultEditor)
+class USkillTreeEditorSettings : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	UDialogueEditorSettings();
-	virtual ~UDialogueEditorSettings();
-
-	class FAssetEditor_Dialogue* AssetEditor;
+	USkillTreeEditorSettings();
+	virtual ~USkillTreeEditorSettings();
 
 	UPROPERTY(EditDefaultsOnly, Category = "AutoArrange")
 	float OptimalDistance;
 
 	UPROPERTY(EditDefaultsOnly, AdvancedDisplay, Category = "AutoArrange")
-	EAutoLayoutStrategy_DE AutoLayoutStrategy;
+	EAutoLayoutStrategy_STE AutoLayoutStrategy;
 
 	UPROPERTY(EditDefaultsOnly, AdvancedDisplay, Category = "AutoArrange")
 	int32 MaxIteration;
@@ -43,8 +40,5 @@ public:
 	UPROPERTY(EditDefaultsOnly, AdvancedDisplay, Category = "AutoArrange")
 	float CoolDownRate;
 
-public:
-	virtual void PostLoad() override;
 
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 };

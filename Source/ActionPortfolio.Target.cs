@@ -10,6 +10,6 @@ public class ActionPortfolioTarget : TargetRules
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V2;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_1;
-        ExtraModuleNames.AddRange(new string[] { "ActionPortfolio", "DialogueRuntime" });
+        ExtraModuleNames.AddRange(new string[] { "ActionPortfolio", "DialogueRuntime", "SkillTreeRuntime" });
     }
 }

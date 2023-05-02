@@ -1,7 +1,4 @@
-#include "AutoLayout/ForceDirectedLayoutStrategy.h"
-#include "DialogueSession.h"
-#include "DialogueNode.h"
-#include "Nodes/DialogueNode_Start.h"
+#include "AutoLayout/ForceDirectedLayoutStrategy_STE.h"
 
 static inline float CoolDown(float Temp, float CoolDownRate)
 {
@@ -19,25 +16,25 @@ static inline float GetRepulseForce(float X, float k)
 	return X != 0 ? k * k / X : TNumericLimits<float>::Max();
 }
 
-UForceDirectedLayoutStrategy::UForceDirectedLayoutStrategy()
+UForceDirectedLayoutStrategy_STE::UForceDirectedLayoutStrategy_STE()
 {
 	bRandomInit = false;
 	CoolDownRate = 10;
 	InitTemperature = 10.f;
 }
 
-UForceDirectedLayoutStrategy::~UForceDirectedLayoutStrategy()
+UForceDirectedLayoutStrategy_STE::~UForceDirectedLayoutStrategy_STE()
 {
 
 }
 
-void UForceDirectedLayoutStrategy::Layout(UEdGraph* _EdGraph)
+void UForceDirectedLayoutStrategy_STE::Layout(UEdGraph* _EdGraph)
 {
-	EdGraph = Cast<UEdGraph_DialogueSession>(_EdGraph);
+	EdGraph = Cast<UEdGraph_SkillTree>(_EdGraph);
 	check(EdGraph != nullptr);
 
-	EdGraph->RebuildDialogueSession();
-	Graph = EdGraph->GetDialogueSession();
+	EdGraph->RebuildSkillTree();
+	Graph = EdGraph->GetSkillTree();
 	check(Graph != nullptr);
 
 	if (Settings != nullptr)
@@ -48,10 +45,13 @@ void UForceDirectedLayoutStrategy::Layout(UEdGraph* _EdGraph)
 	}
 
 	FBox2D PreTreeBound(ForceInitToZero);
-	PreTreeBound = LayoutOneTree(Cast<UDialogueNode>(Graph->StartNode), PreTreeBound);
+	for (int32 i = 0; i < Graph->RootNodes.Num(); ++i)
+	{
+		PreTreeBound = LayoutOneTree(Graph->RootNodes[i], PreTreeBound);
+	}
 }
 
-FBox2D UForceDirectedLayoutStrategy::LayoutOneTree(UDialogueNode* RootNode, const FBox2D& PreTreeBound)
+FBox2D UForceDirectedLayoutStrategy_STE::LayoutOneTree(USkillNode* RootNode, const FBox2D& PreTreeBound)
 {
 	float Temp = InitTemperature;
 	FBox2D TreeBound = GetActualBounds(RootNode);
@@ -95,23 +95,23 @@ FBox2D UForceDirectedLayoutStrategy::LayoutOneTree(UDialogueNode* RootNode, cons
 
 		// Calculate the attractive forces.
 		int Level = 0;
-		TArray<UDialogueNode*> CurrLevelNodes = { RootNode };
-		TArray<UDialogueNode*> NextLevelNodes;
+		TArray<USkillNode*> CurrLevelNodes = { RootNode };
+		TArray<USkillNode*> NextLevelNodes;
 
 		while (CurrLevelNodes.Num() != 0)
 		{
 			for (int32 i = 0; i < CurrLevelNodes.Num(); ++i)
 			{
-				UDialogueNode* Node = CurrLevelNodes[i];
+				USkillNode* Node = CurrLevelNodes[i];
 				check(Node != nullptr);
 
-				UEdGraphNode_Dialogue* EdNode_ParentNode = EdGraph->NodeMap[Node];
+				UEdGraphNode_SkillNode* EdNode_ParentNode = EdGraph->NodeMap[Node];
 
-				for (int32 j = 0; j < Node->ChildrenNodes.Num(); ++j)
+				for (int32 j = 0; j < Node->ChildNodes.Num(); ++j)
 				{
-					NextLevelNodes.Add(Node->ChildrenNodes[j]);
+					NextLevelNodes.Add(Node->ChildNodes[j]);
 
-					UEdGraphNode_Dialogue* EdNode_ChildNode = EdGraph->NodeMap[Node->ChildrenNodes[j]];
+					UEdGraphNode_SkillNode* EdNode_ChildNode = EdGraph->NodeMap[Node->ChildNodes[j]];
 
 					Diff.X = EdNode_ChildNode->NodePosX - EdNode_ParentNode->NodePosY;
 					Diff.Y = EdNode_ChildNode->NodePosY - EdNode_ParentNode->NodePosY;

@@ -7,7 +7,31 @@
 		{
 			"Name": "ActionPortfolio",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"DialogueRuntime"
+			]
+		},
+		{
+			"Name": "DialogueRuntime",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"CoreUObject",
+				"Engine",
+				"GameplayAbilities",
+				"GameplayTasks"
+			]
+		},
+		{
+			"Name": "DialogueEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"UnrealEd",
+				"UMG"
+			]
 		}
 	],
 	"Plugins": [

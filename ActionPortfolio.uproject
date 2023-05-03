@@ -11,7 +11,8 @@
 			"AdditionalDependencies": [
 				"DialogueRuntime",
 				"SkillTreeRuntime",
-				"Engine"
+				"Engine",
+				"CoreUObject"
 			]
 		},
 		{

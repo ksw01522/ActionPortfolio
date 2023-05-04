@@ -3,6 +3,7 @@
 #include "ActionPortfolioGameMode.h"
 #include "ActionPortfolioCharacter.h"
 #include "UObject/ConstructorHelpers.h"
+#include "ActionPFPlayerController.h"
 
 AActionPortfolioGameMode::AActionPortfolioGameMode()
 {
@@ -12,4 +13,6 @@ AActionPortfolioGameMode::AActionPortfolioGameMode()
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
+
+	PlayerControllerClass = AActionPFPlayerController::StaticClass();
 }

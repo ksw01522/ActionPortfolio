@@ -17,7 +17,7 @@ public:
 	UInteractionSystemComponent();
 
 protected:
-	UPROPERTY(BlueprintEditAnywhere, BlueprintReadOnly, Category = "Interaction", BlueprintGetter = GetInteractionName)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interaction", BlueprintGetter = GetInteractionName)
 	FText InteractionName;
 
 protected:
@@ -37,6 +37,6 @@ public:
 	void Interact(AActor* InteracActor);
 	virtual void Interact_Implementation(AActor* InteractActor) {}
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintNativeEvent, Category = "Interaction", BlueprintGetter)
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Interaction", BlueprintGetter)
 	const FText& GetInteractionName() const {return InteractionName;}
 };

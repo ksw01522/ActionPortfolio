@@ -13,5 +13,10 @@ UCLASS()
 class ACTIONPORTFOLIO_API AActionPFPlayerController : public APlayerController
 {
 	GENERATED_BODY()
+
+	AActionPFPlayerController();
+
+public:
+	void InteractWithNPC(const TArray<class UNPCInteract*> NPCInteracts);
 	
 };

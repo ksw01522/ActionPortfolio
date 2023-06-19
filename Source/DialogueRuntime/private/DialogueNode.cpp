@@ -23,8 +23,10 @@ UDialogueSession* UDialogueNode::GetDialogueSession() const
 	return DialogueSession;
 }
 
-void UDialogueNode::CallEvents(FActingDialogueHandle& Handle)
+void UDialogueNode::CallEvents(const FActingDialogueHandle& Handle)
 {
+	if(!Handle.IsValid()) return;
+
 	for (auto Event : EnterEvents) {
 		Event->CallEvent(Handle);
 	}

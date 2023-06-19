@@ -2,8 +2,12 @@
 
 
 #include "Interaction/InteractionType/InteractionSystemComponent_NPC.h"
-#include "ActionPFPlayerController.h"
+#include "Character/Player/ActionPFPlayerController.h"
 #include "ActionPortfolio.h"
+#include "DialogueSession.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "DialoguerComponent.h"
+#include "DialogueBFL.h"
 
 #define LOCTEXT_NAMESPACE "NPCIneract"
 
@@ -13,12 +17,38 @@ UNPCInteract::UNPCInteract()
 
 }
 
-
-
 // Dialogue
 UNPCInteract_Dialogue::UNPCInteract_Dialogue()
 {
 	NPCInteractionName = LOCTEXT("Name_Dialogue", "대화하기");
+}
+
+bool UNPCInteract_Dialogue::IsCanNPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const
+{
+	return IsValid(InteractPlayer) && DialogueSession != nullptr;
+}
+
+void UNPCInteract_Dialogue::NPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const
+{
+	if(!IsCanNPCInteract(InteractPlayer)) return;
+
+	UDialogueManager* DialogueMag = UDialogueBFL::GetDialogueManager();
+	if(!IsValid(DialogueMag)) return;
+
+	TArray<FString> DialoguerIDs;
+	DialoguerIDs.Add(InteractPlayer->GetDialoguerID());
+	
+	UDialoguerComponent* NPCDialoguer = OwnerSystem->GetNPCDialoguerComponent();
+	if (IsValid(NPCDialoguer)) {
+		DialoguerIDs.Add(NPCDialoguer->GetDialoguerID());
+	}
+
+	for (auto ExstraID : ExtraDialoguerIDs) {
+		DialoguerIDs.Add(ExstraID);
+	}
+
+	UDialogueBFL::GetDialogueManager()->EnterDialogue(DialoguerIDs, DialogueSession);
+	InteractPlayer->OnEnterDialogue(EActionPFDialogueType::NPC);
 }
 
 
@@ -28,11 +58,13 @@ UNPCInteract_Dialogue::UNPCInteract_Dialogue()
 ///////////////////////////// InteractionSystemComponent_NPC ////////////////////////////////////
 UInteractionSystemComponent_NPC::UInteractionSystemComponent_NPC()
 {
-	InteractionName = LOCTEXT("NPC InteractionSystem Name", "NPC 상호작용 시스템");
+	InteractionName = LOCTEXT("NPC InteractionSystem Name", "말 걸기");
 }
 
 void UInteractionSystemComponent_NPC::BeginPlay()
 {
+	Super::BeginPlay();
+
 	for (auto Interaction : NPCInteractions) {
 		if (Interaction == nullptr) {
 			PFLOG(Error, TEXT("NPC Interaction is nullptr."));
@@ -41,9 +73,10 @@ void UInteractionSystemComponent_NPC::BeginPlay()
 
 		Interaction->SetOwnerSystem(this);
 	}
+	
 }
 
-bool UInteractionSystemComponent_NPC::IsCanInteract_Implementation(AActor* InteractActor) const
+bool UInteractionSystemComponent_NPC::CanInteract_CPP(AActor* InteractActor) const
 {
 	if(!IsValid(InteractActor)) return false;
 
@@ -53,23 +86,70 @@ bool UInteractionSystemComponent_NPC::IsCanInteract_Implementation(AActor* Inter
 	return true;
 }
 
-void UInteractionSystemComponent_NPC::Interact_Implementation(AActor* InteractActor)
+void UInteractionSystemComponent_NPC::Interact_CPP(AActor* InteractActor)
 {
-	if (!IsCanInteract(InteractActor)) { return; }
+	if (!IsValid(InteractActor)) return;
 
 	AActionPFPlayerController* InteractPlayerController = InteractActor->GetInstigatorController<AActionPFPlayerController>();
-	TArray<UNPCInteract*> Interactions;
-	
-	for (auto Interaction : NPCInteractions) {
-		if (Interaction == nullptr) {
-			PFLOG(Error, TEXT("NPC Interaction is nullptr."));
-			continue;
+	if(!IsValid(InteractPlayerController)) return;
+
+	if (!GreetingDialogueSession.IsEmpty()) {
+		TArray<FString> DialoguerIDs;
+		DialoguerIDs.Add(InteractPlayerController->GetDialoguerID());
+		UDialoguerComponent* NPCDialoguer = GetNPCDialoguerComponent();
+		if (IsValid(NPCDialoguer)) {
+			DialoguerIDs.Add(NPCDialoguer->GetDialoguerID());
 		}
 
-		if(Interaction->IsCanNPCInteract(InteractPlayerController)) Interactions.Add(Interaction);
+		for (auto ExstraID : ExtraDialoguerIDs) {
+			DialoguerIDs.Add(ExstraID);
+		}
+
+		UDialogueBFL::GetDialogueManager()->EnterDialogue(DialoguerIDs, GetGreetingDialogue(InteractPlayerController));
 	}
 
-	InteractPlayerController->InteractWithNPC(Interactions);
+	InteractPlayerController->InteractWithNPC(this);
+}
+
+UDialogueSession* UInteractionSystemComponent_NPC::GetGreetingDialogue(const AActionPFPlayerController* PlayerController) const
+{
+	if(GreetingDialogueSession.IsEmpty()) return nullptr;
+
+	int32 Num = GreetingDialogueSession.Num();
+
+	int32 Idx = UKismetMathLibrary::RandomInteger(Num);
+
+	return GreetingDialogueSession[Idx];
+}
+
+const TArray<UNPCInteract*> UInteractionSystemComponent_NPC::GetAbleNPCInteractions(AActionPFPlayerController* PlayerController) const
+{
+	TArray<UNPCInteract*> ReturnInteractions;
+
+	for (auto NPCInteract : NPCInteractions)
+	{
+		if(NPCInteract->IsCanNPCInteract(PlayerController)) ReturnInteractions.Add(NPCInteract);
+	}
+
+	return ReturnInteractions;
+}
+
+UDialoguerComponent* UInteractionSystemComponent_NPC::GetNPCDialoguerComponent()
+{
+	if(DialoguerComponent.IsValid()) return DialoguerComponent.Get();
+	
+	ensure(IsValid(GetOwner()));
+
+	DialoguerComponent = Cast<UDialoguerComponent>( GetOwner()->GetComponentByClass(UDialoguerComponent::StaticClass()));
+
+	if(!DialoguerComponent.IsValid()) PFLOG(Warning, TEXT("Can't find Dialoguer Component from %s"), *GetOwner()->GetName());
+
+	return DialoguerComponent.Get();
+}
+
+void UInteractionSystemComponent_NPC::SetNPCDialoguerComponent(UDialoguerComponent* NewDialoguer)
+{
+	DialoguerComponent = NewDialoguer;
 }
 
 

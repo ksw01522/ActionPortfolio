@@ -269,6 +269,9 @@ void UDialogueNode_Basic::OnChanged_DialogueStringCode()
 {
 	LOG_INFO(TEXT("Changed String Code"));
 
+	Original_DialogueString = "";
+	DialogueString = "";
+
 	FDialogueLocalization* DialogueRow = GetDialogueStringRow();
 	if(DialogueSession == nullptr || DialogueSession->DialogueStringTable == nullptr || DialogueRow == nullptr) { 
 		CanVisible_DialogueString = false;
@@ -281,25 +284,25 @@ void UDialogueNode_Basic::OnChanged_DialogueStringCode()
 
 	if (DialogueRow == nullptr)
 	{
-		Original_DialogueString = "";
-		DialogueString = "";
+		return;
 	}
-	else {
-		Original_DialogueString = DialogueRow->Original;
-		switch (DialogueSession->PreviewLanguage)
-		{
-		case EDialogueLanguage::Korean:
-			DialogueString = DialogueRow->Korean;
-			break;
 
-		case EDialogueLanguage::English:
-			DialogueString = DialogueRow->English;
-			break;
+	
+	Original_DialogueString = DialogueRow->Original;
+	switch (DialogueSession->PreviewLanguage)
+	{
+	case EDialogueLanguage::Korean:
+		DialogueString = DialogueRow->Korean;
+		break;
 
-		default:
-			break;
-		}
+	case EDialogueLanguage::English:
+		DialogueString = DialogueRow->English;
+		break;
+
+	default:
+		break;
 	}
+	
 }
 
 void UDialogueNode_Basic::OnChanged_PreviewLanguage()

@@ -11,6 +11,8 @@
 
 UDialogueManager* UDialogueBFL::GetDialogueManager()
 {
+	if(GEngine == nullptr) return nullptr;
+	if(GEngine->GameViewport == nullptr) return nullptr;
 	UWorld* World = GEngine->GameViewport->GetWorld();
 	if (World == nullptr) return nullptr;
 	UDialogueManager* DialogueManager = UGameInstance::GetSubsystem<UDialogueManager>(World->GetGameInstance());

@@ -37,7 +37,7 @@ protected:
 	FActingDialogueHandle CalledDialogueID;
 
 public:
-	void CallEvent(FActingDialogueHandle& Handle);
+	void CallEvent(const FActingDialogueHandle& Handle);
 	void CallEndEvent(bool bIsCancelled) { OnEndEvent(bIsCancelled); }
 
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
@@ -47,7 +47,7 @@ public:
 
 
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
-	void OnCalledEvent(FActingDialogueHandle& Handle);
+	void OnCalledEvent(const FActingDialogueHandle& Handle);
 
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
 	void OnEndEvent(bool bIsCancelled);

@@ -12,7 +12,8 @@
 				"DialogueRuntime",
 				"SkillTreeRuntime",
 				"Engine",
-				"CoreUObject"
+				"CoreUObject",
+				"GameplayAbilities"
 			]
 		},
 		{

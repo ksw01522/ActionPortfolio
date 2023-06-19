@@ -25,12 +25,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dialoguer", meta = (AllowPrivateAccess = "true"))
 	FString DialoguerID;
 
+	UPROPERTY(Transient)
 	FActingDialogueHandle DialogueHandle;
 
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 	virtual void BeginDestroy() override;
+
+	FActingDialogueHandle& GetDialogueHandle() { return DialogueHandle; };
 
 public:		
 	// Called every frame
@@ -44,7 +47,7 @@ public:
 	FString GetDialoguerID() const {return DialoguerID;}
 	
 	
-
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Dialogue")
-	FActingDialogueHandle GetDialogueHandle() { return DialogueHandle; };
+	bool IsInDialogue();
+
 };

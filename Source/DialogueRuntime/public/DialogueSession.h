@@ -23,7 +23,7 @@
  };
 
 
-UCLASS()
+UCLASS(BlueprintType)
 class DIALOGUERUNTIME_API UDialogueSession : public UObject
 {
 	GENERATED_BODY()

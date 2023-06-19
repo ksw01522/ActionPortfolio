@@ -39,6 +39,16 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	FString DialogString;
+
+	UPROPERTY(BlueprintReadOnly)
+	UDataTable* DialogueStyleSet;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<TSubclassOf<class USRichTextBlockDecorator>> DialogueSlateDecorators;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<TSubclassOf<class URichTextBlockDecorator>> DialogueUMGDecorators;
+
 };
 
 USTRUCT(Atomic)

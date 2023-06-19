@@ -6,8 +6,11 @@
 #include "Components/ActorComponent.h"
 #include "InteractionSystemComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInteractDelegate, AActor*, InteractActor);
 
-UCLASS( ClassGroup=(InteractSystem), Abstract)
+class UCanInteractionCondition;
+
+UCLASS( ClassGroup=(InteractSystem), Abstract, Blueprintable, BlueprintType)
 class ACTIONPORTFOLIO_API UInteractionSystemComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -21,22 +24,47 @@ protected:
 	FText InteractionName;
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Condition")
+	TArray<UCanInteractionCondition*> InteractionConditions;
+
+	UPROPERTY(BlueprintAssignable)
+	FInteractDelegate Del_Interact;
+
+private:
+	virtual void Interact_CPP(AActor* InteractActor) {}
+	virtual bool CanInteract_CPP(AActor* InteractActor) const;
+
+protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
 
 
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintNativeEvent, Category = "Interaction")
-	bool IsCanInteract(AActor* InteractActor) const;
-	virtual bool IsCanInteract_Implementation(AActor* InteractActor) const {return false;}
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Interaction")
+	bool CanInteract(AActor* InteractActor) const;
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interaction")
-	void Interact(AActor* InteracActor);
-	virtual void Interact_Implementation(AActor* InteractActor) {}
+	UFUNCTION(BlueprintCallable, Category = "Interaction")
+	void Interact(AActor* InteractActor);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Interaction", BlueprintGetter)
 	const FText& GetInteractionName() const {return InteractionName;}
+};
+
+UCLASS(ClassGroup = (InteractSystem), Abstract, Blueprintable, BlueprintType, EditInlineNew, DefaultToInstanced)
+class ACTIONPORTFOLIO_API UCanInteractionCondition : public UObject
+{
+	GENERATED_BODY()
+
+	friend UInteractionSystemComponent;
+
+public:
+	UCanInteractionCondition() {};
+	virtual ~UCanInteractionCondition() {};
+
+private:
+	virtual bool CanInteractCondition(AActor* InteractActor);
 };

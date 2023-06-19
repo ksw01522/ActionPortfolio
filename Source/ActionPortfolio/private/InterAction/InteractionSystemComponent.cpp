@@ -24,6 +24,11 @@ void UInteractionSystemComponent::BeginPlay()
 }
 
 
+bool UInteractionSystemComponent::CanInteract_CPP(AActor* InteractActor) const
+{
+	return false;
+}
+
 // Called every frame
 void UInteractionSystemComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -32,3 +37,31 @@ void UInteractionSystemComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	// ...
 }
 
+bool UInteractionSystemComponent::CanInteract(AActor* InteractActor) const
+{
+	if(!IsValid(InteractActor)) return false;
+
+	bool bIsCan = CanInteract_CPP(InteractActor);
+	
+	for (auto Condition : InteractionConditions)
+	{
+		if(!bIsCan) break;
+
+		bIsCan = Condition->CanInteractCondition(InteractActor);
+	}
+	
+	return bIsCan;
+}
+
+void UInteractionSystemComponent::Interact(AActor* InteractActor)
+{
+	if (!IsValid(InteractActor)) return;
+
+	if(Del_Interact.IsBound()) {Del_Interact.Broadcast(InteractActor); }
+	Interact_CPP(InteractActor);
+}
+
+bool UCanInteractionCondition::CanInteractCondition(AActor* InteractActor)
+{
+	return false;
+}

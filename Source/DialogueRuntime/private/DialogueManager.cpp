@@ -6,6 +6,8 @@
 #include "DialogueRuntime.h"
 #include "DialogueHeaders.h"
 #include "Components/AudioComponent.h"
+#include "SRichTextBlockDecorator.h"
+#include "Components/RichTextBlockDecorator.h"
 
 ////////////////////////////////////////// FActingDialogueData /////////////////////////////////////////////
 FActingDialogueData::FActingDialogueData(TArray<UDialoguerComponent*> NewDialoguers, UDialogueSession* Session)
@@ -13,6 +15,13 @@ FActingDialogueData::FActingDialogueData(TArray<UDialoguerComponent*> NewDialogu
 	Dialoguers.Empty();
 	DialogueEvents.Empty();
 	DialogueSession = Session;
+
+	for (auto NewDialoguer : NewDialoguers)
+	{
+		if (IsValid(NewDialoguer)) {
+			Dialoguers.Add(NewDialoguer);
+		}
+	}
 	if (DialogueSession.IsValid()) {
 		CurrentNode = Session->GetStartNode();
 	} else {CurrentNode.Reset(); }
@@ -27,9 +36,29 @@ bool FActingDialogueData::IsValidDialogue() const
 
 
 ///////////////////////////////////////// Add And Remove Dialogue ///////////////////////////////////////////
-FActingDialogueHandle UDialogueManager::EnterDialogue(TArray<UDialoguerComponent*> Dialoguers, UDialogueSession* Session)
+FActingDialogueHandle UDialogueManager::EnterDialogue(const TArray<FString>& DialoguerIDs, UDialogueSession* Session)
 {
-	if(Session == nullptr){ return FActingDialogueHandle(); }
+	if(Session == nullptr){ 
+		LOG_ERROR(TEXT("Dialogue Session in null."));
+		return FActingDialogueHandle(); 
+		}
+
+	TArray<UDialoguerComponent*> Dialoguers;
+	for (auto ID : DialoguerIDs) 
+	{
+		TWeakObjectPtr<UDialoguerComponent>* FindedDialoguer = DialoguerMap.Find(ID);
+
+		if(FindedDialoguer == nullptr) continue;
+
+		Dialoguers.Add(FindedDialoguer->Get());
+	}
+
+	for (auto Dialoguer : Dialoguers)
+	{
+		if (Dialoguer->IsInDialogue()) {
+			RemoveDialogue(Dialoguer->GetDialogueHandle());
+		}
+	}
 
 	FActingDialogueHandle Handle(GDialogueHandleID++);
 	FActingDialogueData Data(Dialoguers, Session);
@@ -37,15 +66,20 @@ FActingDialogueHandle UDialogueManager::EnterDialogue(TArray<UDialoguerComponent
 	ActingDialogueMap.Add(Handle, Data);
 
 	for (auto Dialoguer : Dialoguers) {
+		if (!IsValid(Dialoguer)) {
+			LOG_ERROR(TEXT("Can't find Dialoguer."));
+			continue;
+		}
 		Dialoguer->OnEnteredDialogue(Handle);
 	}
+
 
 	return Handle;
 }
 
 
 
-void UDialogueManager::RemoveDialogue(FActingDialogueHandle Target)
+void UDialogueManager::RemoveDialogue(const FActingDialogueHandle& Target)
 {
 	if (!Target.IsValid()) return;
 
@@ -68,9 +102,9 @@ void UDialogueManager::RemoveDialogue(FActingDialogueHandle Target)
 //////////////////////////////////////////////// Get ////////////////////////////////////////////////////////
 
 // 등록된 대화 데이터 가져오기
-FActingDialogueData* UDialogueManager::GetActingDialogueData(FActingDialogueHandle& Handle)
+FActingDialogueData* UDialogueManager::GetActingDialogueData(const FActingDialogueHandle& Handle)
 {
-	if(CheckDialogueFromHandle(Handle)) {return nullptr;}
+	if(!CheckDialogueFromHandle(Handle)) {return nullptr;}
 	
 	FActingDialogueData* ReturnData = ActingDialogueMap.Find(Handle);
 
@@ -92,7 +126,7 @@ bool UDialogueManager::IsCanEnterNextNode(FActingDialogueHandle& Handle)
 }
 
 // 대화사람들 가져오기
-bool UDialogueManager::GetDialoguersInDialog(TArray<UDialoguerComponent*>& OutDialoguers, FActingDialogueHandle& Handle)
+bool UDialogueManager::GetDialoguersInDialog(TArray<UDialoguerComponent*>& OutDialoguers, const FActingDialogueHandle& Handle)
 {
 	FActingDialogueData* Data = GetActingDialogueData(Handle);
 	if (Data == nullptr) { return false; }
@@ -114,6 +148,9 @@ bool UDialogueManager::GetElementFromNode(TArray<FDialogueElement>& OutElements,
 	FDialogueElement TempElement;
 	TempElement.Name = BasicNode->GetDialoguerName(CurrentLanguage);
 	TempElement.DialogString = BasicNode->GetDialogueString(CurrentLanguage);
+	TempElement.DialogueStyleSet = BasicNode->GetDialogueTextStyleSet();
+	TempElement.DialogueSlateDecorators = BasicNode->GetSlateDecoClasses();
+	TempElement.DialogueUMGDecorators = BasicNode->GetUMGDecoClasses();
 
 	OutElements.Add(TempElement);
 
@@ -165,15 +202,18 @@ void UDialogueManager::GetElementsFromData(TArray<FDialogueElement>& OutElements
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-bool UDialogueManager::CheckDialogueFromHandle(FActingDialogueHandle& Handle)
+bool UDialogueManager::CheckDialogueFromHandle(const FActingDialogueHandle& Handle)
 {
-	if(!Handle.IsValid()) return false;
+	LOG_INFO(TEXT("Check Dialogue Handle."));
+	if(!Handle.IsValid()) {
+		LOG_INFO(TEXT("Dialogue Handle Is Not Valid."));
+		return false;
+	}
 
 	FActingDialogueData* Data = ActingDialogueMap.Find(Handle);
 
 	if (Data == nullptr) {
 		LOG_ERROR(TEXT("Acting Dialogue Data Is nullptr."));
-		Handle.Invalidate();
 		return false;
 	}
 
@@ -189,12 +229,21 @@ bool UDialogueManager::CheckDialogueFromHandle(FActingDialogueHandle& Handle)
 
 
 
-EDialogueNodeType UDialogueManager::EnterNextNode(TArray<FDialogueElement>& OutElements, FActingDialogueHandle& Handle)
+EDialogueNodeType UDialogueManager::EnterNextNode(TArray<FDialogueElement>& OutElements, UDialoguerComponent* Dialoguer)
 {
-	FActingDialogueData* Data = GetActingDialogueData(Handle);
-	if(Data == nullptr) { return EDialogueNodeType::None; }
-	if(!IsCanEnterNextNode(Handle)) return EDialogueNodeType::None;
+	if(!IsValid(Dialoguer)) return EDialogueNodeType::None;
+	FActingDialogueHandle& Handle = Dialoguer->GetDialogueHandle();
 
+	FActingDialogueData* Data = GetActingDialogueData(Handle);
+	if(Data == nullptr) { 
+		LOG_ERROR(TEXT("Can't find ActingDialogueData."));
+		return EDialogueNodeType::None; 
+	}
+	if(!IsCanEnterNextNode(Handle))
+	{
+		LOG_ERROR(TEXT("Can't next Dialogue node."));
+		return EDialogueNodeType::None;
+	}
 	if (Data->CurrentNode->GetDialogueNodeType() == EDialogueNodeType::Question) {
 		LOG_ERROR(TEXT("Do Not Call this Function From Question Node."));
 		return EDialogueNodeType::None;
@@ -241,7 +290,7 @@ EDialogueNodeType UDialogueManager::EnterNextNode(TArray<FDialogueElement>& OutE
 
 /////////////////////////////////////// Events ///////////////////////////////////////////////////
 
-bool UDialogueManager::AddDialogueEvent(UDialogueEvent* NewEvent, FActingDialogueHandle& Handle)
+bool UDialogueManager::AddDialogueEvent(UDialogueEvent* NewEvent, const FActingDialogueHandle& Handle)
 {
 	if(!IsValid(NewEvent)) return false;
 
@@ -253,7 +302,7 @@ bool UDialogueManager::AddDialogueEvent(UDialogueEvent* NewEvent, FActingDialogu
 	return true;
 }
 
-bool UDialogueManager::RemoveDialogueEvent(UDialogueEvent* RemoveEvent, FActingDialogueHandle& Handle)
+bool UDialogueManager::RemoveDialogueEvent(UDialogueEvent* RemoveEvent, const FActingDialogueHandle& Handle)
 {
 	FActingDialogueData* Data = GetActingDialogueData(Handle);
 	if(Data == nullptr) return false;
@@ -261,6 +310,20 @@ bool UDialogueManager::RemoveDialogueEvent(UDialogueEvent* RemoveEvent, FActingD
 	if(Data->DialogueEvents.Remove(RemoveEvent) <= 0) return false;
 
 	return true;
+}
+
+void UDialogueManager::RegisterDialoguer(UDialoguerComponent* NewDialoguer)
+{
+	if(!IsValid(NewDialoguer) || DialoguerMap.Find(NewDialoguer->GetDialoguerID()) != nullptr) return;
+
+	DialoguerMap.Add(NewDialoguer->GetDialoguerID(), NewDialoguer);
+}
+
+void UDialogueManager::UnregisterDialoguer(UDialoguerComponent* TargetDialoguer)
+{
+	if (!IsValid(TargetDialoguer)) return;
+
+	DialoguerMap.Remove(TargetDialoguer->GetDialoguerID());
 }
 
 

@@ -36,7 +36,6 @@ public:
 	bool operator==(const FActingDialogueHandle& Other) const { return ID == Other.ID; }
 	bool operator!=(const FActingDialogueHandle& Other) const { return ID != Other.ID; }
 
-
 	friend uint32 GetTypeHash(const FActingDialogueHandle& InHandle)
 	{
 		return InHandle.ID;
@@ -79,36 +78,37 @@ private:
 	UDialogueManager() {}
 
 private:
-
 	uint32 GDialogueHandleID = 0;
 
 	TMap<FActingDialogueHandle, FActingDialogueData> ActingDialogueMap;
 	EDialogueLanguage CurrentLanguage = EDialogueLanguage::Korean;
 
+	TMap<FString, TWeakObjectPtr<UDialoguerComponent>> DialoguerMap;
+
 private:
 
-	void RemoveDialogue(FActingDialogueHandle Target);
+	void RemoveDialogue(const FActingDialogueHandle& Target);
 
 	bool GetElementFromNode(TArray<FDialogueElement>& OutElements, UDialogueNode_Basic* BasicNode) const;
 	void GetElementsFromData(TArray<FDialogueElement>& OutElements, FActingDialogueData* Data) const;
 
-	FActingDialogueData* GetActingDialogueData(FActingDialogueHandle& Handle);
+	FActingDialogueData* GetActingDialogueData(const FActingDialogueHandle& Handle);
 
 
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "DialogueManager")
-	FActingDialogueHandle EnterDialogue(TArray<UDialoguerComponent*> Dialoguers, UDialogueSession* Session);
+	FActingDialogueHandle EnterDialogue(const TArray<FString>& DialoguerIDs, UDialogueSession* Session);
 
 	UFUNCTION(BlueprintCallable, Category = "DialogueManager")
-	EDialogueNodeType EnterNextNode(TArray<FDialogueElement>& OutElements, UPARAM(ref) FActingDialogueHandle& Handle);
+	EDialogueNodeType EnterNextNode(TArray<FDialogueElement>& OutElements, UDialoguerComponent* Dialoguer);
 
 	void SetCurrentLanguage(EDialogueLanguage Lan) { CurrentLanguage = Lan; }
 
 	UFUNCTION(BlueprintCallable, Category = "DialoguerManager")
-	bool GetDialoguersInDialog(TArray<UDialoguerComponent*>& OutDialoguers, FActingDialogueHandle& Handle);
+	bool GetDialoguersInDialog(TArray<UDialoguerComponent*>& OutDialoguers, const FActingDialogueHandle& Handle);
 
-	bool CheckDialogueFromHandle(FActingDialogueHandle& Handle);
+	bool CheckDialogueFromHandle(const FActingDialogueHandle& Handle);
 
 	/////////////////Events
 private:
@@ -120,6 +120,9 @@ private:
 	bool IsCanEnterNextNode(FActingDialogueHandle& Handle);
 
 public:
-	bool AddDialogueEvent(UDialogueEvent* NewEvent, FActingDialogueHandle& Handle);
-	bool RemoveDialogueEvent(UDialogueEvent* RemoveEvent, FActingDialogueHandle& Handle);
+	bool AddDialogueEvent(UDialogueEvent* NewEvent, const FActingDialogueHandle& Handle);
+	bool RemoveDialogueEvent(UDialogueEvent* RemoveEvent, const FActingDialogueHandle& Handle);
+
+	void RegisterDialoguer(UDialoguerComponent* NewDialoguer);
+	void UnregisterDialoguer(UDialoguerComponent* TargetDialoguer);
 };

@@ -1,18 +1,23 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ActionPortfolioGameMode.h"
-#include "ActionPortfolioCharacter.h"
+#include "Character/Player/PlayerCharacter.h"
 #include "UObject/ConstructorHelpers.h"
-#include "ActionPFPlayerController.h"
+#include "Character/Player/ActionPFPlayerController.h"
 
 AActionPortfolioGameMode::AActionPortfolioGameMode()
 {
 	// set default pawn class to our Blueprinted character
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ActionPFCharacter/Player/Blueprints/BP_ThirdPersonCharacter.BP_ThirdPersonCharacter_C"));
 	if (PlayerPawnBPClass.Class != NULL)
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
 
-	PlayerControllerClass = AActionPFPlayerController::StaticClass();
+	static ConstructorHelpers::FClassFinder<APlayerController> BPPlayerControllerClass(TEXT("/Game/ActionPFCharacter/Player/Blueprints/BP_PlayerController.BP_PlayerController_C"));
+	if (BPPlayerControllerClass.Succeeded())
+	{
+		PlayerControllerClass = BPPlayerControllerClass.Class;
+	}
+
 }

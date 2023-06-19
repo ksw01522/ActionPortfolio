@@ -7,8 +7,8 @@
 #include "InteractionSystemComponent_NPC.generated.h"
 
 class AActionPFPlayerController;
-
-
+class UDialogueSession;
+class UDialoguerComponent;
 
 UCLASS(BlueprintType, meta = (BlueprintSpawnableComponent))
 class ACTIONPORTFOLIO_API UInteractionSystemComponent_NPC : public UInteractionSystemComponent
@@ -21,16 +21,37 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NPCInteraction", Instanced, meta = (AllowPrivateAccess = "true"))
 	TArray<UNPCInteract*> NPCInteractions;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NPCInteraction", meta = (AllowPrivateAccess = "true"))
+	TArray<UDialogueSession*> GreetingDialogueSession;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NPCInteraction", meta = (AllowPrivateAccess = "true"))
+	TArray<FString> ExtraDialoguerIDs;
+
+	TWeakObjectPtr<UDialoguerComponent> DialoguerComponent;
+
+private:
+	virtual bool CanInteract_CPP(AActor* InteractActor) const override;
+	virtual void Interact_CPP(AActor* InteractActor) override;
+
 protected:
 	virtual void BeginPlay() override;
 
-public:
-	virtual bool IsCanInteract_Implementation(AActor* InteractActor) const override;
-	virtual void Interact_Implementation(AActor* InteractActor) override;
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintNativeEvent, Category = "NPCInteraction")
-	FText GetGreetingDialogue() const;
-	virtual FText GetGreetingDialogue_Implementation() const {return FText::FromString(FString("Redefine GetGreetingDialogue Function.")); }
+public:
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "NPCInteraction")
+	UDialogueSession* GetGreetingDialogue(const AActionPFPlayerController* PlayerController) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "NPCInteraction")
+	const TArray<UNPCInteract*>& GetNPCInteractions() const {return NPCInteractions;}
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "NPCInteraction")
+	const TArray<UNPCInteract*> GetAbleNPCInteractions(class AActionPFPlayerController* PlayerController) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "NPCInteraction")
+	UDialoguerComponent* GetNPCDialoguerComponent();
+
+	void SetNPCDialoguerComponent(UDialoguerComponent* NewDialoguer);
 };
 
 
@@ -45,7 +66,7 @@ public:
 	UNPCInteract();
 
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NPCInteraction", BlueprintGetter = GetNPCInteractionName, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NPCInteraction", BlueprintGetter = GetNPCInteractionName, meta = (AllowPrivateAccess = "true"))
 	FText NPCInteractionName;
 
 	UInteractionSystemComponent_NPC* OwnerSystem;
@@ -75,11 +96,18 @@ class ACTIONPORTFOLIO_API UNPCInteract_Dialogue : public UNPCInteract
 public:
 	UNPCInteract_Dialogue();
 
-public:
-	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "NPCDialogue")
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NPCDialogue", meta = (AllowPrivateAccess = "true"))
 	class UDialogueSession* DialogueSession;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NPCDialouge", meta = (AllowPrivateAccess = "true"))
+	TArray<FString> ExtraDialoguerIDs;
+
+
 public:
-	virtual bool IsCanNPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const { return true; }
+
+public:
+	virtual bool IsCanNPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const;
+	virtual void NPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const;
 };
 

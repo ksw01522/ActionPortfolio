@@ -24,6 +24,8 @@ class DIALOGUERUNTIME_API UDialogueBFL : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 	
 public:
-	UFUNCTION(BlueprintCallable, Category = "Manager")
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "DialogueBFL|Manager")
 	static UDialogueManager* GetDialogueManager();
+
+
 };

@@ -100,7 +100,7 @@ void FDialogueEditor::HandleNewDialogueEventBlueprintCreated(UBlueprint* Bluepri
 	Blueprint->bForceFullEditor = true;
 	UK2Node_Event* EventNode = FDialogueEditorUtilities::BlueprintGetOrAddEvent(
 		Blueprint,
-		GET_FUNCTION_NAME_CHECKED(UDialogueEvent, CallEvent),
+		GET_FUNCTION_NAME_CHECKED(UDialogueEvent, OnCalledEvent),
 		UDialogueEvent::StaticClass()
 	);
 	if (EventNode)

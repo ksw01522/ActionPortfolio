@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "DialogueHeaders.h"
 #include "DialogueRuntime.h"
+#include "DialogueBFL.h"
 
 // Sets default values for this component's properties
 UDialoguerComponent::UDialoguerComponent()
@@ -23,13 +24,20 @@ void UDialoguerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-
-	
+	UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
+	if (IsValid(DialogueManager)) {
+		DialogueManager->RegisterDialoguer(this);
+	}
 }
 
 void UDialoguerComponent::BeginDestroy()
 {
 	Super::BeginDestroy();
+
+	UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
+	if (IsValid(DialogueManager)) {
+		DialogueManager->UnregisterDialoguer(this);
+	}
 }
 
 
@@ -45,6 +53,18 @@ void UDialoguerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 void UDialoguerComponent::OnEnteredDialogue(const FActingDialogueHandle& Handle)
 {
 	DialogueHandle = Handle;
+}
+
+bool UDialoguerComponent::IsInDialogue()
+{
+	if(!DialogueHandle.IsValid()) return false;
+
+	UDialogueManager* DialogueMag = UDialogueBFL::GetDialogueManager();
+	if(!IsValid(DialogueMag)) return false;
+
+	return DialogueMag->CheckDialogueFromHandle(DialogueHandle);
+
+	
 }
 
 

@@ -32,7 +32,7 @@ void UActionPFAbilitySystemComponent::GetActiveAbilitiesWithTags(const FGameplay
 	}
 }
 
-bool UActionPFAbilitySystemComponent::IsActingAbilityWithClass(TSubclassOf<UGameplayAbility> CheckAbility)
+bool UActionPFAbilitySystemComponent::IsActingAbilityByClass(TSubclassOf<UGameplayAbility> CheckAbility)
 {
 	const UGameplayAbility* AbilityCDO = CheckAbility.GetDefaultObject();
 

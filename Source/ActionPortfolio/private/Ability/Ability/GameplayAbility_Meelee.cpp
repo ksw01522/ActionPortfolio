@@ -23,7 +23,7 @@ UGameplayAbility_Meelee::UGameplayAbility_Meelee() : Super()
 	PlayLate = 1.f;
 }
 
-void UGameplayAbility_Meelee::OnEventRecevied(FGameplayEventData EventData)
+void UGameplayAbility_Meelee::OnEventReceived(FGameplayEventData EventData)
 {
 	FActionPFDamageStruct* DamageStruct = DamageMap.Find(EventData.EventTag);
 	if(DamageStruct == nullptr || EventData.Instigator.IsNull() || EventData.Target.IsNull()) return;
@@ -139,7 +139,7 @@ void UGameplayAbility_Meelee::ActivateAbility_CPP(const FGameplayAbilitySpecHand
 	MeeleeAbilityTask->OnBlendOut.AddDynamic(this, &UGameplayAbility_Meelee::OnMontageEnded);
 	MeeleeAbilityTask->OnInterrupted.AddDynamic(this, &UGameplayAbility_Meelee::OnMontageCancelled);
 	MeeleeAbilityTask->OnCancelled.AddDynamic(this, &UGameplayAbility_Meelee::OnMontageCancelled);
-	MeeleeAbilityTask->EventReceived.AddDynamic(this, &UGameplayAbility_Meelee::OnEventRecevied);
+	MeeleeAbilityTask->EventReceived.AddDynamic(this, &UGameplayAbility_Meelee::OnEventReceived);
 
 	MeeleeAbilityTask->ReadyForActivation();
 }

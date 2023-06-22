@@ -13,7 +13,8 @@
 				"SkillTreeRuntime",
 				"Engine",
 				"CoreUObject",
-				"GameplayAbilities"
+				"GameplayAbilities",
+				"AIModule"
 			]
 		},
 		{

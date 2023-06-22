@@ -26,7 +26,7 @@ public:
 public:
 
 	void GetActiveAbilitiesWithTags(const FGameplayTagContainer& GameplayTagContainer, TArray<UActionPFGameplayAbility*>& ActiveAbilities);
-	bool IsActingAbilityWithClass(TSubclassOf<UGameplayAbility> CheckAbility);
+	bool IsActingAbilityByClass(TSubclassOf<UGameplayAbility> CheckAbility);
 
 
 	static UActionPFAbilitySystemComponent* GetAbilitySystemComponentFromActor(const AActor* Actor, bool LookForComponent = false);

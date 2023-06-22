@@ -21,7 +21,7 @@
 	InstancedPerExecution
  };
 
-UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew, AutoExpandCategories = ("DialogueEvent"))
+UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew, DefaultToInstanced, AutoExpandCategories = ("DialogueEvent"))
 class DIALOGUERUNTIME_API UDialogueEvent : public UObject
 {
 	GENERATED_BODY()

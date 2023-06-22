@@ -39,9 +39,9 @@ protected:
 	TMap<FGameplayTag, FActionPFDamageStruct> DamageMap;
 
 
-private:
+protected:
 	UFUNCTION()
-	virtual void OnEventRecevied(FGameplayEventData EventData);
+	virtual void OnEventReceived(FGameplayEventData EventData);
 	UFUNCTION()
 	virtual void OnMontageEnded(FGameplayEventData EventData);
 	UFUNCTION()

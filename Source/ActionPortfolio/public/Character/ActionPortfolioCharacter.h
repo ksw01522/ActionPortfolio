@@ -9,6 +9,7 @@
 #include "ActiveGameplayEffectHandle.h"
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "GameplayEffect.h"
+#include "GenericTeamAgentInterface.h"
 #include "ActionPortfolioCharacter.generated.h"
 
 
@@ -70,7 +71,7 @@ public:
 };
 
 UCLASS(config=Game)
-class AActionPortfolioCharacter : public ACharacter, public IAbilitySystemInterface
+class AActionPortfolioCharacter : public ACharacter, public IAbilitySystemInterface, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -81,8 +82,7 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
 	class UActionPFAttributeSet* AttributeSet;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attributes", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<class UGameplayEffect> DefaultAttributes;
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
 	TArray<TSubclassOf<class UActionPFGameplayAbility>> CharacterAbilities;
@@ -93,10 +93,14 @@ private:
 	UPROPERTY(Transient)
 	TMap<FName, class UShapeComponent*> AttackShapeMap;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attributes")
+	TSubclassOf<class UGameplayEffect> DefaultAttributes;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
 	TArray<FName> AttackShapeTags;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HitReaction", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HitReaction")
 	FHitReactionAnimations HitReactionAnimations;
 
 	FOnMontageEnded DownRecoveryMontageEndedDelegate;
@@ -220,6 +224,18 @@ public:
 	virtual void Landed(const FHitResult& Hit);
 
 
+///////////////// Team //////////////////////////
+private:
+	FGenericTeamId TeamID;
 
+public:
+
+	/** Assigns Team Agent to given TeamID */
+	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override { TeamID = NewTeamID; };
+
+	/** Retrieve team identifier in form of FGenericTeamId */
+	virtual FGenericTeamId GetGenericTeamId() const override { return TeamID; }
+
+	virtual void PossessedBy(AController* NewController) override;
 };
 

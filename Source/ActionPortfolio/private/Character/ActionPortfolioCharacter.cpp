@@ -19,6 +19,8 @@
 #include "Ability/ActionPFGameplayAbility.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+#include "Character/Player/ActionPFPlayerController.h"
+
 //////////////////////////////////////////////////////////////////////////
 // AActionPortfolioCharacter
 
@@ -372,7 +374,7 @@ UShapeComponent* AActionPortfolioCharacter::GetAttackShape(FName AttackShapeTag)
 
 void AActionPortfolioCharacter::ActivateActionPFAbility(TSubclassOf<class UActionPFGameplayAbility> AbilityClass)
 {
-	if (AbilitySystem->IsActingAbilityWithClass(AbilityClass))
+	if (AbilitySystem->IsActingAbilityByClass(AbilityClass))
 	{
 
 		FGameplayAbilitySpec* AbilitySpec = AbilitySystem->FindAbilitySpecFromClass(AbilityClass);
@@ -407,6 +409,21 @@ void AActionPortfolioCharacter::Landed(const FHitResult& Hit)
 	
 	Super::Landed(Hit);
 }
+
+void AActionPortfolioCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	if (AActionPFPlayerController* PlayerController = Cast<AActionPFPlayerController>(NewController))
+	{
+		SetGenericTeamId(1);
+	}
+	else
+	{
+		SetGenericTeamId(2);
+	}
+}
+
 
 
 

@@ -38,6 +38,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee", meta = (AllowPrivateAccess = "true"))
 	TMap<FGameplayTag, FActionPFDamageStruct> DamageMap;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee", meta = (AllowPrivateAccess = "true"))
+	bool bBlockMoveInActing;
 
 protected:
 	UFUNCTION()
@@ -47,6 +49,7 @@ protected:
 	UFUNCTION()
 	virtual void OnMontageCancelled(FGameplayEventData EventData);
 
+	void OffBlockMove(UGameplayAbility* Ability);
 
 public:
 	virtual void ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;

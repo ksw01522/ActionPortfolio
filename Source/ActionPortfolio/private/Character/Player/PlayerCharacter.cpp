@@ -139,6 +139,8 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
+	if(!CanCharacterMove()) return;
+
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 

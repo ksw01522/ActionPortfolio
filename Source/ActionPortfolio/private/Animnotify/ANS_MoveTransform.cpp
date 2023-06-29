@@ -82,7 +82,5 @@ void UANS_MoveTransform::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSeque
 
 	FVector TempLocation = FMath::Lerp<FVector>(MeshOwnerActor->GetActorLocation(), GoalLocation, ActingTime / TotalAnimDuration);
 
-	MeshOwnerActor->SetActorLocation(TempLocation);
-
-	
+	MeshOwnerActor->TeleportTo(TempLocation, MeshOwnerActor->GetActorRotation());
 }

@@ -256,6 +256,18 @@ float AActionPortfolioCharacter::GetMaxHealth() const
 	return AttributeSet->GetMaxHealth();
 }
 
+bool AActionPortfolioCharacter::CanCharacterMove() const
+{
+	bool CanMove = true;
+	FGameplayTagContainer TagCon;
+	TagCon.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Death"));
+	TagCon.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Down"));
+	TagCon.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity"));
+	TagCon.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.BlockMove"));
+	CanMove = !AbilitySystem->HasAnyMatchingGameplayTags(TagCon);
+	return CanMove;
+}
+
 void AActionPortfolioCharacter::RemoveRigidityHandle()
 {
 	if (!RigidityHandle.IsValid()) {
@@ -406,7 +418,7 @@ void AActionPortfolioCharacter::Landed(const FHitResult& Hit)
 		SetDown(true);
 		GetMesh()->GetAnimInstance()->Montage_Play(HitReactionAnimations.Down);
 	}
-	
+
 	Super::Landed(Hit);
 }
 

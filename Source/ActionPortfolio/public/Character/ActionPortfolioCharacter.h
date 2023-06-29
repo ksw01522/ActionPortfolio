@@ -180,6 +180,8 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Attributes")
 	float GetMaxHealth() const;
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "State")
+	bool CanCharacterMove() const;
 
 ///////////////// Rigidity ///////////////////
 private:

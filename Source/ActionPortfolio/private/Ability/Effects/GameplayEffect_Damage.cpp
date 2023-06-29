@@ -3,6 +3,7 @@
 
 #include "Ability/Effects/GameplayEffect_Damage.h"
 #include "Ability/Effects/DamageExecutionCalculation.h"
+#include "Ability/Effects/RigidityExecutionCalculation.h"
 
 UGameplayEffect_Damage::UGameplayEffect_Damage()
 {
@@ -14,5 +15,12 @@ UGameplayEffect_Damage::UGameplayEffect_Damage()
 	DamageExecution.CalculationModifiers.Add(DEModifierInfo);
 	Executions.Add(DamageExecution);
 
-	ApplicationTagRequirements.IgnoreTags.AddTag(FGameplayTag::RequestGameplayTag("State.Immune.Damage"));
+	DEModifierInfo.TargetTags.IgnoreTags.AddTag(FGameplayTag::RequestGameplayTag("State.Immune.Damage"));
+
+	FGameplayEffectExecutionDefinition RigidityExecution;
+	RigidityExecution.CalculationClass = URigidityExecutionCalculation::StaticClass();
+	FGameplayEffectExecutionScopedModifierInfo REModifierInfo(FGameplayTag::RequestGameplayTag("Data.RigidityTime"));
+	REModifierInfo.ModifierOp = EGameplayModOp::Override;
+	RigidityExecution.CalculationModifiers.Add(REModifierInfo);
+	Executions.Add(RigidityExecution);
 }

@@ -52,58 +52,8 @@ void UGameplayAbility_Meelee::OnEventReceived(FGameplayEventData EventData)
 		}
 		
 	}
-
-	bool bForceDown = false;
-
-	EHitReactionDirection HitReactionDir = EHitReactionDirection::Front;
-
 	if (DamageStruct->Knockback != nullptr) {
 		DamageStruct->Knockback->KnockbackEffect(EventData.Instigator.Get(), EventData.Target.Get());
-		bForceDown = DamageStruct->Knockback->IsForceDown();
-
-		if (TargetCharacter) {
-			FVector KnockbackDir = DamageStruct->Knockback->GetKnockbackVector(EventData.Instigator.Get(), EventData.Target.Get());
-			KnockbackDir.Z = 0;
-			KnockbackDir.Normalize();
-
-			bool bIsRight = true;
-
-			FVector TargetForward = TargetCharacter->GetActorForwardVector();
-			TargetForward.Z = 0;
-			TargetForward.Normalize();
-
-			float DotP = FVector::DotProduct(KnockbackDir, TargetForward);
-			if (0.707 <= DotP) {
-				HitReactionDir = EHitReactionDirection::Back;
-			}
-			else if(DotP <= -0.707)
-			{
-				HitReactionDir = EHitReactionDirection::Front;
-			}
-			else
-			{
-				FVector Cross = FVector::CrossProduct(TargetForward, KnockbackDir);
-
-				double temp = FVector::DotProduct(Cross, FVector::UpVector);
-				bIsRight = 0 < temp;
-
-				if (bIsRight) {
-					HitReactionDir = EHitReactionDirection::Left;
-				}
-				else {
-					HitReactionDir = EHitReactionDirection::Right;
-				}
-			}
-		}
-
-		
-	}
-
-	
-
-	if (TargetCharacter) {
-		TargetCharacter->CharacterRigidity(DamageStruct->RigidityTime);
-		TargetCharacter->HitReact(HitReactionDir, bForceDown);
 	}
 }
 
@@ -125,6 +75,11 @@ void UGameplayAbility_Meelee::OnMontageCancelled(FGameplayEventData EventData)
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
+void UGameplayAbility_Meelee::OffBlockMove(UGameplayAbility* Ability)
+{
+	GetCurrentActorInfo()->AbilitySystemComponent->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.BlockMove"));
+}
+
 void UGameplayAbility_Meelee::ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo)) 
@@ -142,6 +97,12 @@ void UGameplayAbility_Meelee::ActivateAbility_CPP(const FGameplayAbilitySpecHand
 	MeeleeAbilityTask->EventReceived.AddDynamic(this, &UGameplayAbility_Meelee::OnEventReceived);
 
 	MeeleeAbilityTask->ReadyForActivation();
+
+	if (bBlockMoveInActing)
+	{
+		GetCurrentActorInfo()->AbilitySystemComponent->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.BlockMove"));
+		OnGameplayAbilityEnded.AddUObject(this, &UGameplayAbility_Meelee::OffBlockMove);
+	}
 }
 
 bool UGameplayAbility_Meelee::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const

@@ -66,7 +66,4 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
 	TSubclassOf<class UGameplayEffect_Damage> DamageEffectClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
-	float RigidityTime;
 };

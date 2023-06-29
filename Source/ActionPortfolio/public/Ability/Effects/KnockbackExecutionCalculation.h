@@ -31,10 +31,13 @@ protected:
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Knockback")
-	virtual FVector GetKnockbackVector(const class AActor* Instigator, const AActor* Target) {return FVector::ZeroVector;}
+	virtual FVector GetKnockbackVector(const class AActor* Instigator, const AActor* Target) const {return FVector::ZeroVector;}
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Knockback")
+	FGameplayEffectSpecHandle MakeEffectSpecHandle(const AActor* Instigator, const AActor* Target) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Knockback")
-	void KnockbackEffect(const AActor* Instigator, const AActor* Target);
+	void KnockbackEffect(const AActor* Instigator, const AActor* Target) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Knockback")
 	bool IsForceDown() const {return bForceDown;};
@@ -48,14 +51,13 @@ public:
 	UKncokback_Forward() {}
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Knockback")
-	float FlyStrength;
+
 
 public:
-	virtual FVector GetKnockbackVector(const class AActor* Instigator, const AActor* Target) override;
+	virtual FVector GetKnockbackVector(const class AActor* Instigator, const AActor* Target) const override;
 };
 
-UCLASS()
+UCLASS(Abstract)
 class ACTIONPORTFOLIO_API UKnockbackExecutionCalculation : public UGameplayEffectExecutionCalculation
 {
 	GENERATED_BODY()
@@ -63,4 +65,7 @@ public:
 	UKnockbackExecutionCalculation();
 
 	virtual void Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, OUT FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const override;
+
+private:
+	virtual FVector MakeKnockbackVector() const;
 };

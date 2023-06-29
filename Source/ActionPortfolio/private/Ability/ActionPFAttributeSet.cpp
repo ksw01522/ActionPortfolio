@@ -48,6 +48,7 @@ void UActionPFAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
     {
         float LocalDamage = GetDamage();
         SetDamage(0);
+        PFLOG(Warning, TEXT("Damage = %.1f"), LocalDamage);
 
         // IsDie
         if(GetHealth() <= 0) return;

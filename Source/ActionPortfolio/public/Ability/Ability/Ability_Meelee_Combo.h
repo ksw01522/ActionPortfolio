@@ -26,15 +26,14 @@ public:
 	bool bCanNextComboFromAI;
 
 protected:
-	UFUNCTION()
-	virtual void OnReactiveEvent(FGameplayEventData EventData);
-
-	UFUNCTION()
-	virtual void OnMeeleeComboEnded(UGameplayAbility* Ability);
 
 	virtual void OnEventReceived(FGameplayEventData EventData) override;
 
 
 public:
 	virtual void ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void ReactivateAbility();
+
+	virtual bool CanReactivateAbility() const override { return true; };
+
 };

@@ -44,3 +44,4 @@ AChracterEnemyA::AChracterEnemyA()
 		DefaultAttributes = EnemyADefaultAttribute.Class;
 	}
 }
+

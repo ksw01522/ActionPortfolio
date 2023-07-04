@@ -4,25 +4,25 @@
 
 #include "CoreMinimal.h"
 #include "Character/ActionPortfolioCharacter.h"
-#include "ChracterEnemyA.generated.h"
+#include "CharacterBoss.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class ACTIONPORTFOLIO_API AChracterEnemyA : public AActionPortfolioCharacter
+class ACTIONPORTFOLIO_API ACharacterBoss : public AActionPortfolioCharacter
 {
 	GENERATED_BODY()
 	
+	ACharacterBoss();
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
 	class UBoxComponent* LeftPunchBox;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* RightPunchBox;
-
-public:
-	AChracterEnemyA();
-
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss", meta = (AllowPrivateAccess = "true"))
+	float StunTime;
 };

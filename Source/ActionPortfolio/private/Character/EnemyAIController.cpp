@@ -16,7 +16,7 @@
 
 #include "Character/ActionPortfolioCharacter.h"
 
-const FName AEnemyAIController::FocusedHostileTargetKey(TEXT("FocusedHostileTargetKey"));
+const FName AEnemyAIController::FocusedHostileTargetKey(TEXT("FocusedHostileTarget"));
 
 AEnemyAIController::AEnemyAIController()
 {
@@ -32,11 +32,11 @@ void AEnemyAIController::ConstructPerceptionSystem()
 
 	//½Ã¾ß
 	Sight_Config = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("Sight Config"));
-	Sight_Config->SightRadius = 12000.f;
-	Sight_Config->LoseSightRadius = Sight_Config->SightRadius + 200.f;
-	Sight_Config->PeripheralVisionAngleDegrees = 100.f;
-	Sight_Config->SetMaxAge(5.f);
-	Sight_Config->AutoSuccessRangeFromLastSeenLocation = 300.f;
+	Sight_Config->SightRadius = 1400.f;
+	Sight_Config->LoseSightRadius = Sight_Config->SightRadius + 400.f;
+	Sight_Config->PeripheralVisionAngleDegrees = 180.f;
+	Sight_Config->SetMaxAge(3.f);
+	Sight_Config->AutoSuccessRangeFromLastSeenLocation = 200.f;
 	Sight_Config->DetectionByAffiliation.bDetectEnemies = true;
 	Sight_Config->DetectionByAffiliation.bDetectFriendlies = false;
 	Sight_Config->DetectionByAffiliation.bDetectNeutrals = false;
@@ -86,8 +86,6 @@ void AEnemyAIController::OnTargetDetected(AActor* actor, FAIStimulus const stimu
 	
 }
 
-
-
 void AEnemyAIController::RemoveDetectedHostileTarget(AActor* Target)
 {
 	DetectedHostileTargets.Remove(Target);
@@ -101,9 +99,14 @@ void AEnemyAIController::RemoveDetectedHostileTarget(AActor* Target)
 	}
 }
 
+
 void AEnemyAIController::OnHostileTargetDetected(AActor* NewTarget)
 {
 	if(!IsValid(NewTarget)) return;
+
+#if WITH_EDITOR
+	PFLOG(Warning, TEXT("Add Hostile Target Name : %s"), *NewTarget->GetFName().ToString());
+#endif
 
 	DetectedHostileTargets.AddUnique(NewTarget);
 
@@ -113,6 +116,10 @@ void AEnemyAIController::OnHostileTargetDetected(AActor* NewTarget)
 	}
 	else
 	{
+#if WITH_EDITOR
+		PFLOG(Warning, TEXT("Focus Hostile Target Name : %s"), *NewTarget->GetFName().ToString());
+#endif
+
 		GetBlackboardComponent()->SetValueAsObject(FocusedHostileTargetKey, NewTarget);
 	}	
 }
@@ -123,6 +130,7 @@ void AEnemyAIController::FocusOtherTarget()
 {
 	if (DetectedHostileTargets.IsEmpty()) {
 		GetBlackboardComponent()->SetValueAsObject(FocusedHostileTargetKey, nullptr);
+		return;
 	}
 
 	int RandIdx = FMath::Rand() % DetectedHostileTargets.Num();
@@ -131,8 +139,16 @@ void AEnemyAIController::FocusOtherTarget()
 		RemoveNotValidHostileTargets();
 		RandIdx = FMath::Rand() % DetectedHostileTargets.Num();
 	}
-
-	GetBlackboardComponent()->SetValueAsObject(FocusedHostileTargetKey, DetectedHostileTargets[RandIdx].Get());
+	if (DetectedHostileTargets.IsValidIndex(RandIdx))
+	{
+		GetBlackboardComponent()->SetValueAsObject(FocusedHostileTargetKey, DetectedHostileTargets[RandIdx].Get());
+		
+		#if WITH_EDITOR
+		if (DetectedHostileTargets[RandIdx].IsValid()) {
+			PFLOG(Warning,TEXT("Focus Hostile Target : %s."), *DetectedHostileTargets[RandIdx]->GetFName().ToString());
+		}
+		#endif
+	}
 }
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
@@ -184,5 +200,12 @@ void AEnemyAIController::RemoveNotValidHostileTargets()
 void AEnemyAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	AActionPortfolioCharacter* PossesChar = GetPawn<AActionPortfolioCharacter>();
+	if (IsValid(PossesChar))
+	{
+		GetBlackboardComponent()->SetValueAsBool("CanBasicAct", PossesChar->CanBasicAct());
+	}
+
 }
 

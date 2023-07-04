@@ -28,4 +28,7 @@ protected:
 
 private:
 	virtual FString GetStaticDescription() const override;
+
+
+
 };

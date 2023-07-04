@@ -12,15 +12,19 @@ UGameplayEffect_Damage::UGameplayEffect_Damage()
 	FGameplayEffectExecutionScopedModifierInfo DEModifierInfo(FGameplayTag::RequestGameplayTag("Data.Damage"));
 	DEModifierInfo.ModifierOp = EGameplayModOp::Override;
 	DEModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(0.0f);
+	DEModifierInfo.TargetTags.IgnoreTags.AddTag(FGameplayTag::RequestGameplayTag("State.Immune.Damage"));
 	DamageExecution.CalculationModifiers.Add(DEModifierInfo);
 	Executions.Add(DamageExecution);
 
-	DEModifierInfo.TargetTags.IgnoreTags.AddTag(FGameplayTag::RequestGameplayTag("State.Immune.Damage"));
 
 	FGameplayEffectExecutionDefinition RigidityExecution;
 	RigidityExecution.CalculationClass = URigidityExecutionCalculation::StaticClass();
 	FGameplayEffectExecutionScopedModifierInfo REModifierInfo(FGameplayTag::RequestGameplayTag("Data.RigidityTime"));
 	REModifierInfo.ModifierOp = EGameplayModOp::Override;
+	REModifierInfo.TargetTags.IgnoreTags.AddTag(FGameplayTag::RequestGameplayTag("State.Immune.Rigidity"));
 	RigidityExecution.CalculationModifiers.Add(REModifierInfo);
 	Executions.Add(RigidityExecution);
+
+	ApplicationTagRequirements.IgnoreTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Death"));
+	ApplicationTagRequirements.IgnoreTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Down"));
 }

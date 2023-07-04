@@ -26,7 +26,10 @@ void UANS_MoveTransform::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequ
 	switch (TransformPolicy)
 	{
 	case EMoveTransformPolicy::Relative:
-		GoalLocation = ActorLocation + RelativeTargetLocation;
+		GoalLocation = ActorLocation;
+		GoalLocation += RelativeTargetLocation.X * MeshOwnerActor->GetActorForwardVector();
+		GoalLocation += RelativeTargetLocation.Y * MeshOwnerActor->GetActorRightVector();
+		GoalLocation += RelativeTargetLocation.Z * FVector::UpVector;
 		GoalRotation = ActorRotation + RelativeTargetRotation;
 		MeshOwnerActor->SetActorRotation(GoalRotation);
 		break;
@@ -82,5 +85,5 @@ void UANS_MoveTransform::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSeque
 
 	FVector TempLocation = FMath::Lerp<FVector>(MeshOwnerActor->GetActorLocation(), GoalLocation, ActingTime / TotalAnimDuration);
 
-	MeshOwnerActor->TeleportTo(TempLocation, MeshOwnerActor->GetActorRotation());
+	if(FAISystem::IsValidLocation(TempLocation))	MeshOwnerActor->TeleportTo(TempLocation, MeshOwnerActor->GetActorRotation());
 }

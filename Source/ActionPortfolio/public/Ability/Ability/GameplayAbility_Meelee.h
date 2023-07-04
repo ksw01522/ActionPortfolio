@@ -36,7 +36,7 @@ protected:
 	FGameplayTagContainer EventTagContainer;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee", meta = (AllowPrivateAccess = "true"))
-	TMap<FGameplayTag, FActionPFDamageStruct> DamageMap;
+	TMap<FGameplayTag, FActionPFEffectContainer> DamageMap;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee", meta = (AllowPrivateAccess = "true"))
 	bool bBlockMoveInActing;

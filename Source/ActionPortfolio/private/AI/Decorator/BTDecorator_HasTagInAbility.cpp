@@ -5,10 +5,17 @@
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "Character/ActionPortfolioCharacter.h"
 #include "Character/EnemyAIController.h"
+#include "ActionPortfolio.h"
 
 UBTDecorator_HasTagInAbility::UBTDecorator_HasTagInAbility()
 {
 	NodeName = "Has Tag In AbilitySystem";
+
+	bNotifyTick = false;
+
+	bAllowAbortNone = false;
+	bAllowAbortLowerPri = false;
+	bAllowAbortChildNodes = false;
 }
 
 bool UBTDecorator_HasTagInAbility::CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const
@@ -50,3 +57,6 @@ FString UBTDecorator_HasTagInAbility::GetStaticDescription() const
 	}
 
 }
+
+
+

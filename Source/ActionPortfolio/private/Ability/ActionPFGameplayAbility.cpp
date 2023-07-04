@@ -18,21 +18,6 @@ TArray<FGameplayEffectSpecHandle> UActionPFGameplayAbility::MakeEffectSpecHandle
 	return ReturnArray;
 }
 
-bool UActionPFGameplayAbility::CanReactivateAbility() const
-{
-	if (ReactivateEventTag == FGameplayTag::EmptyTag) return false;
-
-	UActionPFAbilitySystemComponent* AbilitySystem = Cast<UActionPFAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
-	if (!IsValid(AbilitySystem))
-	{
-		PFLOG(Warning, TEXT("Can't find AbilitySystemComponent."));
-		return false;
-	}
-
-
-	return AbilitySystem->HasMatchingGameplayTag(ReactivateEventTag);
-}
-
 void UActionPFGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	if (bHasBlueprintActivate)
@@ -62,4 +47,9 @@ void UActionPFGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 void UActionPFGameplayAbility::ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 
+}
+
+void UActionPFGameplayAbility::ReactivateAbility()
+{
+	
 }

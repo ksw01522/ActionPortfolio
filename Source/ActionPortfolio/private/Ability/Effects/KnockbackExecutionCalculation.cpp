@@ -28,51 +28,46 @@ void UKnockbackExecutionCalculation::Execute_Implementation(const FGameplayEffec
 	if(!IsValid(TargetCharacter)) return;
 	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();
 
-	FVector KnockbackVector(0,0,0);
-	KnockbackVector.X = FMath::Max<float>(Spec.GetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.X"), false, 0), 0);
-	KnockbackVector.Y = FMath::Max<float>(Spec.GetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.Y"), false, 0), 0);
-	KnockbackVector.Z = FMath::Max<float>(Spec.GetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.Z"), false, 0), 0);
-	float ForceDown = Spec.GetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.ForceDown"), false);
-	if(ForceDown <= 0 && !TargetCharacter->GetCharacterMovement()->IsFalling()) KnockbackVector.Z = 0;
+	FVector KnockbackVector = MakeKnockbackVector(ExecutionParams);
 
 	EHitReactionDirection HitReactionDir = EHitReactionDirection::Front;
-
-	FVector KnockbackDir = KnockbackVector;
-	KnockbackDir.Z = 0;
-	KnockbackDir.Normalize();
-
-	bool bIsRight = true;
-
-	FVector TargetForward = TargetCharacter->GetActorForwardVector();
-	TargetForward.Z = 0;
-	TargetForward.Normalize();
-
-	float DotP = FVector::DotProduct(KnockbackDir, TargetForward);
-	if (0.707 <= DotP) {
-		HitReactionDir = EHitReactionDirection::Back;
-	}
-	else if (DotP <= -0.707)
-	{
-		HitReactionDir = EHitReactionDirection::Front;
-	}
-	else
-	{
-		FVector Cross = FVector::CrossProduct(TargetForward, KnockbackDir);
-
-		double temp = FVector::DotProduct(Cross, FVector::UpVector);
-		bIsRight = 0 < temp;
-
-		if (bIsRight) {
-			HitReactionDir = EHitReactionDirection::Left;
-		}
-		else {
-			HitReactionDir = EHitReactionDirection::Right;
-		}
-	}
 
 
 	if (!KnockbackVector.IsNearlyZero())
 	{
+		FVector KnockbackDir = KnockbackVector;
+		KnockbackDir.Z = 0;
+		KnockbackDir.Normalize();
+
+		bool bIsRight = true;
+
+		FVector TargetForward = TargetCharacter->GetActorForwardVector();
+		TargetForward.Z = 0;
+		TargetForward.Normalize();
+
+		float DotP = FVector::DotProduct(KnockbackDir, TargetForward);
+		if (0.707 <= DotP) {
+			HitReactionDir = EHitReactionDirection::Back;
+		}
+		else if (DotP <= -0.707)
+		{
+			HitReactionDir = EHitReactionDirection::Front;
+		}
+		else
+		{
+			FVector Cross = FVector::CrossProduct(TargetForward, KnockbackDir);
+
+			double temp = FVector::DotProduct(Cross, FVector::UpVector);
+			bIsRight = 0 < temp;
+
+			if (bIsRight) {
+				HitReactionDir = EHitReactionDirection::Left;
+			}
+			else {
+				HitReactionDir = EHitReactionDirection::Right;
+			}
+		}
+
 		FVector CurrentVel = TargetCharacter->GetCharacterMovement()->Velocity;
 		TargetCharacter->GetCharacterMovement()->AddImpulse(KnockbackVector - CurrentVel, true);
 	}
@@ -80,65 +75,47 @@ void UKnockbackExecutionCalculation::Execute_Implementation(const FGameplayEffec
 	TargetCharacter->HitReact(HitReactionDir, KnockbackVector.Z != 0);
 }
 
-FVector UKnockbackExecutionCalculation::MakeKnockbackVector() const
+UKncokback_Forward::UKncokback_Forward()
 {
-	return FVector(0, 0, 0);
+	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("Data.Knockback.Forward.Strength"));
+	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("Data.Knockback.Forward.ZStrength"));
+	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("Data.Knockback.Forward.bForceDown"));
 }
 
-
-FVector UKncokback_Forward::GetKnockbackVector(const AActor* Instigator, const AActor* Target) const
+FVector UKncokback_Forward::MakeKnockbackVector(const FGameplayEffectCustomExecutionParameters& ExecutionParams) const
 {
-	const ACharacter* TargetCharacter = Cast<ACharacter>(Target);
+	FVector KnockbackVector;
 
-	FVector Direction = Instigator->GetActorForwardVector();
-	Direction.Z = 0;
-	Direction.Normalize();
-	Direction = Direction * KnockbackStrength;
-	Direction.Z = FlyStrength;
+	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();
+	AActor* EffectInstigator = Spec.GetEffectContext().GetInstigator();
+	
+	UAbilitySystemComponent* TargetAbilitySystemComponent = ExecutionParams.GetTargetAbilitySystemComponent();
 
-	return Direction;
-}
+	AActor* TargetActor = TargetAbilitySystemComponent ? TargetAbilitySystemComponent->GetAvatarActor() : nullptr;
+	AActionPortfolioCharacter* TargetCharacter = Cast<AActionPortfolioCharacter>(TargetActor);
 
+	const FGameplayTagContainer* SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
+	const FGameplayTagContainer* TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
 
-void UActionPFKnockbackObject::KnockbackEffect(const AActor* Instigator, const AActor* Target) const
-{
-	UAbilitySystemComponent* SourceAbilitySystem = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Instigator);
-	UAbilitySystemComponent* TargetAbilitySystem = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-	if (!IsValid(SourceAbilitySystem) || !IsValid(TargetAbilitySystem)) return;
+	FAggregatorEvaluateParameters EvaluationParameters;
+	EvaluationParameters.SourceTags = SourceTags;
+	EvaluationParameters.TargetTags = TargetTags;
 
-	FGameplayEffectSpecHandle NewHandle = MakeEffectSpecHandle(Instigator, Target);
+	float Strength;
+	ExecutionParams.AttemptCalculateTransientAggregatorMagnitude(FGameplayTag::RequestGameplayTag("Data.Knockback.Forward.Strength"), EvaluationParameters, Strength);
+	
+	float bForceDown = 0;
+	ExecutionParams.AttemptCalculateTransientAggregatorMagnitude(FGameplayTag::RequestGameplayTag("Data.Knockback.Forward.bForceDown"), EvaluationParameters, bForceDown);
 
-	if (NewHandle.IsValid())
-	{
-		FActiveGameplayEffectHandle ActiveGEHandle = SourceAbilitySystem->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), TargetAbilitySystem);
+	KnockbackVector = EffectInstigator->GetActorForwardVector();
+
+	KnockbackVector *= Strength;
+	if (0 < bForceDown || TargetCharacter->GetCharacterMovement()->IsFalling()) {
+		float ZStrength;
+		ExecutionParams.AttemptCalculateTransientAggregatorMagnitude(FGameplayTag::RequestGameplayTag("Data.Knockback.Forward.ZStrength"), EvaluationParameters, ZStrength);
+
+		KnockbackVector.Z = ZStrength;
 	}
-}
 
-FGameplayEffectSpecHandle UActionPFKnockbackObject::MakeEffectSpecHandle(const AActor* Instigator, const AActor* Target) const
-{
-	UAbilitySystemComponent* SourceAbilitySystem = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Instigator);
-	UAbilitySystemComponent* TargetAbilitySystem = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-	if (!IsValid(SourceAbilitySystem) || !IsValid(TargetAbilitySystem)) return FGameplayEffectSpecHandle();
-
-	FVector KnockbackVector = GetKnockbackVector(Instigator, Target);
-	UGameplayEffect* KnockbackEffect = NewObject<UGameplayEffect>(GetTransientPackage(), "Knockback");
-
-	FGameplayEffectExecutionDefinition KnockbackEffectExecution;
-	KnockbackEffectExecution.CalculationClass = UKnockbackExecutionCalculation::StaticClass();
-	KnockbackEffect->Executions.Add(KnockbackEffectExecution);
-
-	KnockbackEffect->ApplicationTagRequirements.IgnoreTags.AddTag(FGameplayTag::RequestGameplayTag("State.Immune.Knockback"));
-
-	FGameplayEffectContextHandle EffectContext = SourceAbilitySystem->MakeEffectContext();
-	EffectContext.AddSourceObject(SourceAbilitySystem->GetOwnerActor());
-
-	FGameplayEffectSpec* NewSpec = new FGameplayEffectSpec(KnockbackEffect, EffectContext, 1);
-	NewSpec->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.X"), KnockbackVector.X);
-	NewSpec->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.Y"), KnockbackVector.Y);
-	NewSpec->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.Z"), KnockbackVector.Z);
-	NewSpec->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.ForceDown"), bForceDown);
-
-	FGameplayEffectSpecHandle NewHandle(NewSpec);
-
-	return NewHandle;
+	return KnockbackVector;
 }

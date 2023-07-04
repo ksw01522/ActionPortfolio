@@ -28,7 +28,7 @@ private:
 	TArray<TWeakObjectPtr<AActor>> DetectedHostileTargets;
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AIPerception, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AIPerception)
 	class UAIPerceptionComponent* AIPerception;
 
 	UPROPERTY()

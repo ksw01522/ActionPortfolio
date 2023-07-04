@@ -36,5 +36,6 @@ void URigidityExecutionCalculation::Execute_Implementation(const FGameplayEffect
 
 	if (TargetActor) {
 		TargetActor->CharacterRigidity(RigidityTime);
+		TargetActor->HitReact(EHitReactionDirection::Front, false);
 	}
 }

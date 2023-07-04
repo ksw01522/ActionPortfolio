@@ -25,8 +25,8 @@ UGameplayAbility_Meelee::UGameplayAbility_Meelee() : Super()
 
 void UGameplayAbility_Meelee::OnEventReceived(FGameplayEventData EventData)
 {
-	FActionPFDamageStruct* DamageStruct = DamageMap.Find(EventData.EventTag);
-	if(DamageStruct == nullptr || EventData.Instigator.IsNull() || EventData.Target.IsNull()) return;
+	FActionPFEffectContainer* EffectsToApply = DamageMap.Find(EventData.EventTag);
+	if(EffectsToApply == nullptr || EffectsToApply->EffectClasses.IsEmpty() || EventData.Instigator.IsNull() || EventData.Target.IsNull()) return;
 
 	UActionPFAbilitySystemComponent* SourceAbilitySystem = Cast<UActionPFAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	UActionPFAbilitySystemComponent* TargetAbilitySystem = nullptr;
@@ -38,22 +38,17 @@ void UGameplayAbility_Meelee::OnEventReceived(FGameplayEventData EventData)
 
 	if (!IsValid(SourceAbilitySystem) || !IsValid(TargetAbilitySystem)) return;
 	AActionPortfolioCharacter* TargetCharacter = Cast<AActionPortfolioCharacter>(TargetAbilitySystem->GetOwnerActor());
+	
+	FGameplayEffectContextHandle EffectContext = SourceAbilitySystem->MakeEffectContext();
+	EffectContext.AddSourceObject(GetCurrentSourceObject());
 
-
-	if (DamageStruct->DamageEffectClass.Get() != nullptr) {
-
-		FGameplayEffectContextHandle EffectContext = SourceAbilitySystem->MakeEffectContext();
-		EffectContext.AddSourceObject(GetCurrentSourceObject());
-		
-		FGameplayEffectSpecHandle NewHandle = SourceAbilitySystem->MakeOutgoingSpec(DamageStruct->DamageEffectClass, GetAbilityLevel(), EffectContext);
+	for (auto EffectToApply : EffectsToApply->EffectClasses)
+	{
+		FGameplayEffectSpecHandle NewHandle = SourceAbilitySystem->MakeOutgoingSpec(EffectToApply, GetAbilityLevel(), EffectContext);
 		if (NewHandle.IsValid())
 		{
 			FActiveGameplayEffectHandle ActiveGEHandle = SourceAbilitySystem->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), TargetAbilitySystem);
 		}
-		
-	}
-	if (DamageStruct->Knockback != nullptr) {
-		DamageStruct->Knockback->KnockbackEffect(EventData.Instigator.Get(), EventData.Target.Get());
 	}
 }
 

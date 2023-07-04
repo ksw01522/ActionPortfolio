@@ -47,6 +47,29 @@ bool UActionPFAbilitySystemComponent::IsActingAbilityByClass(TSubclassOf<UGamepl
 	return false;
 }
 
+bool UActionPFAbilitySystemComponent::TryActivatePFAbilityByClass(TSubclassOf<class UActionPFGameplayAbility> AbilityClass)
+{
+	if (IsActingAbilityByClass(AbilityClass))
+	{
+		FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromClass(AbilityClass);
+		if (AbilitySpec == nullptr || AbilitySpec->GetAbilityInstances().IsEmpty()) {
+			return false;
+		}
+
+		UActionPFGameplayAbility* ActionPFAbilityInstance = Cast<UActionPFGameplayAbility>(AbilitySpec->GetAbilityInstances()[0]);
+		if (ActionPFAbilityInstance == nullptr || !ActionPFAbilityInstance->CanReactivateAbility()) {
+			return false;
+		}
+
+		ActionPFAbilityInstance->ReactivateAbility();
+		return true;
+	}
+	else
+	{
+		return TryActivateAbilityByClass(AbilityClass);
+	}
+}
+
 
 
 UActionPFAbilitySystemComponent* UActionPFAbilitySystemComponent::GetAbilitySystemComponentFromActor(const AActor* Actor, bool LookForComponent)

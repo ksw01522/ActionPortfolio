@@ -45,28 +45,5 @@ void UAbility_GutPunch::OnImpactSpawnEventReceived(FGameplayEventData EventData)
 	FGameplayEffectSpecHandle ImpactDamageSpecHandle = MakeOutgoingGameplayEffectSpec(ImpactDamageEffectClass, GetAbilityLevel());
 	ImpactActor->EffectSpecHandles.Add(ImpactDamageSpecHandle);
 
-	UGameplayEffect* KnockbackEffect = NewObject<UGameplayEffect>(GetTransientPackage());
-	FGameplayEffectExecutionDefinition KnockbackEffectExecution;
-	KnockbackEffectExecution.CalculationClass = UKnockbackExecutionCalculation::StaticClass();
-	KnockbackEffect->Executions.Add(KnockbackEffectExecution);
-
-	KnockbackEffect->ApplicationTagRequirements.IgnoreTags.AddTag(FGameplayTag::RequestGameplayTag("State.Immune.Knockback"));
-
-	FGameplayEffectContextHandle EffectContext = GetAbilitySystemComponentFromActorInfo()->MakeEffectContext();
-	EffectContext.AddSourceObject(GetCurrentSourceObject());
-
-	FVector KnockbackVector = GetAvatarActorFromActorInfo()->GetActorForwardVector();
-	KnockbackVector *= KnockbackStrength;
-	KnockbackVector.Z = KnockbackZStrength;
-
-	FGameplayEffectSpec* KnockbackSpec = new FGameplayEffectSpec(KnockbackEffect, EffectContext, 1);
-	KnockbackSpec->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.X"), KnockbackVector.X);
-	KnockbackSpec->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.Y"), KnockbackVector.Y);
-	KnockbackSpec->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.Z"), KnockbackVector.Z);
-	KnockbackSpec->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.KnockbackVector.ForceDown"), true);
-
-	FGameplayEffectSpecHandle KnockbackSpecHandle(KnockbackSpec);
-	ImpactActor->EffectSpecHandles.Add(KnockbackSpecHandle);
-
 	ImpactActor->FinishSpawning(FinalImpactSpawnTransform);
 }

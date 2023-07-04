@@ -42,7 +42,7 @@ AActionPortfolioCharacter::AActionPortfolioCharacter()
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	GetCharacterMovement()->MaxWalkSpeed = 350.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 
@@ -331,6 +331,7 @@ void AActionPortfolioCharacter::BeginPlay()
 
 	InitializeAbilitySystem();
 	InitForAttackShape();
+	InitializeMovement();
 }
 
 void AActionPortfolioCharacter::Tick(float DeltaSeconds)
@@ -341,6 +342,11 @@ void AActionPortfolioCharacter::Tick(float DeltaSeconds)
 
 	if (RigidityHandle.IsValid()) {
 		RigidityTime -= DeltaSeconds;
+
+		if (IsInAir())
+		{
+			RigidityTime = FMath::Max<float>(RigidityTime, 1);
+		}
 
 		if (RigidityTime <= 0.0f) {
 			RemoveRigidityHandle();
@@ -386,35 +392,19 @@ UShapeComponent* AActionPortfolioCharacter::GetAttackShape(FName AttackShapeTag)
 
 void AActionPortfolioCharacter::ActivateActionPFAbility(TSubclassOf<class UActionPFGameplayAbility> AbilityClass)
 {
-	if (AbilitySystem->IsActingAbilityByClass(AbilityClass))
-	{
+	AbilitySystem->TryActivatePFAbilityByClass(AbilityClass);
 
-		FGameplayAbilitySpec* AbilitySpec = AbilitySystem->FindAbilitySpecFromClass(AbilityClass);
-		if(AbilitySpec == nullptr || AbilitySpec->GetAbilityInstances().IsEmpty()) {
-			return;
-		}
-
-		UActionPFGameplayAbility* ActionPFAbilityInstance = Cast<UActionPFGameplayAbility>(AbilitySpec->GetAbilityInstances()[0]);
-		if(ActionPFAbilityInstance == nullptr || !ActionPFAbilityInstance->CanReactivateAbility()){
-			return;
-		}
-		FGameplayEventData EventData;
-		EventData.Instigator = this;
-		EventData.Target = this;
-		AbilitySystem->HandleGameplayEvent(AbilityClass.GetDefaultObject()->GetReactivateEventTag(), &EventData);
-	}
-	else
-	{
-		AbilitySystem->TryActivateAbilityByClass(AbilityClass);
-	}
+	
 }
 
 
 
 void AActionPortfolioCharacter::Landed(const FHitResult& Hit)
 {
+
 	if (AbilitySystem->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity")))
 	{
+
 		SetDown(true);
 		GetMesh()->GetAnimInstance()->Montage_Play(HitReactionAnimations.Down);
 	}
@@ -434,6 +424,28 @@ void AActionPortfolioCharacter::PossessedBy(AController* NewController)
 	{
 		SetGenericTeamId(2);
 	}
+}
+
+void AActionPortfolioCharacter::InitializeMovement()
+{
+	bDefaultOrientRotationToMovement = GetCharacterMovement()->bOrientRotationToMovement;
+	DefaultWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+}
+
+void AActionPortfolioCharacter::ResetMovement()
+{
+	GetCharacterMovement()->bOrientRotationToMovement = bDefaultOrientRotationToMovement;
+	GetCharacterMovement()->MaxWalkSpeed = DefaultWalkSpeed;
+}
+
+bool AActionPortfolioCharacter::CanBasicAct() const
+{
+	FGameplayTagContainer CheckTags;
+	CheckTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Death"));
+	CheckTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Down"));
+	CheckTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity"));
+
+	return !GetAbilitySystemComponent()->HasAnyMatchingGameplayTags(CheckTags);
 }
 
 

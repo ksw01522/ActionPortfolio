@@ -82,18 +82,16 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
 	class UActionPFAttributeSet* AttributeSet;
 
-
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
-	TArray<TSubclassOf<class UActionPFGameplayAbility>> CharacterAbilities;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
-	TArray<TSubclassOf<UGameplayEffect>> StartupEffects;
-
 	UPROPERTY(Transient)
 	TMap<FName, class UShapeComponent*> AttackShapeMap;
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+	TArray<TSubclassOf<class UActionPFGameplayAbility>> CharacterAbilities;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+	TArray<TSubclassOf<UGameplayEffect>> StartupEffects;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attributes")
 	TSubclassOf<class UGameplayEffect> DefaultAttributes;
 
@@ -239,5 +237,23 @@ public:
 	virtual FGenericTeamId GetGenericTeamId() const override { return TeamID; }
 
 	virtual void PossessedBy(AController* NewController) override;
+
+
+///////////////// Movement //////////////////////////
+private:
+	bool bDefaultOrientRotationToMovement;
+	float DefaultWalkSpeed;
+
+protected:
+	void InitializeMovement();
+
+public:
+	void ResetMovement();
+
+
+
+///////////////// For AI //////////////////////////
+public:
+	virtual bool CanBasicAct() const;
 };
 

@@ -38,6 +38,9 @@ AChracterEnemyA::AChracterEnemyA()
 	AttackShapeTags.Add("LeftPunch");
 	AttackShapeTags.Add("RightPunch");
 
+	LeftPunchBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RightPunchBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 	static ConstructorHelpers::FClassFinder<UGameplayEffect> EnemyADefaultAttribute(TEXT("/Game/ActionPFCharacter/Enemies/EnemyA/Ability/DefaultAttribute_EnemyA.DefaultAttribute_EnemyA_C"));
 	if (EnemyADefaultAttribute.Succeeded())
 	{

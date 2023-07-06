@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
+#include "GenericTeamAgentInterface.h"
 #include "ActionPFPlayerController.generated.h"
 
 /**
@@ -22,7 +23,7 @@ enum class EActionPFDialogueType : uint8
 };
 
 UCLASS()
-class ACTIONPORTFOLIO_API AActionPFPlayerController : public APlayerController, public IAbilitySystemInterface
+class ACTIONPORTFOLIO_API AActionPFPlayerController : public APlayerController, public IAbilitySystemInterface, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -65,4 +66,13 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
+//////////////////////// Team /////////////////////
+private:
+	FGenericTeamId TeamID;
+public:
+	/** Assigns Team Agent to given TeamID */
+	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
+
+	/** Retrieve team identifier in form of FGenericTeamId */
+	virtual FGenericTeamId GetGenericTeamId() const { return TeamID; }
 };

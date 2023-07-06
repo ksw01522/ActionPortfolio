@@ -5,6 +5,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystem.h"
 
 // Sets default values
 ABatteryBomb::ABatteryBomb()
@@ -12,7 +13,18 @@ ABatteryBomb::ABatteryBomb()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
+	Collider = CreateDefaultSubobject<UCapsuleComponent>("Collider");
+	RootComponent = Collider;
+	Collider->SetEnableGravity(false);
+	Collider->CanCharacterStepUpOn = ECanBeCharacterBase::ECB_No;
+	Collider->SetCapsuleHalfHeight(156);
+	Collider->SetCapsuleRadius(100);
+
 	BatteryMesh = CreateDefaultSubobject<UStaticMeshComponent>("BatteryMesh");
+	BatteryMesh->SetupAttachment(Collider);
+	BatteryMesh->CanCharacterStepUpOn = ECanBeCharacterBase::ECB_No;
+	BatteryMesh->SetRelativeScale3D(FVector(3,3,3));
+	BatteryMesh->SetRelativeLocation(FVector(30, 0, 0));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> BATTERYMESH(TEXT("/Game/ModSci_Engineer/Meshes/SM_ElectricDistribBox.SM_ElectricDistribBox"));
 	if (BATTERYMESH.Succeeded())
@@ -20,12 +32,11 @@ ABatteryBomb::ABatteryBomb()
 		BatteryMesh->SetStaticMesh(BATTERYMESH.Object);
 	}
 
-	Collider = CreateDefaultSubobject<UCapsuleComponent>("Collider");
 
-	static ConstructorHelpers::FClassFinder<UParticleSystem> BOMBPARTICLE(TEXT("/Game/ActionPFCharacter/Enemies/Boss/FX/P_Boss_BatteryBomb.P_Boss_BatteryBomb_C"));
+	static ConstructorHelpers::FObjectFinder<UParticleSystem> BOMBPARTICLE(TEXT("/Game/ActionPFCharacter/Enemies/Boss/FX/P_Boss_BatteryBomb.P_Boss_BatteryBomb"));
 	if (BOMBPARTICLE.Succeeded())
 	{
-		BombParticle = BOMBPARTICLE.Class;
+		BombParticle = BOMBPARTICLE.Object;
 	}
 }
 

@@ -6,6 +6,7 @@
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "ActionPortfolio.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Character/ActionPortfolioCharacter.h"
 
 struct ActionPFDamageStatics
 {
@@ -38,6 +39,8 @@ void UDamageExecutionCalculation::Execute_Implementation(const FGameplayEffectCu
 
 	AActor* SourceActor = SourceAbilitySystemComponent ? SourceAbilitySystemComponent->GetAvatarActor() : nullptr;
 	AActor* TargetActor = TargetAbilitySystemComponent ? TargetAbilitySystemComponent->GetAvatarActor() : nullptr;
+	AActionPortfolioCharacter* TargetCharacter = Cast<AActionPortfolioCharacter>(TargetActor);
+	
 
 	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();
 
@@ -55,5 +58,6 @@ void UDamageExecutionCalculation::Execute_Implementation(const FGameplayEffectCu
 	if (Damage > 0.f)
 	{
 		OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(DamageStatics().DamageProperty, EGameplayModOp::Additive, Damage));
+		TargetCharacter->OnDamageEvent(Damage, SourceActor);
 	}
 }

@@ -17,6 +17,7 @@ class UInteractionSystemComponent;
 class UInputAction;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCharcterDieDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCharacterDamagedDelegate, float, DamageAmount, AActor*, DamageInstigator);
 
 UENUM(BlueprintType)
 enum class EHitReactionDirection : uint8
@@ -116,6 +117,7 @@ private:
 
 public:
 	FOnCharcterDieDelegate OnCharacterDie;
+	FOnCharacterDamagedDelegate OnDamagedDel;
 
 private:
 	void OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -128,7 +130,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Attributes")
 	bool IsCharacterDie() const;
 
-	void CharacterDie();
+	virtual void CharacterDie();
+
+	virtual void OnDamageEvent(float DamageAmount, AActor* DamageInstigator);
 
 /////////////////// AbilitySystem ////////////////////
 private:
@@ -225,16 +229,9 @@ public:
 
 
 ///////////////// Team //////////////////////////
-private:
-	FGenericTeamId TeamID;
-
 public:
-
-	/** Assigns Team Agent to given TeamID */
-	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override { TeamID = NewTeamID; };
-
 	/** Retrieve team identifier in form of FGenericTeamId */
-	virtual FGenericTeamId GetGenericTeamId() const override { return TeamID; }
+	virtual FGenericTeamId GetGenericTeamId() const override;
 
 	virtual void PossessedBy(AController* NewController) override;
 

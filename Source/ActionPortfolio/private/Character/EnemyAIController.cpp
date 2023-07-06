@@ -25,6 +25,14 @@ AEnemyAIController::AEnemyAIController()
 	ConstructPerceptionSystem();
 }
 
+void AEnemyAIController::BeginPlay()
+{
+	Super::BeginPlay();
+
+	SetGenericTeamId(2);
+
+}
+
 void AEnemyAIController::ConstructPerceptionSystem()
 {
 	AIPerception = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("Perception Component"));
@@ -209,3 +217,7 @@ void AEnemyAIController::Tick(float DeltaTime)
 
 }
 
+void AEnemyAIController::SetFocusTargetForced(AActor* NewTarget) 
+{
+	GetBlackboardComponent()->SetValueAsObject(FocusedHostileTargetKey, NewTarget);
+}

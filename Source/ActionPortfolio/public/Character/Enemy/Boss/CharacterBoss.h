@@ -23,6 +23,18 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* RightPunchBox;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
+	UBoxComponent* BossRushBox;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss", meta = (AllowPrivateAccess = "true", ClampMin = 1))
+	int CollisionCountForStun;
+
+	int CurrentCollisionCountForStun = 0;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss", meta = (AllowPrivateAccess = "true"))
 	float StunTime;
+
+
+public:
+	void OnBossCollisionBatteryBomb();
 };

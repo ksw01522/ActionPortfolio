@@ -14,4 +14,19 @@ class ACTIONPORTFOLIO_API ABossAIController : public AEnemyAIController
 {
 	GENERATED_BODY()
 	
+	ABossAIController();
+
+public:
+	static const FName IsDamagedKey;
+
+protected:
+	UFUNCTION()
+	void OnBossDamaged(float DamageAmount, AActor* DamageInstigator);
+
+public:
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnUnPossess() override;
+
+	void SetIsDamaged(bool NewState);
+	bool IsDamaged() const;
 };

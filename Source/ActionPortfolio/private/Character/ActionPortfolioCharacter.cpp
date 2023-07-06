@@ -285,7 +285,7 @@ void AActionPortfolioCharacter::RemoveRigidityHandle()
 
 void AActionPortfolioCharacter::CharacterRigidity(float NewRigidityTime)
 {
-	if (NewRigidityTime <= 0 || AbilitySystem->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Immune.Rigidity")) || IsCharacterDie()) return;
+	if (NewRigidityTime <= 0 || IsCharacterDie()) return;
 
 
 	if (!RigidityHandle.IsValid()) {
@@ -412,6 +412,17 @@ void AActionPortfolioCharacter::Landed(const FHitResult& Hit)
 	Super::Landed(Hit);
 }
 
+FGenericTeamId AActionPortfolioCharacter::GetGenericTeamId() const
+{
+	IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>(GetController());
+	if (TeamAgent) {
+		return TeamAgent->GetGenericTeamId();
+	}
+	else {
+		return FGenericTeamId::NoTeam;
+	}
+}
+
 void AActionPortfolioCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
@@ -488,6 +499,14 @@ void AActionPortfolioCharacter::CharacterDie()
 		Destroy();
 	}
 
+}
+
+void AActionPortfolioCharacter::OnDamageEvent(float DamageAmount, AActor* DamageInstigator)
+{
+	if (OnDamagedDel.IsBound())
+	{
+		OnDamagedDel.Broadcast(DamageAmount, DamageInstigator);
+	}
 }
 
 void AActionPortfolioCharacter::HitReact(EHitReactionDirection Direction, bool bForceDown, UAnimMontage* ForceHitReactionAnim)

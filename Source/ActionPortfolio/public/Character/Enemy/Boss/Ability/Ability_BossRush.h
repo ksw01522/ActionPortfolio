@@ -13,5 +13,9 @@ UCLASS()
 class ACTIONPORTFOLIO_API UAbility_BossRush : public UGameplayAbility_Meelee
 {
 	GENERATED_BODY()
-	
+public:
+	UAbility_BossRush();
+
+protected:
+	virtual void OnEventReceived(FGameplayEventData EventData) override;
 };

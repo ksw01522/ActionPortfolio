@@ -39,6 +39,8 @@ protected:
 	
 
 protected:
+	virtual void BeginPlay() override;
+
 	virtual void ConstructPerceptionSystem();
 
 	UFUNCTION()
@@ -59,4 +61,6 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(BlueprintCallable, Category = "AI")
+	void SetFocusTargetForced(AActor* NewTarget);
 };

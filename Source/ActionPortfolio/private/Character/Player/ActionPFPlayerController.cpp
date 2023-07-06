@@ -35,7 +35,7 @@ void AActionPFPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-
+	SetGenericTeamId(1);
 }
 
 void AActionPFPlayerController::InteractWithNPC(UInteractionSystemComponent_NPC* NPCInteractionSystem)
@@ -92,6 +92,13 @@ UAbilitySystemComponent* AActionPFPlayerController::GetAbilitySystemComponent() 
 	if(!IsValid(ControlPawn)) return nullptr;
 
 	return ControlPawn->GetAbilitySystemComponent();
+}
+
+void AActionPFPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+	if (TeamID != NewTeamID) {
+		TeamID = NewTeamID;
+	}
 }
 
 

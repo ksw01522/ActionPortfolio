@@ -78,6 +78,7 @@ protected:
 public:
 	void OnMouseButtonDownInDialogueBox();
 
+	UFUNCTION(BlueprintCallable, Category = "ActionPF|Dialogue")
 	void EnterDialogueBasic(class UDialogueSession* NewSession);
 
 //////////////////////// Team /////////////////////

@@ -6,6 +6,7 @@
 #include "ActionPortfolio.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
+#include "Kismet/GameplayStatics.h"
 
 const FName ABossAIController::IsDamagedKey(TEXT("IsDamaged"));
 
@@ -59,4 +60,9 @@ void ABossAIController::SetIsDamaged(bool NewState)
 bool ABossAIController::IsDamaged() const
 {
 	return GetBlackboardComponent()->GetValueAsBool(IsDamagedKey);
+}
+
+void ABossAIController::FocusPlayer()
+{
+	SetFocusTargetForced(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
 }

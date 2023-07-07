@@ -19,6 +19,7 @@ UENUM()
 enum class EActionPFDialogueType : uint8
 {
 	NPC,
+	Basic,
 	Auto
 };
 
@@ -65,6 +66,19 @@ public:
 	void OnEnterDialogue(EActionPFDialogueType Type);
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+
+protected:
+	TSharedPtr<class SDialogueSlate> DialogueSlate;
+	FTimerHandle DialogueAnimHandle_Basic;
+	FTimerDelegate DialogueAnimDel_Basic;
+
+	void EndDialogueSlate();
+
+public:
+	void OnMouseButtonDownInDialogueBox();
+
+	void EnterDialogueBasic(class UDialogueSession* NewSession);
 
 //////////////////////// Team /////////////////////
 private:

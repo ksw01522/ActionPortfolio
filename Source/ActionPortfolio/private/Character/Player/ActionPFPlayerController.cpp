@@ -15,6 +15,7 @@
 #include "Engine/DataTable.h"
 #include "ActionPortfolioInstance.h"
 #include "Character/Player/PlayerCharacter.h"
+#include "UI/DialogueSlate.h"
 
 
 AActionPFPlayerController::AActionPFPlayerController()
@@ -29,6 +30,7 @@ void AActionPFPlayerController::PostInitializeComponents()
 	Super::PostInitializeComponents();
 
 	DialogueAnimDel_NPC.BindUObject(this, &AActionPFPlayerController::AnimDialogue, EActionPFDialogueType::NPC);
+	DialogueAnimDel_Basic.BindUObject(this, &AActionPFPlayerController::AnimDialogue, EActionPFDialogueType::Basic);
 }
 
 void AActionPFPlayerController::BeginPlay()
@@ -51,7 +53,7 @@ void AActionPFPlayerController::InteractWithNPC(UInteractionSystemComponent_NPC*
 	GEngine->GameViewport->AddViewportWidgetForPlayer(GetLocalPlayer(), NPCInteractWidget.ToSharedRef(), 0);
 
 		
-	OnEnterDialogue(EActionPFDialogueType::NPC);
+	EnterNextDialogue(EActionPFDialogueType::NPC);
 }
 
 
@@ -94,6 +96,41 @@ UAbilitySystemComponent* AActionPFPlayerController::GetAbilitySystemComponent() 
 	return ControlPawn->GetAbilitySystemComponent();
 }
 
+void AActionPFPlayerController::EndDialogueSlate()
+{
+	if (DialogueSlate.IsValid()) {
+		GEngine->GameViewport->RemoveViewportWidgetForPlayer(
+			GetLocalPlayer(),
+			DialogueSlate.ToSharedRef()
+		);
+	}
+}
+
+void AActionPFPlayerController::OnMouseButtonDownInDialogueBox()
+{
+	if (NPCInteractWidget->IsDialogueAnimating()) {
+		ForceDialogueAnimComplete(EActionPFDialogueType::Basic);
+	}
+	else if (PlayerDialoguer->IsInDialogue()) {
+		EnterNextDialogue(EActionPFDialogueType::Basic);
+	}
+}
+
+void AActionPFPlayerController::EnterDialogueBasic(UDialogueSession* NewSession)
+{
+	if(NewSession == nullptr) return;
+
+	UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
+	TArray<FString> DialoguerIDs;
+	DialoguerIDs.Add(PlayerDialoguer->GetDialoguerID());
+	DialogueManager->EnterDialogue(DialoguerIDs, NewSession);
+
+	SAssignNew(DialogueSlate, SDialogueSlate).OwnerPlayer(this);
+	GEngine->GameViewport->AddViewportWidgetForPlayer(GetLocalPlayer(), DialogueSlate.ToSharedRef(), 1);
+
+	EnterNextDialogue(EActionPFDialogueType::Basic);
+}
+
 void AActionPFPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 {
 	if (TeamID != NewTeamID) {
@@ -106,15 +143,15 @@ void AActionPFPlayerController::EnterNextDialogue(EActionPFDialogueType Type)
 {
 	if(!PlayerDialoguer->IsInDialogue()) return;
 
+	UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
+	TArray<FDialogueElement> DialogueElements;
+	EDialogueNodeType DialogueNodeType = DialogueManager->EnterNextNode(DialogueElements, PlayerDialoguer);
+
 	switch (Type)
 	{
 		case EActionPFDialogueType::NPC:
 			if (!NPCInteractWidget.IsValid()){return;}
 			NPCInteractWidget->SetShowInteractButton(false);
-			UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
-
-			TArray<FDialogueElement> DialogueElements;
-			EDialogueNodeType DialogueNodeType = DialogueManager->EnterNextNode(DialogueElements, PlayerDialoguer);
 
 			switch (DialogueNodeType)
 			{
@@ -136,6 +173,32 @@ void AActionPFPlayerController::EnterNextDialogue(EActionPFDialogueType Type)
 				break;
 			}
 		break;
+
+		case EActionPFDialogueType::Basic:
+			if(!DialogueSlate.IsValid()){return;}
+
+
+			switch (DialogueNodeType)
+			{
+			case EDialogueNodeType::Basic:
+				DialogueSlate->SetDialoguerName(DialogueElements[0].Name);
+				DialogueSlate->SetDialogueText(DialogueElements[0].DialogString);
+				DialogueSlate->SetDialogueStyleSet(DialogueElements[0].DialogueStyleSet);
+				DialogueSlate->SetDialogueDecorator(DialogueElements[0].DialogueSlateDecorators);
+				AnimDialogue(EActionPFDialogueType::Basic);
+				break;
+
+			case EDialogueNodeType::Question:
+				PFLOG(Warning, TEXT("Node type question"));
+				break;
+
+			case EDialogueNodeType::End:
+			case EDialogueNodeType::None:
+				EndDialogueSlate();
+				break;
+			}
+
+		break;
 	}
 
 	
@@ -147,6 +210,8 @@ void AActionPFPlayerController::AnimDialogue(EActionPFDialogueType Type)
 {
 	if(!PlayerDialoguer->IsInDialogue()) return;
 
+	UActionPortfolioInstance* ActionPFInstance = GetGameInstance<UActionPortfolioInstance>();
+
 	switch (Type)
 	{
 		case EActionPFDialogueType::NPC:
@@ -154,7 +219,6 @@ void AActionPFPlayerController::AnimDialogue(EActionPFDialogueType Type)
 
 			NPCInteractWidget->AnimDialogueText();
 
-			UActionPortfolioInstance* ActionPFInstance = GetGameInstance<UActionPortfolioInstance>();
 
 			if (NPCInteractWidget->IsDialogueAnimating()) {
 				GetWorld()->GetTimerManager().SetTimer(DialogueAnimHandle_NPC, DialogueAnimDel_NPC, ActionPFInstance->GetDialogueAnimTime(), false);
@@ -164,6 +228,21 @@ void AActionPFPlayerController::AnimDialogue(EActionPFDialogueType Type)
 			}
 
 		break;
+
+		case EActionPFDialogueType::Basic:
+		if(!DialogueSlate.IsValid()) return;
+
+		DialogueSlate->AnimDialogueText();
+
+
+		if (NPCInteractWidget->IsDialogueAnimating()) {
+			GetWorld()->GetTimerManager().SetTimer(DialogueAnimHandle_Basic, DialogueAnimDel_Basic, ActionPFInstance->GetDialogueAnimTime(), false);
+		}
+		else {
+			OnCompleteDialogueAnim(EActionPFDialogueType::Basic);
+		}
+		break;
+		
 	}
 }
 

@@ -29,4 +29,7 @@ public:
 
 	void SetIsDamaged(bool NewState);
 	bool IsDamaged() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Boss")
+	void FocusPlayer();
 };

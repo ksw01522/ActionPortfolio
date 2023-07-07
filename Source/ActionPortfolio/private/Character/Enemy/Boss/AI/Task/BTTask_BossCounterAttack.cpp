@@ -31,6 +31,12 @@ EBTNodeResult::Type UBTTask_BossCounterAttack::ExecuteTask(UBehaviorTreeComponen
 	MyMemory->SourceBoss = AIController->GetPawn<ACharacterBoss>();
 	if (!MyMemory->SourceBoss.IsValid()) return NodeResult;
 
+	if (!MyMemory->SourceBoss->GetAbilitySystemComponent()->TryActivateAbilityByClass(BossCounterAbility))
+	{
+		return EBTNodeResult::Failed;
+	}
+
+	NodeResult = EBTNodeResult::InProgress;
 	FVector FocusVector;
 	if (TargetSelector.SelectedKeyType == UBlackboardKeyType_Vector::StaticClass()) {
 		FocusVector = OwnerComp.GetBlackboardComponent()->GetValueAsVector(TargetSelector.SelectedKeyName);
@@ -52,7 +58,6 @@ EBTNodeResult::Type UBTTask_BossCounterAttack::ExecuteTask(UBehaviorTreeComponen
 
 	FVector FocusDir = FocusVector - MyMemory->SourceBoss->GetActorLocation();
 	MyMemory->SourceBoss->SetActorRotation(FocusDir.Rotation());
-	if (MyMemory->SourceBoss->GetAbilitySystemComponent()->TryActivateAbilityByClass(BossCounterAbility)) NodeResult = EBTNodeResult::InProgress;
 
 	return NodeResult;
 }

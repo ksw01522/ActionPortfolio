@@ -45,6 +45,7 @@ AActionPortfolioCharacter::AActionPortfolioCharacter()
 	GetCharacterMovement()->MaxWalkSpeed = 350.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
+	GetCharacterMovement()->bForceMaxAccel = false;
 
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
@@ -441,12 +442,15 @@ void AActionPortfolioCharacter::InitializeMovement()
 {
 	bDefaultOrientRotationToMovement = GetCharacterMovement()->bOrientRotationToMovement;
 	DefaultWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+	DefaultMaxAcceleration = GetCharacterMovement()->MaxAcceleration;
 }
 
 void AActionPortfolioCharacter::ResetMovement()
 {
 	GetCharacterMovement()->bOrientRotationToMovement = bDefaultOrientRotationToMovement;
 	GetCharacterMovement()->MaxWalkSpeed = DefaultWalkSpeed;
+	GetCharacterMovement()->bForceMaxAccel = false;
+	GetCharacterMovement()->MaxAcceleration = DefaultMaxAcceleration;
 }
 
 bool AActionPortfolioCharacter::CanBasicAct() const

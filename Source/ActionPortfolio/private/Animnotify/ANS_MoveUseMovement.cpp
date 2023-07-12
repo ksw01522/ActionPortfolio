@@ -18,8 +18,8 @@ void UANS_MoveUseMovement::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSe
 	FinalDirection = FinalDirection.X * Char->GetActorForwardVector() + FinalDirection.Y * Char->GetActorRightVector();
 
 	MovementComponent = Char->GetCharacterMovement();
+	MovementComponent->Velocity = FinalDirection * MoveSpeed;
 	MovementComponent->MaxWalkSpeed = MoveSpeed;
-
 }
 
 void UANS_MoveUseMovement::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference)
@@ -35,5 +35,6 @@ void UANS_MoveUseMovement::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequ
 {
 	if (AActionPortfolioCharacter* Char = MeshComp->GetOwner<AActionPortfolioCharacter>()) {
 		Char->ResetMovement();
+		Char->GetCharacterMovement()->Velocity = FVector::ZeroVector;
 	}
 }

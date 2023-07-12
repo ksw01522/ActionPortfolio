@@ -6,6 +6,7 @@
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
 #include "ActionPortfolio.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Character/EnemyAIController.h"
 
 UBTTask_FocusToTarget::UBTTask_FocusToTarget()
 {
@@ -52,7 +53,7 @@ EBTNodeResult::Type UBTTask_FocusToTarget::ExecuteTask(UBehaviorTreeComponent& O
 		return EBTNodeResult::Failed;
 	}
 
-	AActor* Instigator = OwnerComp.GetOwner();
+	AActor* Instigator = OwnerComp.GetAIOwner()->GetPawn();
 	FVector Dir = TargetLocation - Instigator->GetActorLocation();
 	Instigator->SetActorRotation(Dir.Rotation());
 

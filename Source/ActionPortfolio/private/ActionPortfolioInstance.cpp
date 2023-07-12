@@ -4,6 +4,9 @@
 #include "ActionPortfolioInstance.h"
 #include "WidgetStyle/ActionPortfolioWidgetStyle.h"
 #include "ActionPortfolio.h"
+#include "DialogueManager.h"
+#include "DialogueBFL.h"
+#include "Kismet/KismetInternationalizationLibrary.h"
 
 UActionPortfolioInstance::UActionPortfolioInstance()
 {
@@ -41,4 +44,27 @@ float UActionPortfolioInstance::GetDialogueAnimTime() const
 	}
 
 	return 0.2f;
+}
+
+void UActionPortfolioInstance::SetCurrentLanguage(ELanguage NewLanguage)
+{
+	if(Language == NewLanguage) return;
+	Language = NewLanguage;
+	UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
+
+	switch (Language)
+	{
+	case ELanguage::Korean:
+		DialogueManager->SetCurrentLanguage(EDialogueLanguage::Korean);
+		UKismetInternationalizationLibrary::SetCurrentCulture("ko-KR");
+		break;
+	case ELanguage::English:
+		DialogueManager->SetCurrentLanguage(EDialogueLanguage::English);
+		UKismetInternationalizationLibrary::SetCurrentCulture("en");
+		break;
+	default:
+		break;
+	}
+
+	SaveConfig();
 }

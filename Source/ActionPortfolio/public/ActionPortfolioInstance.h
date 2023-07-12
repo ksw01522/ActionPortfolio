@@ -17,6 +17,14 @@ enum class EDialogueWidgetAnimSpeed : uint8
 	FAST
 };
 
+UENUM(BlueprintType)
+enum class ELanguage : uint8
+{
+	Korean,
+	English
+};
+
+
 UCLASS(Config = ActionPortfolioSetting)
 class ACTIONPORTFOLIO_API UActionPortfolioInstance : public UGameInstance
 {
@@ -37,6 +45,9 @@ private:
 	UPROPERTY(GlobalConfig)
 	EDialogueWidgetAnimSpeed DialogueAnimSpeed;
 
+	UPROPERTY(GlobalConfig)
+	ELanguage Language;
+
 public:
 	virtual void Init() override;
 	virtual void Shutdown() override;
@@ -48,4 +59,10 @@ public:
 		DialogueAnimSpeed = NewSpeed;
 		SaveConfig();
 	}
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Localization")
+	ELanguage GetCurrentLanguage() {return Language;}
+
+	UFUNCTION(BlueprintCallable, Category = "ActionPF|Localization")
+	void SetCurrentLanguage(ELanguage NewLanguage);
 };

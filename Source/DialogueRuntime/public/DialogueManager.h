@@ -69,7 +69,7 @@ public:
  
 
 
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, Config = CustomDialogue)
 class DIALOGUERUNTIME_API UDialogueManager : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
@@ -105,7 +105,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DialogueManager")
 	EDialogueNodeType EnterNextNode(TArray<FDialogueElement>& OutElements, UDialoguerComponent* Dialoguer);
 
-	void SetCurrentLanguage(EDialogueLanguage Lan) { CurrentLanguage = Lan; }
+	void SetCurrentLanguage(EDialogueLanguage Lan) { CurrentLanguage = Lan; SaveConfig(); }
 
 	UFUNCTION(BlueprintCallable, Category = "DialoguerManager")
 	bool GetDialoguersInDialog(TArray<UDialoguerComponent*>& OutDialoguers, const FActingDialogueHandle& Handle);

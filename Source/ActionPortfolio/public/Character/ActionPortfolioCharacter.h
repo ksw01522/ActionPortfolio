@@ -240,6 +240,7 @@ public:
 private:
 	bool bDefaultOrientRotationToMovement;
 	float DefaultWalkSpeed;
+	float DefaultMaxAcceleration;
 
 protected:
 	void InitializeMovement();

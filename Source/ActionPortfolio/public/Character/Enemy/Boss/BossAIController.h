@@ -22,6 +22,9 @@ public:
 protected:
 	UFUNCTION()
 	void OnBossDamaged(float DamageAmount, AActor* DamageInstigator);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BossHPBar")
+	TSubclassOf<class UWidget_HPBar_Basic> HPBarClass;
+	UWidget_HPBar_Basic* HPBarWidget;
 
 public:
 	virtual void OnPossess(APawn* InPawn) override;

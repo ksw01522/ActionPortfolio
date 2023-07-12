@@ -16,7 +16,7 @@
 #include "ActionPortfolioInstance.h"
 #include "Character/Player/PlayerCharacter.h"
 #include "UI/DialogueSlate.h"
-
+#include "GameFramework/CharacterMovementComponent.h"
 
 AActionPFPlayerController::AActionPFPlayerController()
 {
@@ -38,6 +38,8 @@ void AActionPFPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	SetGenericTeamId(1);
+
+	ChangeGameInputMode();
 }
 
 void AActionPFPlayerController::InteractWithNPC(UInteractionSystemComponent_NPC* NPCInteractionSystem)
@@ -104,11 +106,13 @@ void AActionPFPlayerController::EndDialogueSlate()
 			DialogueSlate.ToSharedRef()
 		);
 	}
+
+	ChangeGameInputMode();
 }
 
 void AActionPFPlayerController::OnMouseButtonDownInDialogueBox()
 {
-	if (NPCInteractWidget->IsDialogueAnimating()) {
+	if (DialogueSlate->IsDialogueAnimating()) {
 		ForceDialogueAnimComplete(EActionPFDialogueType::Basic);
 	}
 	else if (PlayerDialoguer->IsInDialogue()) {
@@ -128,7 +132,10 @@ void AActionPFPlayerController::EnterDialogueBasic(UDialogueSession* NewSession)
 	SAssignNew(DialogueSlate, SDialogueSlate).OwnerPlayer(this);
 	GEngine->GameViewport->AddViewportWidgetForPlayer(GetLocalPlayer(), DialogueSlate.ToSharedRef(), 1);
 
-	EnterNextDialogue(EActionPFDialogueType::Basic);
+	if (DialogueSlate.IsValid()) {
+		ChangeUIInputMode();
+		EnterNextDialogue(EActionPFDialogueType::Basic);
+	}
 }
 
 void AActionPFPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
@@ -234,8 +241,7 @@ void AActionPFPlayerController::AnimDialogue(EActionPFDialogueType Type)
 
 		DialogueSlate->AnimDialogueText();
 
-
-		if (NPCInteractWidget->IsDialogueAnimating()) {
+		if (DialogueSlate->IsDialogueAnimating()) {
 			GetWorld()->GetTimerManager().SetTimer(DialogueAnimHandle_Basic, DialogueAnimDel_Basic, ActionPFInstance->GetDialogueAnimTime(), false);
 		}
 		else {
@@ -248,11 +254,24 @@ void AActionPFPlayerController::AnimDialogue(EActionPFDialogueType Type)
 
 void AActionPFPlayerController::ForceDialogueAnimComplete(EActionPFDialogueType Type)
 {
-	if(!NPCInteractWidget.IsValid()) return;
+	switch (Type) {
+		case EActionPFDialogueType::NPC:
+			if (!NPCInteractWidget.IsValid()) return;
 
-	NPCInteractWidget->ForceDialogueAnimComplete();
-	GetWorld()->GetTimerManager().ClearTimer(DialogueAnimHandle_NPC);
-	OnCompleteDialogueAnim(EActionPFDialogueType::NPC);
+			NPCInteractWidget->ForceDialogueAnimComplete();
+			GetWorld()->GetTimerManager().ClearTimer(DialogueAnimHandle_NPC);
+			OnCompleteDialogueAnim(EActionPFDialogueType::NPC);
+			break;
+
+		case EActionPFDialogueType::Basic:
+			if (!DialogueSlate.IsValid()) return;
+
+			DialogueSlate->ForceDialogueAnimComplete();
+			GetWorld()->GetTimerManager().ClearTimer(DialogueAnimHandle_Basic);
+			OnCompleteDialogueAnim(EActionPFDialogueType::Basic);
+
+		break;
+	}
 }
 
 void AActionPFPlayerController::OnCompleteDialogueAnim(EActionPFDialogueType Type)
@@ -262,9 +281,12 @@ void AActionPFPlayerController::OnCompleteDialogueAnim(EActionPFDialogueType Typ
 
 void AActionPFPlayerController::ChangeUIInputMode()
 {
+
 	FInputModeUIOnly InputUIMode;
 	SetShowMouseCursor(true);
 	SetInputMode(InputUIMode);
+
+	InputComponent->bBlockInput = true;
 }
 
 void AActionPFPlayerController::ChangeGameInputMode()
@@ -272,4 +294,6 @@ void AActionPFPlayerController::ChangeGameInputMode()
 	FInputModeGameOnly InputGameMode;
 	SetShowMouseCursor(false);
 	SetInputMode(InputGameMode);
+
+	InputComponent->bBlockInput = false;
 }

@@ -77,9 +77,11 @@ void UKnockbackExecutionCalculation::Execute_Implementation(const FGameplayEffec
 
 UKncokback_Forward::UKncokback_Forward()
 {
+#if WITH_EDITORONLY_DATA
 	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("Data.Knockback.Forward.Strength"));
 	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("Data.Knockback.Forward.ZStrength"));
 	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("Data.Knockback.Forward.bForceDown"));
+#endif
 }
 
 FVector UKncokback_Forward::MakeKnockbackVector(const FGameplayEffectCustomExecutionParameters& ExecutionParams) const

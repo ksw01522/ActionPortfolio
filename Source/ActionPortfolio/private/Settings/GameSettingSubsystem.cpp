@@ -4,8 +4,17 @@
 #include "Settings/GameSettingSubsystem.h"
 #include "ActionPortfolio.h"
 #include "GameFramework/GameUserSettings.h"
+#include "Engine/RendererSettings.h"
+#include "DialogueManager.h"
+#include "DialogueBFL.h"
+#include "Kismet/KismetInternationalizationLibrary.h"
 
-#define LOCTEXT_NAMESPACE "ActionPFGameSettings"
+#define LOCTEXT_NAMESPACE "ActionPFSettings"
+
+TArray<FText> UGameSettingSubsystem::BasicLevelOptions({LOCTEXT("레벨_저", "저"), 
+														LOCTEXT("레벨_중", "중"), 
+														LOCTEXT("레벨_고", "고"),
+														LOCTEXT("레벨_에픽", "에픽") });
 
 UGameSettingSubsystem::UGameSettingSubsystem()
 {
@@ -17,60 +26,163 @@ UGameSettingSubsystem::UGameSettingSubsystem()
 void UGameSettingSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
+	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
 
-	ScreenResolutions.Add(FIntPoint(1280, 720));
-	ScreenResolutions.Add(FIntPoint(1600, 900));
-	ScreenResolutions.Add(FIntPoint(1920, 1080));
-	ScreenResolutions.Add(FIntPoint(2560, 1440));
+	ScreenResolutionOptions.Add(FIntPoint(1280, 720));
+	ScreenResolutionOptions.Add(FIntPoint(1600, 900));
+	ScreenResolutionOptions.Add(FIntPoint(1920, 1080));
+	ScreenResolutionOptions.Add(FIntPoint(2560, 1440));
 
 	FrameRateLimitOptions.Add(30);
 	FrameRateLimitOptions.Add(60);
 	FrameRateLimitOptions.Add(120);
 	FrameRateLimitOptions.Add(144);
 	FrameRateLimitOptions.Add(0);
-}
 
-void UGameSettingSubsystem::ChangeScreenResolution(int Idx)
-{
-	if (Idx < 0 || ScreenResolutions.Num() <= Idx) {
-		PFLOG(Error, TEXT("Can't Find ScreenResolution."));
-		return;
-	}
+	Current_ScreenResolution_IDX = FMath::Clamp(Current_ScreenResolution_IDX, 0, ScreenResolutionOptions.Num() - 1);
+	UserSettings->SetScreenResolution(ScreenResolutionOptions[Current_ScreenResolution_IDX]);
 
-	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
+	Current_FrameRateLimit_IDX = FMath::Clamp(Current_FrameRateLimit_IDX, 0, FrameRateLimitOptions.Num() - 1);
+	UserSettings->SetFrameRateLimit(FrameRateLimitOptions[Current_FrameRateLimit_IDX]);
 
-	UserSettings->SetScreenResolution(ScreenResolutions[Idx]);
-	UserSettings->ApplySettings(true);
-}
+	EAntiAliasingMethod CurrentAAM = RendererSettings->DefaultFeatureAntiAliasing;
+	ECompositingSampleCount::Type CurrentMSAASamepleCount = RendererSettings->MSAASampleCount;
 
-const FIntPoint UGameSettingSubsystem::GetCurrentScreenResolution() const
-{
-	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
-
-	return UserSettings->GetScreenResolution();
-}
-
-void UGameSettingSubsystem::SetWindowMode(FString NewMode)
-{
-	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
-
-	if (NewMode == WindowedMode.ToString()) {
-		UserSettings->SetFullscreenMode(EWindowMode::Windowed);
-	}
-	else if (NewMode == WindowedFullScreenMode.ToString()) {
-		UserSettings->SetFullscreenMode(EWindowMode::WindowedFullscreen);
-	}
-	else if (NewMode == FullScreenMode.ToString()) {
-		UserSettings->SetFullscreenMode(EWindowMode::Fullscreen);
-	}
-	else
+	switch (CurrentAAM)
 	{
-		PFLOG(Error, TEXT("Can't find Selected WindowMode."));
+	case AAM_None:
+		CurrentAntiAliasingMethodIDX = 0;
+		break;
+	case AAM_FXAA:
+		CurrentAntiAliasingMethodIDX = 1;
+		break;
+	case AAM_TemporalAA:
+		CurrentAntiAliasingMethodIDX = 2;
+		break;
+	case AAM_MSAA:
+		switch (CurrentMSAASamepleCount)
+		{
+		case ECompositingSampleCount::Two:
+			CurrentAntiAliasingMethodIDX = 3;
+			break;
+		case ECompositingSampleCount::Four:
+			CurrentAntiAliasingMethodIDX = 4;
+			break;
+		case ECompositingSampleCount::Eight:
+			CurrentAntiAliasingMethodIDX = 5;
+			break;
+		}
+		break;
+	case AAM_TSR:
+		CurrentAntiAliasingMethodIDX = 6;
+		break;
+	}
+
+	UserSettings->ApplySettings(false);
+	SaveConfig();
+}
+
+const TArray<FString> UGameSettingSubsystem::GetDialogueAnimSpeedOptions() const
+{
+	TArray<FText> SpeedTexts({
+						LOCTEXT("느림", "느림"),
+						LOCTEXT("중간", "중간"),
+						LOCTEXT("빠름", "빠름")
+	});
+
+	TArray<FString> ReturnValue;
+
+	for (auto SpeedText : SpeedTexts) {
+		ReturnValue.Add(SpeedText.ToString());
+	}
+
+	return ReturnValue;
+}
+
+void UGameSettingSubsystem::SetCurrentLanguage(ELanguage NewLanguage)
+{
+	if (CurrentLanguage == NewLanguage) return;
+	CurrentLanguage = NewLanguage;
+	UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
+
+	switch (CurrentLanguage)
+	{
+	case ELanguage::Korean:
+		DialogueManager->SetCurrentLanguage(EDialogueLanguage::Korean);
+		UKismetInternationalizationLibrary::SetCurrentCulture("ko-KR");
+		break;
+	case ELanguage::English:
+		DialogueManager->SetCurrentLanguage(EDialogueLanguage::English);
+		UKismetInternationalizationLibrary::SetCurrentCulture("en");
+		break;
+	default:
+		break;
+	}
+
+	SaveConfig();
+}
+
+const TArray<FString> UGameSettingSubsystem::GetLanguageOptions() const
+{
+	TArray<FString> FinalOptions;
+	FinalOptions.Add(TEXT("한국어"));
+	FinalOptions.Add("English");
+
+	return FinalOptions;
+}
+
+void UGameSettingSubsystem::ApplyGraphicSettings()
+{
+	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
+	UserSettings->ApplySettings(true);
+
+	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
+
+
+	int AAType = RendererSettings->DefaultFeatureAntiAliasing;
+	int MSAASampleCount = RendererSettings->MSAASampleCount;
+
+	GetWorld()->GetFirstPlayerController()->ConsoleCommand(FString::Printf(TEXT("r.AntiAliasingMethod %d"), AAType));
+	GetWorld()->GetFirstPlayerController()->ConsoleCommand(FString::Printf(TEXT("r.MSAACount %d"), MSAASampleCount));
+	
+	int Brightness = RendererSettings->DefaultFeatureAutoExposureBias;
+	GetWorld()->GetFirstPlayerController()->ConsoleCommand(FString::Printf(TEXT("r.DefaultFeature.AutoExposure.Bias %.2f"), Brightness));
+}
+
+void UGameSettingSubsystem::SetScreenResolution(int Idx, bool bApply)
+{
+	if (ScreenResolutionOptions.IsEmpty()) {
+		PFLOG(Warning, TEXT("Screen Resolution Options is Empty."));
 		return;
 	}
 
+	Current_ScreenResolution_IDX = Idx;
 
-	UserSettings->ApplySettings(true);
+	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
+
+	SaveConfig();
+	UserSettings->SetScreenResolution(ScreenResolutionOptions[Current_ScreenResolution_IDX]);
+
+	if(bApply) UserSettings->ApplySettings(true);
+}
+
+void UGameSettingSubsystem::SetWindowMode(int Idx, bool bApply)
+{
+	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
+
+	switch (Idx) {
+		case 0:
+			UserSettings->SetFullscreenMode(EWindowMode::Windowed);
+			break;
+		case 1:
+			UserSettings->SetFullscreenMode(EWindowMode::WindowedFullscreen);
+			break;
+		case 2:
+			UserSettings->SetFullscreenMode(EWindowMode::Fullscreen);
+			break;
+	}
+
+	if (bApply) UserSettings->ApplySettings(true);
 }
 
 const TArray<FString> UGameSettingSubsystem::GetWindowModeOptions() const
@@ -104,17 +216,20 @@ FString UGameSettingSubsystem::GetCurrentWindowMode() const
 	return "Not Valid Mode";
 }
 
-void UGameSettingSubsystem::ChangeFrameRateLimit(int Idx)
+void UGameSettingSubsystem::SetFrameRateLimit(int Idx, bool bApply)
 {
-	if (!FrameRateLimitOptions.IsValidIndex(Idx)) {
-		PFLOG(Error, TEXT("Can't find Selected Frame Limit Option."));
+	if (FrameRateLimitOptions.IsEmpty()) {
+		PFLOG(Warning, TEXT("Frame Rate Limit Options is Empty."));
 		return;
 	}
 
+	Current_FrameRateLimit_IDX = FMath::Clamp(Idx, 0, FrameRateLimitOptions.Num() - 1);
+
 	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
 
-	UserSettings->SetFrameRateLimit(FrameRateLimitOptions[Idx]);
-	UserSettings->ApplySettings(false);
+	UserSettings->SetFrameRateLimit(FrameRateLimitOptions[Current_FrameRateLimit_IDX]);
+	if (bApply) UserSettings->ApplySettings(false);
+	SaveConfig();
 }
 
 float UGameSettingSubsystem::GetCurrentFrameRateLimit() const
@@ -124,12 +239,12 @@ float UGameSettingSubsystem::GetCurrentFrameRateLimit() const
 	return UserSettings->GetFrameRateLimit();
 }
 
-void UGameSettingSubsystem::SetVSyncEnabled(bool NewState)
+void UGameSettingSubsystem::SetVSyncEnabled(bool NewState, bool bApply)
 {
 	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
 
 	UserSettings->SetVSyncEnabled(NewState);
-	UserSettings->ApplySettings(false);
+	if (bApply) UserSettings->ApplySettings(false);
 }
 
 bool UGameSettingSubsystem::IsVSyncEnabled() const
@@ -139,12 +254,12 @@ bool UGameSettingSubsystem::IsVSyncEnabled() const
 	return UserSettings->IsVSyncEnabled();
 }
 
-void UGameSettingSubsystem::SetViewDistanceLevel(int32 NewLevel)
+void UGameSettingSubsystem::SetViewDistanceLevel(int32 NewLevel, bool bApply)
 {
 	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
 
 	UserSettings->SetViewDistanceQuality(NewLevel);
-	UserSettings->ApplySettings(false);
+	if (bApply) UserSettings->ApplySettings(false);
 }
 
 int32 UGameSettingSubsystem::GetViewDistanceLevel() const
@@ -154,12 +269,27 @@ int32 UGameSettingSubsystem::GetViewDistanceLevel() const
 	return UserSettings->GetViewDistanceQuality();
 }
 
-void UGameSettingSubsystem::SetShadowQuality(int32 NewLevel)
+const TArray<FString> UGameSettingSubsystem::GetViewDistanceLevelOptions() const
+{
+	static TArray<FText> ViewDistanceLevelOptions({	LOCTEXT("가시거리_근거리", "근거리"), 
+													LOCTEXT("가시거리_중거리", "중거리"), 
+													LOCTEXT("가시거리_원거리", "원거리"), 
+													LOCTEXT("가시거리_전체", "전체")});
+
+	TArray<FString> FinalOptions;
+	for (auto Option : ViewDistanceLevelOptions) {
+		FinalOptions.Add(Option.ToString());
+	}
+
+	return FinalOptions;
+}
+
+void UGameSettingSubsystem::SetShadowQuality(int32 NewLevel, bool bApply)
 {
 	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
 
 	UserSettings->SetShadowQuality(NewLevel);
-	UserSettings->ApplySettings(false);
+	if (bApply) UserSettings->ApplySettings(false);
 }
 
 int32 UGameSettingSubsystem::GetShadowQuality() const
@@ -169,12 +299,22 @@ int32 UGameSettingSubsystem::GetShadowQuality() const
 	return UserSettings->GetShadowQuality();
 }
 
-void UGameSettingSubsystem::SetTextureQuality(int32 NewLevel)
+const TArray<FString> UGameSettingSubsystem::GetShadowQualityOptions() const
+{
+	TArray<FString> FinalOptions;
+	for (auto QualityOption : BasicLevelOptions) {
+		FinalOptions.Add(QualityOption.ToString());
+	}
+
+	return FinalOptions;
+}
+
+void UGameSettingSubsystem::SetTextureQuality(int32 NewLevel, bool bApply)
 {
 	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
 
 	UserSettings->SetTextureQuality(NewLevel);
-	UserSettings->ApplySettings(false);
+	if (bApply) UserSettings->ApplySettings(false);
 }
 
 int32 UGameSettingSubsystem::GetTextureQuality() const
@@ -184,12 +324,22 @@ int32 UGameSettingSubsystem::GetTextureQuality() const
 	return UserSettings->GetTextureQuality();
 }
 
-void UGameSettingSubsystem::SetAntiAliasingQuality(int32 NewLevel)
+const TArray<FString> UGameSettingSubsystem::GetTextureQualityOptions() const
+{
+	TArray<FString> FinalOptions;
+	for (auto QualityOption : BasicLevelOptions) {
+		FinalOptions.Add(QualityOption.ToString());
+	}
+
+	return FinalOptions;
+}
+
+void UGameSettingSubsystem::SetAntiAliasingQuality(int32 NewLevel, bool bApply)
 {
 	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
 
 	UserSettings->SetAntiAliasingQuality(NewLevel);
-	UserSettings->ApplySettings(false);
+	if (bApply) UserSettings->ApplySettings(false);
 }
 
 int32 UGameSettingSubsystem::GetAntiAliasingQuality() const
@@ -199,11 +349,99 @@ int32 UGameSettingSubsystem::GetAntiAliasingQuality() const
 	return UserSettings->GetAntiAliasingQuality();
 }
 
+const TArray<FString> UGameSettingSubsystem::GetAntiAliasingQualityOptions() const
+{
+	TArray<FString> FinalOptions;
+	for (auto QualityOption : BasicLevelOptions) {
+		FinalOptions.Add(QualityOption.ToString());
+	}
+
+	return FinalOptions;
+}
+
+void UGameSettingSubsystem::SetAntiAliasingMethod(int32 NewType, bool bApply)
+{
+	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
+
+	// 0 = None, 1 = FXAA, 2 = TAA, 3 = 2xMSAA, 4 = 4xMSAA, 5 = 8xMSAA, 6 = TSR
+	int32 ClampedType = FMath::Clamp(NewType, 0, 6);
+
+	switch (ClampedType) {
+		case 0:
+			RendererSettings->DefaultFeatureAntiAliasing = EAntiAliasingMethod::AAM_None;
+			break;
+		case 1:
+			RendererSettings->DefaultFeatureAntiAliasing = EAntiAliasingMethod::AAM_FXAA;
+			break;
+		case 2:
+			RendererSettings->DefaultFeatureAntiAliasing = EAntiAliasingMethod::AAM_TemporalAA;
+			break;
+		case 3:
+			RendererSettings->DefaultFeatureAntiAliasing = EAntiAliasingMethod::AAM_MSAA;
+			RendererSettings->MSAASampleCount = ECompositingSampleCount::Two;
+			break;
+		case 4:
+			RendererSettings->DefaultFeatureAntiAliasing = EAntiAliasingMethod::AAM_MSAA;
+			RendererSettings->MSAASampleCount = ECompositingSampleCount::Four;
+			break;
+		case 5:
+			RendererSettings->DefaultFeatureAntiAliasing = EAntiAliasingMethod::AAM_MSAA;
+			RendererSettings->MSAASampleCount = ECompositingSampleCount::Eight;
+			break;
+		case 6:
+			RendererSettings->DefaultFeatureAntiAliasing = EAntiAliasingMethod::AAM_TSR;
+			break;
+	}
+
+	int T = RendererSettings->DefaultFeatureAntiAliasing;
+	int MSAASC = RendererSettings->MSAASampleCount;
+
+	if (bApply) {
+		GetWorld()->GetFirstPlayerController()->ConsoleCommand(FString::Printf(TEXT("r.AntiAliasingMethod %d"), T));
+		GetWorld()->GetFirstPlayerController()->ConsoleCommand(FString::Printf(TEXT("r.MSAACount %d"), MSAASC));
+	}
+
+	CurrentAntiAliasingMethodIDX = ClampedType;
+	RendererSettings->SaveConfig();
+}
+
+const TArray<FString>& UGameSettingSubsystem::GetAntiAliasingMethodOptions() const
+{
+	static TArray<FString> AAMOptions({"None","FXAA", "TAA", "2xMSAA", "4xMSAA", "8xMSAA", "TSR"});
+
+	return AAMOptions;
+}
+
+
+void UGameSettingSubsystem::SetBrightness(float NewValue, bool bApply)
+{
+	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
+
+	float ClampedValue = FMath::Clamp<float>(NewValue, 0, 100);
+	float FinalValue = 0.02 * ClampedValue;
+
+	RendererSettings->DefaultFeatureAutoExposureBias = FinalValue;
+
+	if (bApply) {
+		GetWorld()->GetFirstPlayerController()->ConsoleCommand(FString::Printf(TEXT("r.DefaultFeature.AutoExposure.Bias %.2f"), FinalValue));
+	}
+	RendererSettings->SaveConfig();
+	
+}
+
+float UGameSettingSubsystem::GetBrightness() const
+{
+	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
+	return 50 * RendererSettings->DefaultFeatureAutoExposureBias;
+}
+
 void UGameSettingSubsystem::ForStudy()
 {
 	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
 
-	
+	URendererSettings* Settings = GetMutableDefault<URendererSettings>();
+	Settings->SaveConfig();
+
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -8,8 +8,9 @@
 
 URigidityExecutionCalculation::URigidityExecutionCalculation()
 {
+#if WITH_EDITORONLY_DATA
 	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("Data.RigidityTime"));
-
+#endif
 }
 
 void URigidityExecutionCalculation::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, OUT FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const

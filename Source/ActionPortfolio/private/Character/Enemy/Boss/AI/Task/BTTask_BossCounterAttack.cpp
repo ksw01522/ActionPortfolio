@@ -106,6 +106,8 @@ void UBTTask_BossCounterAttack::OnTaskFinished(UBehaviorTreeComponent& OwnerComp
 	}
 }
 
+#if WITH_EDITOR
+
 void UBTTask_BossCounterAttack::InitializeFromAsset(UBehaviorTree& Asset)
 {
 	Super::InitializeFromAsset(Asset);
@@ -121,6 +123,7 @@ void UBTTask_BossCounterAttack::InitializeFromAsset(UBehaviorTree& Asset)
 	}
 
 }
+#endif
 
 
 

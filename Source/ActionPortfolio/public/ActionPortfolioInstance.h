@@ -4,25 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Settings/CustomStructForSetting.h"
 #include "ActionPortfolioInstance.generated.h"
 
 /**
  * 
  */
-UENUM(BlueprintType)
-enum class EDialogueWidgetAnimSpeed : uint8
-{
-	SLOW,
-	NORMAL,
-	FAST
-};
 
-UENUM(BlueprintType)
-enum class ELanguage : uint8
-{
-	Korean,
-	English
-};
 
 
 UCLASS(Config = ActionPortfolioSetting)
@@ -42,27 +30,14 @@ private:
 	float FastDialogueAnimTime;
 
 
-	UPROPERTY(GlobalConfig)
-	EDialogueWidgetAnimSpeed DialogueAnimSpeed;
-
-	UPROPERTY(GlobalConfig)
-	ELanguage Language;
-
 public:
 	virtual void Init() override;
 	virtual void Shutdown() override;
 
 	float GetDialogueAnimTime() const;
 
-	void SetDialogueAnimSpeed(EDialogueWidgetAnimSpeed NewSpeed) {
-		if(DialogueAnimSpeed == NewSpeed) return;
-		DialogueAnimSpeed = NewSpeed;
-		SaveConfig();
-	}
-
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Localization")
-	ELanguage GetCurrentLanguage() {return Language;}
+	ELanguage GetCurrentLanguage() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ActionPF|Localization")
-	void SetCurrentLanguage(ELanguage NewLanguage);
+
 };

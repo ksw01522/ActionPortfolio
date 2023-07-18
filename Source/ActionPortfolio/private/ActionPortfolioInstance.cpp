@@ -7,6 +7,7 @@
 #include "DialogueManager.h"
 #include "DialogueBFL.h"
 #include "Kismet/KismetInternationalizationLibrary.h"
+#include "Settings/GameSettingSubsystem.h"
 
 UActionPortfolioInstance::UActionPortfolioInstance()
 {
@@ -31,7 +32,7 @@ void UActionPortfolioInstance::Shutdown()
 
 float UActionPortfolioInstance::GetDialogueAnimTime() const
 {
-	switch (DialogueAnimSpeed)
+	switch (GetSubsystem<UGameSettingSubsystem>(this)->CurrentDialogueAnimSpeed)
 	{
 		case EDialogueWidgetAnimSpeed::SLOW:
 		return SlowDialogueAnimTime;
@@ -46,25 +47,8 @@ float UActionPortfolioInstance::GetDialogueAnimTime() const
 	return 0.2f;
 }
 
-void UActionPortfolioInstance::SetCurrentLanguage(ELanguage NewLanguage)
+ELanguage UActionPortfolioInstance::GetCurrentLanguage() const
 {
-	if(Language == NewLanguage) return;
-	Language = NewLanguage;
-	UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
-
-	switch (Language)
-	{
-	case ELanguage::Korean:
-		DialogueManager->SetCurrentLanguage(EDialogueLanguage::Korean);
-		UKismetInternationalizationLibrary::SetCurrentCulture("ko-KR");
-		break;
-	case ELanguage::English:
-		DialogueManager->SetCurrentLanguage(EDialogueLanguage::English);
-		UKismetInternationalizationLibrary::SetCurrentCulture("en");
-		break;
-	default:
-		break;
-	}
-
-	SaveConfig();
+	return GetSubsystem<UGameSettingSubsystem>(this)->CurrentLanguage;
 }
+

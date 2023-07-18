@@ -28,8 +28,9 @@ static const ActionPFDamageStatics& DamageStatics()
 
 UDamageExecutionCalculation::UDamageExecutionCalculation()
 {
-
+#if WITH_EDITORONLY_DATA
 	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("Data.Damage"));
+#endif
 }
 
 void UDamageExecutionCalculation::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, OUT FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const

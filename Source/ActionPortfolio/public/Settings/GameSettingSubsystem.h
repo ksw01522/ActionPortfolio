@@ -4,35 +4,79 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Settings/CustomStructForSetting.h"
+#include "GameFramework/GameUserSettings.h"
 #include "GameSettingSubsystem.generated.h"
 
 /**
  * 
  */
+ 
+
 UCLASS(Config = ActionPortfolioSetting)
 class ACTIONPORTFOLIO_API UGameSettingSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 	UGameSettingSubsystem();
 
+private:
+	friend class UActionPortfolioInstance;
+	static TArray<FText> BasicLevelOptions;
+
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
+///////////// 일반 /////////////
+	UPROPERTY(GlobalConfig)
+	EDialogueWidgetAnimSpeed CurrentDialogueAnimSpeed;
+
+	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Basic")
+	void SetDialogueAnimSpeed(EDialogueWidgetAnimSpeed NewSpeed) {
+		if (CurrentDialogueAnimSpeed == NewSpeed) return;
+		CurrentDialogueAnimSpeed = NewSpeed;
+		SaveConfig();
+	}
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Basic")
+	const TArray<FString> GetDialogueAnimSpeedOptions() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Basic")
+	EDialogueWidgetAnimSpeed GetCurrentDialogueAnimSpeed() const {return CurrentDialogueAnimSpeed; }
+
+	UPROPERTY(GlobalConfig)
+	ELanguage CurrentLanguage;
+
+	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Basic")
+	void SetCurrentLanguage(ELanguage NewLanguage);
+
+	
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Basic")
+	const TArray<FString> GetLanguageOptions() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Basic")
+	ELanguage GetCurrentLanguage() const {return CurrentLanguage;}
+
 ///////////// 그래픽 //////////
+public:
+	void ApplyGraphicSettings();
 
 	///////////// 화면비 //////////
 private:
-	TArray<FIntPoint> ScreenResolutions;
+	TArray<FIntPoint> ScreenResolutionOptions;
+
+	UPROPERTY(GlobalConfig)
+	int Current_ScreenResolution_IDX;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Graphic")
-	void ChangeScreenResolution(int Idx);
+	void SetScreenResolution(int Idx, bool bApply);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
-	const TArray<FIntPoint>& GetScreenResolutionOptions() const {return ScreenResolutions;}
+	const TArray<FIntPoint>& GetScreenResolutionOptions() const {return ScreenResolutionOptions;}
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
-	const FIntPoint GetCurrentScreenResolution() const;
+	const FIntPoint GetCurrentScreenResolution() const { return ScreenResolutionOptions[Current_ScreenResolution_IDX]; }
 
 	///////////// 화면 모드 //////////
 private:
@@ -42,7 +86,7 @@ private:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Graphic")
-	void SetWindowMode(FString NewMode);
+	void SetWindowMode(int Idx, bool bApply);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
 	const TArray<FString> GetWindowModeOptions() const;
@@ -54,9 +98,12 @@ public:
 private:
 	TArray<int> FrameRateLimitOptions;
 
+	UPROPERTY(GlobalConfig)
+	int Current_FrameRateLimit_IDX;
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Graphic")
-	void ChangeFrameRateLimit(int Idx);
+	void SetFrameRateLimit(int Idx, bool bApply);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
 	float GetCurrentFrameRateLimit() const;
@@ -67,41 +114,75 @@ public:
 ///////////// VSync //////////
 public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Graphic")
-	void SetVSyncEnabled(bool NewState);
+	void SetVSyncEnabled(bool NewState, bool bApply);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
 	bool IsVSyncEnabled() const;
 
-///////////// ViewDistance //////////
+///////////// 가시거리 //////////
 public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Graphic")
-	void SetViewDistanceLevel(int32 NewLevel);
+	void SetViewDistanceLevel(int32 NewLevel, bool bApply);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
 	int32 GetViewDistanceLevel() const;
 
-///////////// Shadow //////////
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
+	const TArray<FString> GetViewDistanceLevelOptions() const;
+
+///////////// 그림자 //////////
 public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Graphic")
-	void SetShadowQuality(int32 NewLevel);
+	void SetShadowQuality(int32 NewLevel, bool bApply);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
 	int32 GetShadowQuality() const;
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
+	const TArray<FString> GetShadowQualityOptions() const;
+
 ///////////// Texture //////////
 public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Graphic")
-	void SetTextureQuality(int32 NewLevel);
+	void SetTextureQuality(int32 NewLevel, bool bApply);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
 	int32 GetTextureQuality() const;
 
-///////////// Anti-Aliasing //////////
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
+	const TArray<FString> GetTextureQualityOptions() const;
+
+///////////// AntiAliasing //////////
+private:
+	int32 CurrentAntiAliasingMethodIDX = -1;
+
+public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Graphic")
-	void SetAntiAliasingQuality(int32 NewLevel);
+	void SetAntiAliasingQuality(int32 NewLevel, bool bApply);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
 	int32 GetAntiAliasingQuality() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
+	const TArray<FString> GetAntiAliasingQualityOptions() const;
+
+	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Graphic")
+	void SetAntiAliasingMethod(int32 NewType, bool bApply);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
+	const TArray<FString>& GetAntiAliasingMethodOptions() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
+	const int32 GetAntiAliaisingMethodIDX() const {return CurrentAntiAliasingMethodIDX;}
+
+//////////// 밝기 /////////////
+public:
+	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Graphic")
+	void SetBrightness(float NewValue, bool bApply);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Graphic")
+	float GetBrightness() const;
+
 
 private:
 	void ForStudy();

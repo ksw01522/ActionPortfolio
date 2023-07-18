@@ -10,7 +10,6 @@
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"DialogueRuntime",
-				"SkillTreeRuntime",
 				"Engine",
 				"CoreUObject",
 				"GameplayAbilities",
@@ -25,8 +24,6 @@
 			"AdditionalDependencies": [
 				"CoreUObject",
 				"Engine",
-				"GameplayAbilities",
-				"GameplayTasks"
 			]
 		},
 		{
@@ -37,26 +34,6 @@
 				"Engine",
 				"UnrealEd",
 				"UMG"
-			]
-		},
-		{
-			"Name": "SkillTreeRuntime",
-			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"AdditionalDependencies": [
-				"CoreUObject",
-				"Engine",
-				"GameplayAbilities",
-				"GameplayTasks"
-			]
-		},
-		{
-			"Name": "SkillTreeEditor",
-			"Type": "Editor",
-			"LoadingPhase": "Default",
-			"AdditionalDependencies": [
-				"Engine",
-				"UnrealEd"
 			]
 		}
 	],

@@ -11,8 +11,8 @@
  */
 struct FBTTaskBossCounterAttackNode
 {
-	TWeakObjectPtr<class ACharacterBoss> SourceBoss;
-	TWeakObjectPtr<class ABossAIController> BossController;
+	TWeakObjectPtr<class ACharacterBoss> SourceBoss = nullptr;
+	TWeakObjectPtr<class ABossAIController> BossController = nullptr;
 };
 
 UCLASS(meta = (DisplayName = "Boss Counter Attack"))

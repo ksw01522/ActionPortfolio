@@ -11,6 +11,9 @@ BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SDialogueSlate::Construct(const FArguments& InArgs)
 {
 	OwnerPlayer = InArgs._OwnerPlayer;
+	FSlateBrush* NewBrush = new FSlateBrush;
+
+	NewBrush->TintColor = FLinearColor(1,1,1,1);
 
 	ChildSlot
 		[
@@ -22,6 +25,7 @@ void SDialogueSlate::Construct(const FArguments& InArgs)
 		[
 			SNew(SBorder)
 			.HAlign(HAlign_Fill)
+			.BorderImage(NewBrush)
 		.VAlign(VAlign_Fill)
 		.OnMouseButtonDown(this, &SDialogueSlate::MouseButtonDownInDialogueBox)
 		.Padding(10)

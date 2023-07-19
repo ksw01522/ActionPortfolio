@@ -145,7 +145,7 @@ void UGameSettingSubsystem::ApplyGraphicSettings()
 	GetWorld()->GetFirstPlayerController()->ConsoleCommand(FString::Printf(TEXT("r.AntiAliasingMethod %d"), AAType));
 	GetWorld()->GetFirstPlayerController()->ConsoleCommand(FString::Printf(TEXT("r.MSAACount %d"), MSAASampleCount));
 	
-	int Brightness = RendererSettings->DefaultFeatureAutoExposureBias;
+	float Brightness = RendererSettings->DefaultFeatureAutoExposureBias;
 	GetWorld()->GetFirstPlayerController()->ConsoleCommand(FString::Printf(TEXT("r.DefaultFeature.AutoExposure.Bias %.2f"), Brightness));
 }
 
@@ -418,7 +418,7 @@ void UGameSettingSubsystem::SetBrightness(float NewValue, bool bApply)
 	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
 
 	float ClampedValue = FMath::Clamp<float>(NewValue, 0, 100);
-	float FinalValue = 0.02 * ClampedValue;
+	float FinalValue = 0.04 * ClampedValue;
 
 	RendererSettings->DefaultFeatureAutoExposureBias = FinalValue;
 
@@ -432,7 +432,7 @@ void UGameSettingSubsystem::SetBrightness(float NewValue, bool bApply)
 float UGameSettingSubsystem::GetBrightness() const
 {
 	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
-	return 50 * RendererSettings->DefaultFeatureAutoExposureBias;
+	return 25 * RendererSettings->DefaultFeatureAutoExposureBias;
 }
 
 void UGameSettingSubsystem::ForStudy()

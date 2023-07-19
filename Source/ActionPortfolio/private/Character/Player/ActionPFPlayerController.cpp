@@ -17,10 +17,28 @@
 #include "Character/Player/PlayerCharacter.h"
 #include "UI/DialogueSlate.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
 
 AActionPFPlayerController::AActionPFPlayerController()
 {
 	PlayerDialoguer = CreateDefaultSubobject<UDialoguerComponent>(TEXT("Dialoguer"));
+}
+
+void AActionPFPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent)) {
+		
+		EnhancedInputComponent->BindAction(OpenMenuAction, ETriggerEvent::Started, this, &AActionPFPlayerController::OpenMenu);
+
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(ControllerMappingContext, 0);
+		}
+
+	}
 }
 
 
@@ -145,6 +163,39 @@ void AActionPFPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID
 	}
 }
 
+
+void AActionPFPlayerController::OpenMenu()
+{
+	UUserWidget* CurrentMenuWidget = GetMenuWidget();
+	if(CurrentMenuWidget == nullptr) return;
+
+	ChangeUIInputMode();
+	CurrentMenuWidget->SetVisibility(ESlateVisibility::Visible);
+}
+
+void AActionPFPlayerController::CloseMenu()
+{
+	UUserWidget* CurrentMenuWidget = GetMenuWidget();
+	if (CurrentMenuWidget == nullptr) return;
+
+	ChangeGameInputMode();
+	CurrentMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+UUserWidget* AActionPFPlayerController::GetMenuWidget()
+{
+	if (!IsValid(MenuWidget)) {
+		if (MenuWidgetClass.GetDefaultObject() == nullptr) return nullptr;
+
+		MenuWidget = CreateWidget(this, MenuWidgetClass, "PlayerMenu");
+	}
+	if (!IsValid(MenuWidget)) return nullptr;
+
+	MenuWidget->AddToViewport();
+	MenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+
+	return MenuWidget;
+}
 
 void AActionPFPlayerController::EnterNextDialogue(EActionPFDialogueType Type)
 {

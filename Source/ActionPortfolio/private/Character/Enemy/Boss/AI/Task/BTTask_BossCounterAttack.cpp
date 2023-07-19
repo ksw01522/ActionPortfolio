@@ -13,6 +13,8 @@
 UBTTask_BossCounterAttack::UBTTask_BossCounterAttack()
 {
 	NodeName = "Act Boss Counter Attack";
+	bNotifyTick = true;
+	bNotifyTaskFinished = true;
 
 	TargetSelector.AddVectorFilter(this, GET_MEMBER_NAME_CHECKED(UBTTask_BossCounterAttack, TargetSelector));
 	TargetSelector.AddObjectFilter(this, GET_MEMBER_NAME_CHECKED(UBTTask_BossCounterAttack, TargetSelector), AActor::StaticClass());
@@ -27,6 +29,7 @@ EBTNodeResult::Type UBTTask_BossCounterAttack::ExecuteTask(UBehaviorTreeComponen
 
 	if (AIController == nullptr) return NodeResult;
 	if(!AIController->GetBlackboardComponent()->GetValueAsBool(ABossAIController::IsDamagedKey)) return NodeResult;
+	MyMemory->BossController = AIController;
 
 	MyMemory->SourceBoss = AIController->GetPawn<ACharacterBoss>();
 	if (!MyMemory->SourceBoss.IsValid()) return NodeResult;

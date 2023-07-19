@@ -211,9 +211,13 @@ void SNPCInteractButton::Construct(const FArguments& InArgs)
 void SNPCDialogueBox::Construct(const FArguments& InArgs)
 {
 	FSlateStyleSet* NPCInteractSlateStyle = FActionPortfolioWidgetStyle::GetActionPFWidgetStyleSet();
+	FSlateBrush* NewBrush = new FSlateBrush;
+
+	NewBrush->TintColor = FLinearColor(1, 1, 1, 1);
 
 	ChildSlot[
 		SNew(SBorder)
+		.BorderImage(NewBrush)
 		[
 			SNew(SVerticalBox)
 

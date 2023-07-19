@@ -34,6 +34,34 @@ private:
 	FTimerHandle DialogueAnimHandle_NPC;
 	FTimerDelegate DialogueAnimDel_NPC;
 
+///////////////////입력
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputMappingContext* ControllerMappingContext;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* OpenMenuAction;
+
+protected:
+	virtual void SetupInputComponent() override;
+
+	
+
+///////////////////메뉴 위젯
+private:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UserWidget", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class UUserWidget> MenuWidgetClass;
+
+	UUserWidget* MenuWidget;
+	
+	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player")
+	void OpenMenu();
+
+	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player")
+	void CloseMenu();
+
+	UUserWidget* GetMenuWidget();
+
 protected:
 	TSharedPtr<SNPCInteractWidget> NPCInteractWidget;
 

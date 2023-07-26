@@ -42,4 +42,19 @@ public:
 	virtual void ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData);
 
 	virtual void ReactivateAbility();
+
+
+protected:
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cooldown")
+	FScalableFloat CooldownDuration;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cooldown")
+	FGameplayTagContainer CooldownTags;
+
+	UPROPERTY(Transient)
+	FGameplayTagContainer TempCooldownTags;
+
+public:
+	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const override;
+	virtual const FGameplayTagContainer* GetCooldownTags() const override;
 };

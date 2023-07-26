@@ -16,6 +16,16 @@ class ACTIONPORTFOLIO_API UAbility_BossRush : public UGameplayAbility_Meelee
 public:
 	UAbility_BossRush();
 
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "BossRush")
+	float MaxRushTime;
+	
+	FTimerHandle StopRushTimerHandle;
+
 protected:
+	virtual void ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
 	virtual void OnEventReceived(FGameplayEventData EventData) override;
+
+	void StopRush();
 };

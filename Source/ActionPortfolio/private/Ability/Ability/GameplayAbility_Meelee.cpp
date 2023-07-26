@@ -21,6 +21,10 @@ UGameplayAbility_Meelee::UGameplayAbility_Meelee() : Super()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerExecution;
 	bStopWhenAbilityEnd = true;
 	PlayLate = 1.f;
+
+	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Death"));
+	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Down"));
+	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity"));
 }
 
 void UGameplayAbility_Meelee::OnEventReceived(FGameplayEventData EventData)

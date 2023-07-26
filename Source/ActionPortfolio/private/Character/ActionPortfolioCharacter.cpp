@@ -513,6 +513,15 @@ void AActionPortfolioCharacter::OnDamageEvent(float DamageAmount, AActor* Damage
 	}
 }
 
+void AActionPortfolioCharacter::OnAttackEvent(float DamageAmount, AActor* Target)
+{
+	AActionPortfolioCharacter* Char = Cast<AActionPortfolioCharacter>(Target);
+
+	if (IsValid(Char)) {
+		LastAttackedTarget = Char;
+	}
+}
+
 void AActionPortfolioCharacter::HitReact(EHitReactionDirection Direction, bool bForceDown, UAnimMontage* ForceHitReactionAnim)
 {
 	if(!IsRigidity() || IsCharacterDie()) return;

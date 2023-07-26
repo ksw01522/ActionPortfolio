@@ -25,6 +25,12 @@ AActionPFPlayerController::AActionPFPlayerController()
 	PlayerDialoguer = CreateDefaultSubobject<UDialoguerComponent>(TEXT("Dialoguer"));
 }
 
+void AActionPFPlayerController::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+}
+
 void AActionPFPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
@@ -188,11 +194,12 @@ UUserWidget* AActionPFPlayerController::GetMenuWidget()
 		if (MenuWidgetClass.GetDefaultObject() == nullptr) return nullptr;
 
 		MenuWidget = CreateWidget(this, MenuWidgetClass, "PlayerMenu");
+		MenuWidget->AddToViewport();
+		MenuWidget->SetVisibility(ESlateVisibility::Collapsed);
 	}
 	if (!IsValid(MenuWidget)) return nullptr;
 
-	MenuWidget->AddToViewport();
-	MenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+	
 
 	return MenuWidget;
 }
@@ -332,19 +339,19 @@ void AActionPFPlayerController::OnCompleteDialogueAnim(EActionPFDialogueType Typ
 
 void AActionPFPlayerController::ChangeUIInputMode()
 {
-
-	FInputModeUIOnly InputUIMode;
-	SetShowMouseCursor(true);
-	SetInputMode(InputUIMode);
-
 	InputComponent->bBlockInput = true;
+
+	SetShowMouseCursor(true);
+
+	SetInputMode( FInputModeUIOnly());
 }
 
 void AActionPFPlayerController::ChangeGameInputMode()
 {
-	FInputModeGameOnly InputGameMode;
-	SetShowMouseCursor(false);
-	SetInputMode(InputGameMode);
 
 	InputComponent->bBlockInput = false;
+
+	SetShowMouseCursor(false);
+
+	SetInputMode(FInputModeGameOnly());
 }

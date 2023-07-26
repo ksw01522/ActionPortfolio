@@ -33,7 +33,19 @@ struct FHitReactionAnimations
 {
 	GENERATED_BODY()
 public:
-	FHitReactionAnimations() {}
+	FHitReactionAnimations() {
+		Ground_Front = nullptr;
+		Ground_Back = nullptr;
+		Ground_Right = nullptr;
+		Ground_Left = nullptr;
+		InAir_Front = nullptr;
+		InAir_Back = nullptr;
+		InAir_Right = nullptr;
+		InAir_Left = nullptr;
+		Down = nullptr;
+		DownedRecovery = nullptr;
+		Death = nullptr;
+	}
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ground")
@@ -86,6 +98,10 @@ private:
 	UPROPERTY(Transient)
 	TMap<FName, class UShapeComponent*> AttackShapeMap;
 
+	TWeakObjectPtr<AActionPortfolioCharacter> LastAttackedTarget;
+public:
+	AActionPortfolioCharacter* GetLastAttackedTarget() const {return LastAttackedTarget.Get(); }
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
 	TArray<TSubclassOf<class UActionPFGameplayAbility>> CharacterAbilities;
@@ -133,6 +149,9 @@ public:
 	virtual void CharacterDie();
 
 	virtual void OnDamageEvent(float DamageAmount, AActor* DamageInstigator);
+
+	virtual void OnAttackEvent(float DamageAmount, AActor* Target);
+
 
 /////////////////// AbilitySystem ////////////////////
 private:
@@ -206,7 +225,7 @@ public:
 protected:
 	// To add mapping context
 	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaSeconds);
+	virtual void Tick(float DeltaSeconds) override;
 
 
 

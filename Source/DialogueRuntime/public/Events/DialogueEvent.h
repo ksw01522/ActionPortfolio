@@ -42,9 +42,6 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
 	bool CanEnterNextNode();
-	virtual bool CanEnterNextNode_Implementation() { return true; }
-
-
 
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
 	void OnCalledEvent(const FActingDialogueHandle& Handle);
@@ -52,8 +49,9 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
 	void OnEndEvent(bool bIsCancelled);
 
+protected:
+	virtual bool CanEnterNextNode_Implementation() { return true; }
 
-private:
 	virtual void OnCalledEvent_Implementation(FActingDialogueHandle& Handle) {}
 
 	virtual void OnEndEvent_Implementation(bool bIsCancelled) {}

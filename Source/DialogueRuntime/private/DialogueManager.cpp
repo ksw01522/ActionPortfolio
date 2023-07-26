@@ -8,6 +8,7 @@
 #include "Components/AudioComponent.h"
 #include "SRichTextBlockDecorator.h"
 #include "Components/RichTextBlockDecorator.h"
+#include "Events/CustomDialogueEventObject.h"
 
 ////////////////////////////////////////// FActingDialogueData /////////////////////////////////////////////
 FActingDialogueData::FActingDialogueData(TArray<UDialoguerComponent*> NewDialoguers, UDialogueSession* Session)
@@ -324,6 +325,38 @@ void UDialogueManager::UnregisterDialoguer(UDialoguerComponent* TargetDialoguer)
 	if (!IsValid(TargetDialoguer)) return;
 
 	DialoguerMap.Remove(TargetDialoguer->GetDialoguerID());
+}
+
+void UDialogueManager::CallCustomEvent(int ID)
+{
+	TArray<UCustomDialogueEventObject*>* FindedEventArray = CustomEventMap.Find(ID);
+	if (FindedEventArray == nullptr) {
+		LOG_ERROR(TEXT("Can't Find Custom Event Array"));
+		return;
+	}
+
+	for (auto CustomEvent : *FindedEventArray)
+	{
+		if(CustomEvent != nullptr)		CustomEvent->OnCalledCustomEvent();
+	}
+
+	CustomEventMap.Remove(ID);
+}
+
+UCustomDialogueEventObject* UDialogueManager::MakeCustomEvent(int NewEventID, TSubclassOf<UCustomDialogueEventObject> EventClass)
+{
+	if (EventClass.Get() == nullptr) {
+		LOG_ERROR(TEXT("Can't find Custom Dialogue Event Class"));
+		return nullptr;
+	}
+
+	UCustomDialogueEventObject* NewCustomEvent = NewObject<UCustomDialogueEventObject>(this, EventClass);
+	if (NewCustomEvent != nullptr) 
+	{
+		CustomEventMap.FindOrAdd(NewEventID).Add(NewCustomEvent);
+	}
+
+	return NewCustomEvent;
 }
 
 

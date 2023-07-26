@@ -14,6 +14,17 @@ UAbility_BossRush::UAbility_BossRush()
 	{
 		MeeleeMontage = RUSHAM.Object;
 	}
+
+	MaxRushTime = 2;
+}
+
+void UAbility_BossRush::ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+	if (!CommitCheck(Handle, ActorInfo, ActivationInfo)) return;
+
+	Super::ActivateAbility_CPP(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
+	GetWorld()->GetTimerManager().SetTimer(StopRushTimerHandle, this, &UAbility_BossRush::StopRush, MaxRushTime, false);
 }
 
 void UAbility_BossRush::OnEventReceived(FGameplayEventData EventData)
@@ -37,4 +48,12 @@ void UAbility_BossRush::OnEventReceived(FGameplayEventData EventData)
 	}
 	
 	BossChar->GetMesh()->GetAnimInstance()->Montage_JumpToSection("End", MeeleeMontage);
+}
+
+void UAbility_BossRush::StopRush()
+{
+	if (ACharacter* Char = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+	{
+		Char->GetMesh()->GetAnimInstance()->Montage_JumpToSection("End", MeeleeMontage);
+	}
 }

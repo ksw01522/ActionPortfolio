@@ -127,4 +127,13 @@ public:
 
 	void RegisterDialoguer(UDialoguerComponent* NewDialoguer);
 	void UnregisterDialoguer(UDialoguerComponent* TargetDialoguer);
+
+private:
+	TMap<int, TArray<UCustomDialogueEventObject*>> CustomEventMap;
+
+public:
+	void CallCustomEvent(int ID);
+
+	UFUNCTION(BlueprintCallable, Category = "DialogueManager")
+	class UCustomDialogueEventObject* MakeCustomEvent(int NewEventID, TSubclassOf<UCustomDialogueEventObject> EventClass);
 };

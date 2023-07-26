@@ -21,6 +21,7 @@ void UActionPortfolioInstance::Init()
 	Super::Init();
 
 	FActionPortfolioWidgetStyle::Initialize();
+
 }
 
 void UActionPortfolioInstance::Shutdown()

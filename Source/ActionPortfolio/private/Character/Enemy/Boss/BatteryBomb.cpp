@@ -26,12 +26,6 @@ ABatteryBomb::ABatteryBomb()
 	BatteryMesh->SetRelativeScale3D(FVector(3,3,3));
 	BatteryMesh->SetRelativeLocation(FVector(30, 0, 0));
 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> BATTERYMESH(TEXT("/Game/ModSci_Engineer/Meshes/SM_ElectricDistribBox.SM_ElectricDistribBox"));
-	if (BATTERYMESH.Succeeded())
-	{
-		BatteryMesh->SetStaticMesh(BATTERYMESH.Object);
-	}
-
 
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> BOMBPARTICLE(TEXT("/Game/ActionPFCharacter/Enemies/Boss/FX/P_Boss_BatteryBomb.P_Boss_BatteryBomb"));
 	if (BOMBPARTICLE.Succeeded())

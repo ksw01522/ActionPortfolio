@@ -34,6 +34,10 @@ private:
 	FTimerHandle DialogueAnimHandle_NPC;
 	FTimerDelegate DialogueAnimDel_NPC;
 
+protected:
+	virtual void Tick(float DeltaSeconds) override;
+
+
 ///////////////////ют╥б
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))

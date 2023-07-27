@@ -102,3 +102,5 @@ void UEdGraphNode_Dialogue_Basic::SetDialogueNode(UDialogueNode* NewNode)
 	Cast<UDialogueNode_Basic>(DialogueNode)->OnChangedDialogueStyle.BindDynamic(this, &UEdGraphNode_Dialogue_Basic::OnChangedDialogueStyleFunction);
 }
 
+
+

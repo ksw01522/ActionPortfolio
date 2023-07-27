@@ -13,7 +13,7 @@ UActionPortfolioInstance::UActionPortfolioInstance()
 {
 	SlowDialogueAnimTime = 0.15f;
 	NormalDialogueAnimTime = 0.1f;
-	FastDialogueAnimTime = 0.5f;
+	FastDialogueAnimTime = 0.05f;
 }
 
 void UActionPortfolioInstance::Init()

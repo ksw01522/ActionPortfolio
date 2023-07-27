@@ -22,14 +22,16 @@ protected:
 	UWorldEventObject();
 
 	FString EventKey;
+	bool bDestroyAfterCall;
+
+	virtual void FinishDestroy() override;
 
 public:
 	UPROPERTY(BlueprintAssignable)
 	FOnWorldCustomEvent WorldCustomEvent;
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "WorldEvent")
-	static UWorldEventObject* MakeWorldEvent(FString EventKey);
+	
 
 private:
 	void CallWorldCustomEvent();
@@ -43,12 +45,20 @@ class ACTIONPORTFOLIO_API UWorldEventSubsystem : public UWorldSubsystem
 	UWorldEventSubsystem();
 
 private:
-	
+	TMap<FString , UWorldEventObject*> CustomEvents;
 
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
+	UFUNCTION(BlueprintCallable, Category = "WorldEvent")
+	UWorldEventObject* MakeWorldEvent(FString EventKey, bool bDestroyAfterCall);
+
+	UFUNCTION(BlueprintCallable, Category = "WorldEvent")
+	bool CallWorldCustomEvent(FString EventKey);
+
+	UFUNCTION(BlueprintCallable, Category = "WorldEvent")
+	void RemoveCustomEvent(FString EventKey);
 };
 
 

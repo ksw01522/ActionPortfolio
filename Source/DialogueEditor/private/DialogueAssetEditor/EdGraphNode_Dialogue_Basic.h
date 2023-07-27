@@ -39,4 +39,5 @@ public:
 	void OnChangedDialogueStyleFunction();
 
 	virtual void SetDialogueNode(UDialogueNode* NewNode) override;
+
 };

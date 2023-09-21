@@ -9,7 +9,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(Abstract)
 class ACTIONPORTFOLIO_API UAbility_GutPunch : public UGameplayAbility_Meelee
 {
 	GENERATED_BODY()

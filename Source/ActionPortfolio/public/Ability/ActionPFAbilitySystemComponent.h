@@ -31,4 +31,6 @@ public:
 	bool TryActivatePFAbilityByClass(TSubclassOf<class UActionPFGameplayAbility> AbilityClass);
 
 	static UActionPFAbilitySystemComponent* GetAbilitySystemComponentFromActor(const AActor* Actor, bool LookForComponent = false);
+
+	bool GetCooldownRemainingAndDurationByTag(FGameplayTagContainer CooldownTags, float& TimeRemaining, float& CooldownDuration);
 };

@@ -15,7 +15,8 @@ enum class EPlayerAbilityInputID : uint8
 	Ability_LMB = 0,
 	Ability_RMB = 1,
 	Ability_Q = 2,
-	Ability_E = 3
+	Ability_E = 3,
+	Ability_R = 4
 };
 
 USTRUCT(BlueprintType)
@@ -76,6 +77,9 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	FPlayerInputAbilityStruct Ability_E_Action;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	FPlayerInputAbilityStruct Ability_R_Action;
+
 
 private:
 	virtual void AddCharacterAbilities() override;
@@ -115,5 +119,6 @@ public:
 	UInteractionSystemComponent* GetFocusedInteraction();
 	void ChangeFocusInteraction();
 
-	void Test();
+	UFUNCTION(BlueprintCallable, Category = "Player|Ability")
+	TSubclassOf<class UActionPFGameplayAbility> GetPlayerAbilityClass(EPlayerAbilityInputID ID);
 };

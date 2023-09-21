@@ -70,6 +70,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString English;
 
+public:
 	void DialogueClear() {
 		Original = "";
 		Korean = "";

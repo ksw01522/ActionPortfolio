@@ -23,7 +23,6 @@ private:
 
 	FVector FinalDirection;
 
-	class UCharacterMovementComponent* MovementComponent;
 
 public:
 	virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference);

@@ -19,10 +19,8 @@ void UActionPFAbilitySystemComponent::GetActiveAbilitiesWithTags(const FGameplay
 	TArray<FGameplayAbilitySpec*> AbilitiesToActivate;
 	GetActivatableGameplayAbilitySpecsByAllMatchingTags(GameplayTagContainer, AbilitiesToActivate, false);
 
-	// Iterate the list of all ability specs
 	for (FGameplayAbilitySpec* Spec : AbilitiesToActivate)
 	{
-		// Iterate all instances on this ability spec
 		TArray<UGameplayAbility*> AbilityInstances = Spec->GetAbilityInstances();
 
 		for (UGameplayAbility* ActiveAbility : AbilityInstances)
@@ -75,6 +73,40 @@ bool UActionPFAbilitySystemComponent::TryActivatePFAbilityByClass(TSubclassOf<cl
 UActionPFAbilitySystemComponent* UActionPFAbilitySystemComponent::GetAbilitySystemComponentFromActor(const AActor* Actor, bool LookForComponent)
 {
 	return Cast<UActionPFAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor, LookForComponent));
+}
+
+bool UActionPFAbilitySystemComponent::GetCooldownRemainingAndDurationByTag(FGameplayTagContainer CooldownTags, float& TimeRemaining, float& CooldownDuration)
+{
+	if (CooldownTags.Num() <= 0) {
+		#if WITH_EDITOR
+		PFLOG(Warning, TEXT("Called By Empty Tag"));
+		#endif
+		return false;
+	}
+
+	TimeRemaining = -1;
+	CooldownDuration = -1;
+
+	FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(CooldownTags);
+	TArray< TPair<float, float> > DurationAndTimeRemaining = GetActiveEffectsTimeRemainingAndDuration(Query);
+	if (DurationAndTimeRemaining.Num() <= 0) {
+		return false;
+	}
+
+	int32 LongestIDX = 0;
+	float LongestTime = DurationAndTimeRemaining[0].Key;
+	for (int Idx = 1; Idx < DurationAndTimeRemaining.Num(); Idx++)
+	{
+		if(DurationAndTimeRemaining[Idx].Key <= LongestTime) continue;
+
+		LongestIDX = Idx;
+		LongestTime = DurationAndTimeRemaining[Idx].Key;
+	}
+
+	TimeRemaining = DurationAndTimeRemaining[LongestIDX].Key;
+	CooldownDuration = DurationAndTimeRemaining[LongestIDX].Value;
+
+	return true;
 }
 
 

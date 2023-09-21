@@ -72,10 +72,10 @@ public:
 
 #if WITH_EDITORONLY_DATA
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue", meta = (RowType = "FDialogueLocalization"))
 	UDataTable* DialoguerNameTable;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue", meta = (RowType = "FDialogueLocalization"))
 	UDataTable* DialogueStringTable;
 
 	UPROPERTY(EditAnywhere, Category = "DialogueEditor")

@@ -63,4 +63,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "AI")
 	void SetFocusTargetForced(AActor* NewTarget);
+
+	UFUNCTION(BlueprintCallable, Category = "AI")
+	AActionPortfolioCharacter* GetCurrentFocusedTarget() const;
 };

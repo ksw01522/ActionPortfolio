@@ -19,7 +19,7 @@ EBTNodeResult::Type UBTTask_TryMeeleeAbility::ExecuteTask(UBehaviorTreeComponent
 {
 	EBTNodeResult::Type NodeResult = EBTNodeResult::Failed;
 
-	FBTTaskTryAbilityNode* MyMemory = CastInstanceNodeMemory<FBTTaskTryAbilityNode>(NodeMemory);
+	FBTTaskTryMeeleeAbilityNode* MyMemory = CastInstanceNodeMemory<FBTTaskTryMeeleeAbilityNode>(NodeMemory);
 	AAIController* AIController = OwnerComp.GetAIOwner();
 
 	if (AIController == nullptr) return NodeResult;
@@ -34,7 +34,7 @@ EBTNodeResult::Type UBTTask_TryMeeleeAbility::ExecuteTask(UBehaviorTreeComponent
 
 void UBTTask_TryMeeleeAbility::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
-	FBTTaskTryAbilityNode* MyMemory = CastInstanceNodeMemory<FBTTaskTryAbilityNode>(NodeMemory);
+	FBTTaskTryMeeleeAbilityNode* MyMemory = CastInstanceNodeMemory<FBTTaskTryMeeleeAbilityNode>(NodeMemory);
 	if (!(MyMemory->SourceCharacter.IsValid()))
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
@@ -52,12 +52,12 @@ void UBTTask_TryMeeleeAbility::TickTask(UBehaviorTreeComponent& OwnerComp, uint8
 
 uint16 UBTTask_TryMeeleeAbility::GetInstanceMemorySize() const
 {
-	return sizeof(FBTTaskTryAbilityNode);
+	return sizeof(FBTTaskTryMeeleeAbilityNode);
 }
 
 EBTNodeResult::Type UBTTask_TryMeeleeAbility::AbortTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	FBTTaskTryAbilityNode* MyMemory = CastInstanceNodeMemory<FBTTaskTryAbilityNode>(NodeMemory);
+	FBTTaskTryMeeleeAbilityNode* MyMemory = CastInstanceNodeMemory<FBTTaskTryMeeleeAbilityNode>(NodeMemory);
 
 	if (bStopWhenTaskStop && MyMemory->SourceCharacter.IsValid())
 	{

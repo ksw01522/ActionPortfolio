@@ -4,6 +4,8 @@
 #include "Character/ActionPFAnimInstance.h"
 #include "Character/ActionPortfolioCharacter.h"
 #include "ActionPortfolio.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
 bool UActionPFAnimInstance::IsRigidity()
 {
 	AActionPortfolioCharacter* Character = GetOwnerCharacter();
@@ -28,6 +30,8 @@ void UActionPFAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	FVector Vel = OwnerCharacter->GetVelocity();
 	Speed = Vel.Size();
+
+	bIsInAir = OwnerCharacter->GetCharacterMovement()->IsFalling();
 
 	if (FMath::IsNearlyZero(Speed)) {
 		Degree = 0;

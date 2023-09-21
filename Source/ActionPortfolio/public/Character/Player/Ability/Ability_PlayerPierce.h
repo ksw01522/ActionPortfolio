@@ -9,7 +9,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(Abstract)
 class ACTIONPORTFOLIO_API UAbility_PlayerPierce : public UGameplayAbility_Meelee
 {
 	GENERATED_BODY()
@@ -37,8 +37,9 @@ private:
 
 	FVector PrePiercePos;
 
-
 	TWeakObjectPtr<class AActionPortfolioCharacter> TargetCharacter;
+
+	FTimerHandle EndPierceTimerHandle;
 
 private:
 	void EndPlayerPierce();
@@ -48,12 +49,19 @@ private:
 protected:
 	virtual void ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
+	virtual bool CommitCheck(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) override;
+
+	virtual void CommitExecute(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
+
 private:
 	UFUNCTION()
-	void OnPrePiercePosLeached();
+	void OnPrePiercePosReached();
 
 	UFUNCTION()
 	void OnPierceEnd();
+
+	UFUNCTION()
+	void CameraRotate(float DeltaTime);
 
 public:
 	int GetMaxPierceCount() const {return MaxPierceCount;}

@@ -13,27 +13,25 @@ void SDialogueSlate::Construct(const FArguments& InArgs)
 	OwnerPlayer = InArgs._OwnerPlayer;
 	FSlateBrush* NewBrush = new FSlateBrush;
 
-	NewBrush->TintColor = FLinearColor(1,1,1,1);
+	NewBrush->TintColor = FLinearColor(0,0,0,0);
 
 	ChildSlot
 		[
-			
 			SNew(SConstraintCanvas)
 
 			+ SConstraintCanvas::Slot()
-		.Anchors(FAnchors(0.01, 0.7, 0.99, 0.985))
-		[
-			SNew(SBorder)
-			.HAlign(HAlign_Fill)
-			.BorderImage(NewBrush)
-		.VAlign(VAlign_Fill)
-		.OnMouseButtonDown(this, &SDialogueSlate::MouseButtonDownInDialogueBox)
-		.Padding(10)
-		[
-			SAssignNew(DialogueBox, SNPCDialogueBox)
-			.Visibility(EVisibility::HitTestInvisible)
-		]
-		]
+			.Anchors(FAnchors(0.01, 0.7, 0.99, 0.985))
+			[
+				SNew(SBorder)
+				.HAlign(HAlign_Fill)
+				.BorderImage(NewBrush)
+				.VAlign(VAlign_Fill)
+				.OnMouseButtonDown(this, &SDialogueSlate::MouseButtonDownInDialogueBox)
+				[
+					SAssignNew(DialogueBox, SNPCDialogueBox)
+					.Visibility(EVisibility::HitTestInvisible)
+				]
+			]
 		];
 
 }

@@ -41,8 +41,12 @@ void UGameplayAbility_Meelee::OnEventReceived(FGameplayEventData EventData)
 	TargetAbilitySystem = Cast<UActionPFAbilitySystemComponent>(Inter->GetAbilitySystemComponent());
 
 	if (!IsValid(SourceAbilitySystem) || !IsValid(TargetAbilitySystem)) return;
+	AActionPortfolioCharacter* SourceCharacter = Cast<AActionPortfolioCharacter>(SourceAbilitySystem->GetOwnerActor());
 	AActionPortfolioCharacter* TargetCharacter = Cast<AActionPortfolioCharacter>(TargetAbilitySystem->GetOwnerActor());
 	
+	if(SourceCharacter->GetTeamAttitudeTowards(*TargetCharacter) == ETeamAttitude::Friendly) return;
+
+
 	FGameplayEffectContextHandle EffectContext = SourceAbilitySystem->MakeEffectContext();
 	EffectContext.AddSourceObject(GetCurrentSourceObject());
 

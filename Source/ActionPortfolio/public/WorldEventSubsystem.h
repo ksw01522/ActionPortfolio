@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Kismet/BlueprintAsyncActionBase.h"
 #include "WorldEventSubsystem.generated.h"
 
 /**
@@ -11,8 +12,8 @@
  */
  DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnWorldCustomEvent);
 
-UCLASS()
-class ACTIONPORTFOLIO_API UWorldEventObject : public UObject
+UCLASS(BlueprintType)
+class ACTIONPORTFOLIO_API UWorldEventObject : public UBlueprintAsyncActionBase
 {
 	GENERATED_BODY()
 
@@ -24,14 +25,21 @@ protected:
 	FString EventKey;
 	bool bDestroyAfterCall;
 
+private:
+	bool AddEventInSubsystem(UWorldEventSubsystem& Subsystem);
+
+protected:
 	virtual void FinishDestroy() override;
+
+	virtual void DestroyEvent();
 
 public:
 	UPROPERTY(BlueprintAssignable)
 	FOnWorldCustomEvent WorldCustomEvent;
 
 public:
-	
+	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true"))
+	static UWorldEventObject* MakeWorldEvent(UWorldEventSubsystem* EventSubSystem, FString EventKey, bool bDestroyAfterCall);
 
 private:
 	void CallWorldCustomEvent();
@@ -45,20 +53,24 @@ class ACTIONPORTFOLIO_API UWorldEventSubsystem : public UWorldSubsystem
 	UWorldEventSubsystem();
 
 private:
+	UPROPERTY()
 	TMap<FString , UWorldEventObject*> CustomEvents;
 
-public:
+	friend bool UWorldEventObject::AddEventInSubsystem(UWorldEventSubsystem&);
+
+protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	UFUNCTION(BlueprintCallable, Category = "WorldEvent")
-	UWorldEventObject* MakeWorldEvent(FString EventKey, bool bDestroyAfterCall);
+	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
+public:
 	UFUNCTION(BlueprintCallable, Category = "WorldEvent")
 	bool CallWorldCustomEvent(FString EventKey);
 
 	UFUNCTION(BlueprintCallable, Category = "WorldEvent")
 	void RemoveCustomEvent(FString EventKey);
+
 };
 
 

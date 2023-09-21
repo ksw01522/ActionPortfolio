@@ -16,7 +16,7 @@
 class UInteractionSystemComponent;
 class UInputAction;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCharcterDieDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCharcterDieDelegate, class AActionPortfolioCharacter*, OnDieCharacter);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCharacterDamagedDelegate, float, DamageAmount, AActor*, DamageInstigator);
 
 UENUM(BlueprintType)
@@ -132,6 +132,7 @@ private:
 	bool bDestroyOnDie;
 
 public:
+	UPROPERTY(BlueprintAssignable)
 	FOnCharcterDieDelegate OnCharacterDie;
 	FOnCharacterDamagedDelegate OnDamagedDel;
 
@@ -244,7 +245,7 @@ public:
 	UFUNCTION(BlueprintCallable,  Category = "ActionPF|Ability")
 	void ActivateActionPFAbility(TSubclassOf<class UActionPFGameplayAbility> AbilityClass);
 
-	virtual void Landed(const FHitResult& Hit);
+	virtual void Landed(const FHitResult& Hit) override;
 
 
 ///////////////// Team //////////////////////////
@@ -260,6 +261,7 @@ private:
 	bool bDefaultOrientRotationToMovement;
 	float DefaultWalkSpeed;
 	float DefaultMaxAcceleration;
+	float DefaultGravityScale;
 
 protected:
 	void InitializeMovement();

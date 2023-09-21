@@ -138,7 +138,6 @@ void UGameSettingSubsystem::ApplyGraphicSettings()
 
 	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
 
-
 	int AAType = RendererSettings->DefaultFeatureAntiAliasing;
 	int MSAASampleCount = RendererSettings->MSAASampleCount;
 
@@ -218,10 +217,12 @@ FString UGameSettingSubsystem::GetCurrentWindowMode() const
 
 void UGameSettingSubsystem::SetFrameRateLimit(int Idx, bool bApply)
 {
+#if WITH_EDITOR
 	if (FrameRateLimitOptions.IsEmpty()) {
 		PFLOG(Warning, TEXT("Frame Rate Limit Options is Empty."));
 		return;
 	}
+#endif
 
 	Current_FrameRateLimit_IDX = FMath::Clamp(Idx, 0, FrameRateLimitOptions.Num() - 1);
 
@@ -433,15 +434,6 @@ float UGameSettingSubsystem::GetBrightness() const
 {
 	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
 	return 25 * RendererSettings->DefaultFeatureAutoExposureBias;
-}
-
-void UGameSettingSubsystem::ForStudy()
-{
-	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
-
-	URendererSettings* Settings = GetMutableDefault<URendererSettings>();
-	Settings->SaveConfig();
-
 }
 
 #undef LOCTEXT_NAMESPACE

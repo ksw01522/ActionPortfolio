@@ -10,6 +10,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Character/Widget_HPBar_Basic.h"
 
+
 const FName ABossAIController::IsDamagedKey(TEXT("IsDamaged"));
 
 ABossAIController::ABossAIController()
@@ -22,23 +23,39 @@ ABossAIController::ABossAIController()
 	Sight_Config->DetectionByAffiliation.bDetectEnemies = false;
 	Sight_Config->DetectionByAffiliation.bDetectFriendlies = false;
 	Sight_Config->DetectionByAffiliation.bDetectNeutrals = false;
+
+	PrimaryActorTick.bCanEverTick = true;
 }
 
-void ABossAIController::OnBossDamaged(float DamageAmount, AActor* DamageInstigator)
+void ABossAIController::Tick(float DeltaTime)
 {
-	GetBlackboardComponent()->SetValueAsBool(IsDamagedKey, true);
+	Super::Tick(DeltaTime);
+
+	float DistToTargetFromXY = -1;
+
+	if (AActionPortfolioCharacter* FocusedHostileTarget = Cast<AActionPortfolioCharacter>(GetBlackboardComponent()->GetValueAsObject(FName("FocusedHostileTarget"))))
+	{
+		FVector AvatarLocation = GetPawn()->GetActorLocation();
+		FVector TargetLocation = FocusedHostileTarget->GetActorLocation();
+
+		FVector AvatarToTarget = TargetLocation - AvatarLocation;
+		
+		DistToTargetFromXY = AvatarToTarget.X * AvatarToTarget.X + AvatarToTarget.Y * AvatarToTarget.Y;
+	}
+
+	GetBlackboardComponent()->SetValueAsFloat(FName("DistanceToTargetFromXY"), DistToTargetFromXY);
+
+	if (ACharacterBoss* Boss = GetPawn<ACharacterBoss>()) {
+		float HPPercent = Boss->GetHealth() / Boss->GetMaxHealth();
+		GetBlackboardComponent()->SetValueAsFloat(FName("HPPercent"), HPPercent);
+	}
 }
 
 void ABossAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	if (ACharacterBoss* Boss = Cast<ACharacterBoss>(InPawn)) {
-		Boss->OnDamagedDel.AddDynamic(this, &ABossAIController::OnBossDamaged);
-	}
-	else {
-		PFLOG(Error, TEXT("BossAIController Possess Other Pawn Not Boss."));
-	}
+
 
 }
 

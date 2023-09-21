@@ -43,6 +43,7 @@ void APlayerCharacter::AddCharacterAbilities()
 	ThisAbilitySystem->GiveAbility(FGameplayAbilitySpec(Ability_RMB_Action.AbilityClass, 1, -1, this));
 	ThisAbilitySystem->GiveAbility(FGameplayAbilitySpec(Ability_E_Action.AbilityClass, 1, -1, this));
 	ThisAbilitySystem->GiveAbility(FGameplayAbilitySpec(Ability_Q_Action.AbilityClass, 1, -1, this));
+	ThisAbilitySystem->GiveAbility(FGameplayAbilitySpec(Ability_R_Action.AbilityClass, 1, -1, this));
 
 	Super::AddCharacterAbilities();
 }
@@ -110,6 +111,34 @@ void APlayerCharacter::ChangeFocusInteraction()
 	if (Temp.IsValid()) InteractionSystemArray.AddUnique(Temp);
 }
 
+TSubclassOf<class UActionPFGameplayAbility> APlayerCharacter::GetPlayerAbilityClass(EPlayerAbilityInputID ID)
+{
+	switch (ID)
+	{
+	case EPlayerAbilityInputID::Ability_LMB:
+		return Ability_LMB_Action.AbilityClass;
+		break;
+
+	case EPlayerAbilityInputID::Ability_RMB:
+		return Ability_RMB_Action.AbilityClass;
+		break;
+
+	case EPlayerAbilityInputID::Ability_E:
+		return Ability_E_Action.AbilityClass;
+		break;
+
+	case EPlayerAbilityInputID::Ability_Q:
+		return Ability_Q_Action.AbilityClass;
+		break;
+
+	case EPlayerAbilityInputID::Ability_R:
+		return Ability_R_Action.AbilityClass;
+		break;
+	}
+
+	return nullptr;
+}
+
 
 
 
@@ -137,6 +166,7 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 		EnhancedInputComponent->BindAction(Ability_RMB_Action.InputAction, ETriggerEvent::Started, this, &APlayerCharacter::ActivateInputAbility, EPlayerAbilityInputID::Ability_RMB);
 		EnhancedInputComponent->BindAction(Ability_E_Action.InputAction, ETriggerEvent::Started, this, &APlayerCharacter::ActivateInputAbility, EPlayerAbilityInputID::Ability_E);
 		EnhancedInputComponent->BindAction(Ability_Q_Action.InputAction, ETriggerEvent::Started, this, &APlayerCharacter::ActivateInputAbility, EPlayerAbilityInputID::Ability_Q);
+		EnhancedInputComponent->BindAction(Ability_R_Action.InputAction, ETriggerEvent::Started, this, &APlayerCharacter::ActivateInputAbility, EPlayerAbilityInputID::Ability_R);
 	}
 
 }
@@ -197,6 +227,10 @@ void APlayerCharacter::ActivateInputAbility(const FInputActionValue& Value, EPla
 
 		case EPlayerAbilityInputID::Ability_Q:
 			ActivateActionPFAbility(Ability_Q_Action.AbilityClass);
+			break;
+
+		case EPlayerAbilityInputID::Ability_R:
+			ActivateActionPFAbility(Ability_R_Action.AbilityClass);
 			break;
 	}
 }

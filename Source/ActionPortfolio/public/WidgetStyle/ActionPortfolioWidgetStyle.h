@@ -20,5 +20,33 @@ private:
 
 public:
 	static FSlateStyleSet* GetActionPFWidgetStyleSet();
+	static FButtonStyle* MakeDefaultButtonStyle();
 };
 
+namespace DialoguerNameStyle 
+{
+	namespace Font
+	{
+		static const FName Default = "Dialogue.Name.Font.Default";
+	};
+
+	namespace Color
+	{
+		static const FName Default = "Dialogue.Name.Color.Default";
+	};
+};
+
+namespace CustomUIStyle
+{
+	namespace BorderImage
+	{
+		static const FName Default = "Dialogue.BorderImage.Default";
+	}
+
+	namespace Button
+	{
+		static const FName Normal = "NPCInteract.Button.Normal";
+		static const FName Hovered = "NPCInteract.Button.Hovered";
+		static const FName Pressed = "NPCInteract.Button.Pressed";
+	}
+}

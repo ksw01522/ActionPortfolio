@@ -14,7 +14,7 @@ AChracterEnemyA::AChracterEnemyA()
 	GetMesh()->SetRelativeLocation(FVector(0, 0, -120));
 	GetMesh()->SetRelativeRotation(FRotator(0, -90, 0));
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> EnemyASkeletalMesh(TEXT("/Game/ParagonCrunch/Characters/Heroes/Crunch/Skins/Teir_1/Military/Meshes/Crunch_Military.Crunch_Military"));
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> EnemyASkeletalMesh(TEXT("/Game/ParagonCrunch/Characters/Heroes/Crunch/Skins/Tier_3/CrashSite/Meshes/Crunch_Crash_Site.Crunch_Crash_Site"));
 	if (EnemyASkeletalMesh.Succeeded())
 	{
 		GetMesh()->SetSkeletalMeshAsset(EnemyASkeletalMesh.Object);

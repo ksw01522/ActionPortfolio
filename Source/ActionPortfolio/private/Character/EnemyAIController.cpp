@@ -221,3 +221,8 @@ void AEnemyAIController::SetFocusTargetForced(AActor* NewTarget)
 {
 	GetBlackboardComponent()->SetValueAsObject(FocusedHostileTargetKey, NewTarget);
 }
+
+AActionPortfolioCharacter* AEnemyAIController::GetCurrentFocusedTarget() const
+{
+	return Cast<AActionPortfolioCharacter>(GetBlackboardComponent()->GetValueAsObject(FocusedHostileTargetKey));
+}

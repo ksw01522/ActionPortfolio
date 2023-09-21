@@ -5,6 +5,7 @@
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "ActionPortfolio.h"
 #include "Character/ActionPortfolioCharacter.h"
+#include "Engine/Texture.h"
 
 TArray<FGameplayEffectSpecHandle> UActionPFGameplayAbility::MakeEffectSpecHandle(TArray<TSubclassOf<UGameplayEffect>> ArrayEffectClass)
 {
@@ -54,14 +55,16 @@ void UActionPFGameplayAbility::ReactivateAbility()
 	
 }
 
-void UActionPFGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+void UActionPFGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
+												const FGameplayAbilityActivationInfo ActivationInfo) const
 {
 	UGameplayEffect* CooldownGE = GetCooldownGameplayEffect();
 	if (CooldownGE)
 	{
 		FGameplayEffectSpecHandle CoolDownHandle = MakeOutgoingGameplayEffectSpec(CooldownGE->GetClass(), GetAbilityLevel());
 		CoolDownHandle.Data->DynamicGrantedTags.AppendTags(CooldownTags);
-		CoolDownHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.CooldownTime")), CooldownDuration.GetValueAtLevel(GetAbilityLevel()));
+		CoolDownHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.CooldownTime")), 
+															CooldownDuration.GetValueAtLevel(GetAbilityLevel()));
 		ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, CoolDownHandle);
 	}
 
@@ -79,4 +82,9 @@ const FGameplayTagContainer* UActionPFGameplayAbility::GetCooldownTags() const
 	MutableTags->AppendTags(CooldownTags);
 
 	return MutableTags;
+}
+
+TSoftObjectPtr<UTexture2D> UActionPFGameplayAbility::GetAbilityIconTexture() const
+{
+	return AbilityIconTexture;
 }

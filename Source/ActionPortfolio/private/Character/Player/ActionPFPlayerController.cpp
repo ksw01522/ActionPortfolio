@@ -19,6 +19,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Character/Player/Widget_PlayerMainUI.h"
 
 AActionPFPlayerController::AActionPFPlayerController()
 {
@@ -29,6 +30,23 @@ void AActionPFPlayerController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+}
+
+void AActionPFPlayerController::OnPossess(APawn* aPawn)
+{
+	Super::OnPossess(aPawn);
+
+	APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(aPawn);
+	if (!IsValid(PlayerChar)) return;
+
+
+	if (IsValid(PlayerMainUI)) {
+		PlayerMainUI->LinkASC();
+	}
+	else
+	{
+		CreatePlayerMainUI();
+	}
 }
 
 void AActionPFPlayerController::SetupInputComponent()
@@ -76,9 +94,9 @@ void AActionPFPlayerController::InteractWithNPC(UInteractionSystemComponent_NPC*
 	ChangeUIInputMode();
 
 	SAssignNew(NPCInteractWidget, SNPCInteractWidget).OwnerPlayer(this).NPCInteractionSystem(NPCInteractionSystem);
-	GEngine->GameViewport->AddViewportWidgetForPlayer(GetLocalPlayer(), NPCInteractWidget.ToSharedRef(), 0);
+	GEngine->GameViewport->AddViewportWidgetForPlayer(GetLocalPlayer(), NPCInteractWidget.ToSharedRef(), 10);
+	HideMainUI();
 
-		
 	EnterNextDialogue(EActionPFDialogueType::NPC);
 }
 
@@ -92,6 +110,7 @@ void AActionPFPlayerController::ExitInteractNPC()
 	);
 
 	ChangeGameInputMode();
+	DisplayMainUI();
 }
 
 void AActionPFPlayerController::OnMouseButtonDownInDialogueBox_NPC()
@@ -132,6 +151,7 @@ void AActionPFPlayerController::EndDialogueSlate()
 	}
 
 	ChangeGameInputMode();
+	DisplayMainUI();
 }
 
 void AActionPFPlayerController::OnMouseButtonDownInDialogueBox()
@@ -154,11 +174,12 @@ void AActionPFPlayerController::EnterDialogueBasic(UDialogueSession* NewSession)
 	DialogueManager->EnterDialogue(DialoguerIDs, NewSession);
 
 	SAssignNew(DialogueSlate, SDialogueSlate).OwnerPlayer(this);
-	GEngine->GameViewport->AddViewportWidgetForPlayer(GetLocalPlayer(), DialogueSlate.ToSharedRef(), 1);
+	GEngine->GameViewport->AddViewportWidgetForPlayer(GetLocalPlayer(), DialogueSlate.ToSharedRef(), 10);
 
 	if (DialogueSlate.IsValid()) {
 		ChangeUIInputMode();
 		EnterNextDialogue(EActionPFDialogueType::Basic);
+		HideMainUI();
 	}
 }
 
@@ -170,6 +191,45 @@ void AActionPFPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID
 }
 
 
+UWidget_PlayerMainUI* AActionPFPlayerController::CreatePlayerMainUI()
+{
+	if (PlayerMainUIClass.GetDefaultObject() == nullptr)
+	{
+		PFLOG(Error, TEXT("Not Allocated Main UI Class."));
+		return nullptr;
+	}
+
+	if (IsValid(PlayerMainUI))
+	{
+		PlayerMainUI->RemoveFromViewport();
+		PlayerMainUI->RemoveFromParent();
+	}
+
+	PlayerMainUI = CreateWidget<UWidget_PlayerMainUI>(this, PlayerMainUIClass, "Player Main UI");
+	PlayerMainUI->AddToViewport(0);
+	MainUIHideCount = 0;
+
+	return PlayerMainUI;
+}
+
+void AActionPFPlayerController::HideMainUI()
+{
+	MainUIHideCount++;
+	if (0 < MainUIHideCount)
+	{
+		PlayerMainUI->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
+void AActionPFPlayerController::DisplayMainUI()
+{
+	MainUIHideCount--;
+	if (MainUIHideCount <= 0)
+	{
+		PlayerMainUI->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
 void AActionPFPlayerController::OpenMenu()
 {
 	UUserWidget* CurrentMenuWidget = GetMenuWidget();
@@ -177,6 +237,7 @@ void AActionPFPlayerController::OpenMenu()
 
 	ChangeUIInputMode();
 	CurrentMenuWidget->SetVisibility(ESlateVisibility::Visible);
+	HideMainUI();
 }
 
 void AActionPFPlayerController::CloseMenu()
@@ -186,6 +247,7 @@ void AActionPFPlayerController::CloseMenu()
 
 	ChangeGameInputMode();
 	CurrentMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+	DisplayMainUI();
 }
 
 UUserWidget* AActionPFPlayerController::GetMenuWidget()
@@ -194,7 +256,7 @@ UUserWidget* AActionPFPlayerController::GetMenuWidget()
 		if (MenuWidgetClass.GetDefaultObject() == nullptr) return nullptr;
 
 		MenuWidget = CreateWidget(this, MenuWidgetClass, "PlayerMenu");
-		MenuWidget->AddToViewport();
+		MenuWidget->AddToViewport(100);
 		MenuWidget->SetVisibility(ESlateVisibility::Collapsed);
 	}
 	if (!IsValid(MenuWidget)) return nullptr;
@@ -342,13 +404,12 @@ void AActionPFPlayerController::ChangeUIInputMode()
 	InputComponent->bBlockInput = true;
 
 	SetShowMouseCursor(true);
-
-	SetInputMode( FInputModeUIOnly());
+	
+	SetInputMode( FInputModeGameAndUI());
 }
 
 void AActionPFPlayerController::ChangeGameInputMode()
 {
-
 	InputComponent->bBlockInput = false;
 
 	SetShowMouseCursor(false);

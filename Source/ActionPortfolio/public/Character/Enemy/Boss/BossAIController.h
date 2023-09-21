@@ -20,11 +20,12 @@ public:
 	static const FName IsDamagedKey;
 
 protected:
-	UFUNCTION()
-	void OnBossDamaged(float DamageAmount, AActor* DamageInstigator);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BossHPBar")
 	TSubclassOf<class UWidget_HPBar_Basic> HPBarClass;
 	UWidget_HPBar_Basic* HPBarWidget;
+
+protected:
+	virtual void Tick(float DeltaTime) override;
 
 public:
 	virtual void OnPossess(APawn* InPawn) override;

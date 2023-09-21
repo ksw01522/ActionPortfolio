@@ -47,6 +47,7 @@ private:
 	class UInputAction* OpenMenuAction;
 
 protected:
+	virtual void OnPossess(APawn* aPawn) override;
 	virtual void SetupInputComponent() override;
 
 	
@@ -54,8 +55,25 @@ protected:
 ///////////////////¸Þ´º À§Á¬
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UserWidget", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class UWidget_PlayerMainUI> PlayerMainUIClass;
+
+	UPROPERTY()
+	UWidget_PlayerMainUI* PlayerMainUI;
+
+	UWidget_PlayerMainUI* CreatePlayerMainUI();
+
+	int MainUIHideCount = 0;
+
+private:
+	void HideMainUI();
+	void DisplayMainUI();
+
+private:
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UserWidget", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<class UUserWidget> MenuWidgetClass;
 
+	UPROPERTY()
 	UUserWidget* MenuWidget;
 	
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player")
@@ -81,7 +99,10 @@ private:
 	void OnCompleteDialogueAnim(EActionPFDialogueType Type);
 
 protected:
+	UFUNCTION(BlueprintCallable, Category = "PlayerController")
 	void ChangeUIInputMode();
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerController")
 	void ChangeGameInputMode();
 
 public:

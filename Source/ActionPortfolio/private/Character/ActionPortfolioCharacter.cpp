@@ -402,13 +402,14 @@ void AActionPortfolioCharacter::ActivateActionPFAbility(TSubclassOf<class UActio
 
 void AActionPortfolioCharacter::Landed(const FHitResult& Hit)
 {
-
 	if (AbilitySystem->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity")))
 	{
-
 		SetDown(true);
 		GetMesh()->GetAnimInstance()->Montage_Play(HitReactionAnimations.Down);
 	}
+
+	FGameplayEventData Payload;
+	AbilitySystem->HandleGameplayEvent(FGameplayTag::RequestGameplayTag("Ability.PublicEvent.OnLand"), &Payload);
 
 	Super::Landed(Hit);
 }
@@ -443,6 +444,7 @@ void AActionPortfolioCharacter::InitializeMovement()
 	bDefaultOrientRotationToMovement = GetCharacterMovement()->bOrientRotationToMovement;
 	DefaultWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	DefaultMaxAcceleration = GetCharacterMovement()->MaxAcceleration;
+	DefaultGravityScale = GetCharacterMovement()->GravityScale;
 }
 
 void AActionPortfolioCharacter::ResetMovement()
@@ -451,6 +453,7 @@ void AActionPortfolioCharacter::ResetMovement()
 	GetCharacterMovement()->MaxWalkSpeed = DefaultWalkSpeed;
 	GetCharacterMovement()->bForceMaxAccel = false;
 	GetCharacterMovement()->MaxAcceleration = DefaultMaxAcceleration;
+	GetCharacterMovement()->GravityScale = DefaultGravityScale;
 }
 
 bool AActionPortfolioCharacter::CanBasicAct() const
@@ -490,6 +493,11 @@ void AActionPortfolioCharacter::CharacterDie()
 	EventData.EventTag = DeathTag;
 	AbilitySystem->HandleGameplayEvent(DeathTag, &EventData);
 
+	if(OnCharacterDie.IsBound())
+	{
+		OnCharacterDie.Broadcast(this);
+		OnCharacterDie.Clear();
+	}
 	if (HitReactionAnimations.Death != nullptr)
 	{
 		FOnMontageEnded DeathMontageEnded;

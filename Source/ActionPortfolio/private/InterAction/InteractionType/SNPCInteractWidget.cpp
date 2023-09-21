@@ -17,6 +17,7 @@
 #include "Styling/SlateStyleRegistry.h"
 #include "WidgetStyle/ActionPortfolioWidgetStyle.h"
 #include "Styling/SlateStyle.h"
+#include "Widgets/Layout/SSpacer.h"
 
 #define LOCTEXT_NAMESPACE "NPCInteactWidget"
 
@@ -114,7 +115,10 @@ void SNPCInteractWidget::Construct(const FArguments& InArgs)
 	NPCInteractionSystem = InArgs._NPCInteractionSystem;
 
 	// 블러강도 0~100
-	float BlurStrength = 20;
+	const float BlurStrength = 20;
+	const float ButtonsWidth = 160;
+	const float ButtonsHeight = 40;
+	const float ButtonSpaceSize = 8;
 
 	SAssignNew(NPCInteractBTNBox, SVerticalBox);
 
@@ -127,21 +131,45 @@ void SNPCInteractWidget::Construct(const FArguments& InArgs)
 		NPCInteractBTNBox->AddSlot()
 		.HAlign(HAlign_Fill)
 		.VAlign(VAlign_Fill)
+		.AutoHeight()
 		[
-			SNew(SNPCInteractButton)
-			.NPCInteract(NPCInteract)
-			.OwnerPlayer(InArgs._OwnerPlayer)
+			SNew(SBox)
+			.HeightOverride(ButtonsHeight)
+			[
+				SNew(SNPCInteractButton)
+				.NPCInteract(NPCInteract)
+				.OwnerPlayer(InArgs._OwnerPlayer)
+			]
 		];
 		
+		NPCInteractBTNBox->AddSlot()
+		.HAlign(HAlign_Fill)
+		.VAlign(VAlign_Fill)
+		.AutoHeight()
+		[
+			SNew(SSpacer)
+			.Size(ButtonSpaceSize)
+		];
 	}
+
+	FButtonStyle* CustomBTNStyle = FActionPortfolioWidgetStyle::MakeDefaultButtonStyle();
 
 	NPCInteractBTNBox->AddSlot()
 	.HAlign(HAlign_Fill)
 	.HAlign(HAlign_Fill)
+	.AutoHeight()
 	[
-		SNew(SButton)
-		.Text(LOCTEXT("NPC Interact Exit BTN", "대화 끝내기"))
-		.OnClicked(this, &SNPCInteractWidget::ExitInteractNPC)
+		SNew(SBox)
+		.HeightOverride(ButtonsHeight)
+		[
+			SNew(SButton)
+			.Text(LOCTEXT("NPC Interact Exit BTN", "대화 끝내기"))
+			.OnClicked(this, &SNPCInteractWidget::ExitInteractNPC)
+			.ButtonStyle(CustomBTNStyle)
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
+			.TextShapingMethod(ETextShapingMethod::FullShaping)
+		]
 	];
 
 	ChildSlot
@@ -159,7 +187,6 @@ void SNPCInteractWidget::Construct(const FArguments& InArgs)
 				.HAlign(HAlign_Fill)
 				.VAlign(VAlign_Fill)
 				.OnMouseButtonDown(this, &SNPCInteractWidget::MouseButtonDownInDialogueBox)
-				.Padding(10)
 				[
 					SAssignNew(NPCDialogueTextBox, SNPCDialogueBox)
 					.Visibility(EVisibility::HitTestInvisible)
@@ -168,7 +195,8 @@ void SNPCInteractWidget::Construct(const FArguments& InArgs)
 
 			+ SConstraintCanvas::Slot()
 			.Anchors(FAnchors(0.5))
-			.AutoSize(true)
+			.Alignment(FVector2D(0.5, 0.5))
+			.Offset(FMargin(0, -120, ButtonsWidth ,  NPCInteracts.Num() * (ButtonsHeight + ButtonSpaceSize) + ButtonsHeight) )
 			[
 				SAssignNew(BTNBoxBorder, SBorder)
 				[
@@ -193,27 +221,34 @@ void SNPCInteractButton::Construct(const FArguments& InArgs)
 		return;
 	}
 
+
 	NPCInteract = InArgs._NPCInteract;
 	OwnerPlayer = InArgs._OwnerPlayer;
+
+	FButtonStyle* CustomBTNStyle = FActionPortfolioWidgetStyle::MakeDefaultButtonStyle();
 
 	ChildSlot[
 		SNew(SButton)
 		.OnClicked(this, &SNPCInteractButton::PlayerInteractWithNPC)
 		.Text(NPCInteract->GetNPCInteractionName())
 		.ContentPadding(FMargin(5,5))
-		.HAlign(HAlign_Fill)
-		.VAlign(VAlign_Fill)
+		.HAlign(HAlign_Center)
+		.VAlign(VAlign_Center)
 		.TextShapingMethod(ETextShapingMethod::FullShaping)
+		.ButtonStyle(CustomBTNStyle)
 	];
 }
 
 // DialogueBox Construct
 void SNPCDialogueBox::Construct(const FArguments& InArgs)
 {
-	FSlateStyleSet* NPCInteractSlateStyle = FActionPortfolioWidgetStyle::GetActionPFWidgetStyleSet();
-	FSlateBrush* NewBrush = new FSlateBrush;
+	FSlateStyleSet* ActionPFSlateStyleSet = FActionPortfolioWidgetStyle::GetActionPFWidgetStyleSet();
+	const FSlateBrush* NewBrush = ActionPFSlateStyleSet->GetBrush(CustomUIStyle::BorderImage::Default);
 
-	NewBrush->TintColor = FLinearColor(1, 1, 1, 1);
+	FTextBlockStyle* NameBlockStyle = new FTextBlockStyle;
+	NameBlockStyle->SetFont(ActionPFSlateStyleSet->GetFontStyle(DialoguerNameStyle::Font::Default));
+	FLinearColor NameColor = ActionPFSlateStyleSet->GetColor(DialoguerNameStyle::Color::Default);
+	NameBlockStyle->SetColorAndOpacity(NameColor);
 
 	ChildSlot[
 		SNew(SBorder)
@@ -225,15 +260,17 @@ void SNPCDialogueBox::Construct(const FArguments& InArgs)
 			.HAlign(HAlign_Left)
 			.VAlign(VAlign_Center)
 			.FillHeight(0.2f)
+			.Padding(15, 4)
 			[
 				SAssignNew(DialoguerNameBlock, STextBlock)
-				.Font(NPCInteractSlateStyle->GetFontStyle("NPCInteract.DialoguerName.Default"))
+				.TextStyle(NameBlockStyle)
 			]
 
 			+ SVerticalBox::Slot()
 			.HAlign(HAlign_Fill)
 			.VAlign(VAlign_Fill)
 			.FillHeight(0.8f)
+			.Padding(15, 0)
 			[
 				SAssignNew(DialogueTextBlock, SRichTextBlock)
 				.AutoWrapText(true)

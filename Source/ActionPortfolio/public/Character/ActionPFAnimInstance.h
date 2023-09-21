@@ -23,6 +23,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
 	float Degree;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
+	bool bIsInAir;
 
 protected:
 

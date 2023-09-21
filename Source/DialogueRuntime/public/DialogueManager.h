@@ -81,6 +81,7 @@ private:
 	uint32 GDialogueHandleID = 0;
 
 	TMap<FActingDialogueHandle, FActingDialogueData> ActingDialogueMap;
+
 	EDialogueLanguage CurrentLanguage = EDialogueLanguage::Korean;
 
 	TMap<FString, TWeakObjectPtr<UDialoguerComponent>> DialoguerMap;

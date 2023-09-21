@@ -4,46 +4,47 @@
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/BTTaskNode.h"
-#include "BTTask_TryMeeleeAbility.generated.h"
+#include "BTTask_TryAbility.generated.h"
 
 /**
  * 
  */
-struct FBTTaskTryMeeleeAbilityNode
+
+
+struct FBTTaskTryAbilityNode
 {
 	TWeakObjectPtr<class AActionPortfolioCharacter> SourceCharacter;
+	TWeakObjectPtr<class UActionPFAbilitySystemComponent> AbilitySystem;
+	TSubclassOf<class UActionPFGameplayAbility> TriedAbility;
 };
 
 UCLASS()
-class ACTIONPORTFOLIO_API UBTTask_TryMeeleeAbility : public UBTTaskNode
+class ACTIONPORTFOLIO_API UBTTask_TryAbility : public UBTTaskNode
 {
 	GENERATED_BODY()
 	
-public:
-	UBTTask_TryMeeleeAbility();
+	UBTTask_TryAbility();
 
 private:
+	UPROPERTY(EditAnywhere, Category = "Ability", meta = (AllowPrivateAccess = "true"))
+	TArray<TSubclassOf<class UActionPFGameplayAbility>> Abilities;
+
 	UPROPERTY()
 	FString CachedDescription;
 
-	UPROPERTY(EditAnywhere, Category = "Ability", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<class UGameplayAbility_Meelee> MeeleeAbility;
-
 	UPROPERTY(EditAnywhere, Category = "Task", meta = (AllowPrivateAccess = "true"))
-	bool bStopWhenTaskStop;
+	bool bAbilityStopWhenTaskStop;
 
 protected:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 	virtual void TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
-	virtual uint16 GetInstanceMemorySize() const override;
-
-
+	virtual uint16 GetInstanceMemorySize() const override { return sizeof(FBTTaskTryAbilityNode); };
 
 protected:
 	virtual EBTNodeResult::Type AbortTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
 private:
-	virtual FString GetStaticDescription() const override;
+	virtual FString GetStaticDescription() const override { return CachedDescription;};
 
 #if WITH_EDITOR
 	virtual void BuildDescription();

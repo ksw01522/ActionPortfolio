@@ -15,12 +15,23 @@ class ACTIONPORTFOLIO_API UAN_SendGameplayEvent : public UAnimNotify
 {
 	GENERATED_BODY()
 
+	UAN_SendGameplayEvent();
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayEvent", meta = (AllowPrivateAccess = "true"))
 	FGameplayTag EventTag;
 
+	UPROPERTY()
+	FString CachedNotifyName;
+
+#if WITH_EDITOR
+	void BuildNotifyName();
+
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
 public:
 	virtual void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference);
 
+	FString GetNotifyName_Implementation() const;
 };

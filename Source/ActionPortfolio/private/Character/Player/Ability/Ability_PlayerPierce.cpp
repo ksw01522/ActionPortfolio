@@ -19,6 +19,9 @@
 #include "Character/Player/ActionPFPlayerController.h"
 #include "Ability/Tasks/AbilityTask_CustomTick.h"
 #include "Abilities/Tasks/AbilityTask_MoveToLocation.h"
+#include "AbilitySystemLog.h"
+#include "AbilitySystemStats.h"
+#include "AbilitySystemGlobals.h"
 
 UAbility_PlayerPierce::UAbility_PlayerPierce()
 {
@@ -34,7 +37,12 @@ UAbility_PlayerPierce::UAbility_PlayerPierce()
 
 void UAbility_PlayerPierce::EndPlayerPierce()
 {
+	PFLOG(Warning, TEXT("End PlayerPierce."));
+
 	RemainPierceCount = 0;
+	ApplyCost(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
+
+	GetWorld()->GetTimerManager().ClearTimer(EndPierceTimerHandle);
 }
 
 AActionPortfolioCharacter* UAbility_PlayerPierce::SearchTargetCharacter()
@@ -52,7 +60,7 @@ AActionPortfolioCharacter* UAbility_PlayerPierce::SearchTargetCharacter()
 
 void UAbility_PlayerPierce::ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	if (RemainPierceCount <= 0 && !CommitAbility(Handle, ActorInfo, ActivationInfo))
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
@@ -63,13 +71,13 @@ void UAbility_PlayerPierce::ActivateAbility_CPP(const FGameplayAbilitySpecHandle
 	FRotator ControllerForwardRotator(0, Player->GetController()->GetControlRotation().Yaw, 0);
 	Player->SetActorRotation(ControllerForwardRotator);
 
-	if (RemainPierceCount <= 0)
+	if (RemainPierceCount == MaxPierceCount)
 	{
-		FTimerHandle EndPierceTimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(EndPierceTimerHandle, this, &UAbility_PlayerPierce::EndPlayerPierce, MaxActivePierceTime);
 		SearchTargetCharacter();
-		RemainPierceCount = MaxPierceCount;
 	}
+
+	if(--RemainPierceCount <= 0) EndPlayerPierce();
+	PFLOG(Warning, TEXT("RemainPierceCount == %d"), RemainPierceCount);
 
 	//이동 위치 구하기
 	if(!TargetCharacter.IsValid()) SearchTargetCharacter();
@@ -110,11 +118,56 @@ void UAbility_PlayerPierce::ActivateAbility_CPP(const FGameplayAbilitySpecHandle
 
 	//이동하기
 	UAbilityTask_MoveToLocation* MoveToPrePiercePos = UAbilityTask_MoveToLocation::MoveToLocation(this, "PrePierceMove", PrePiercePos, 0.1, nullptr, nullptr);
-	MoveToPrePiercePos->OnTargetLocationReached.AddDynamic(this, &UAbility_PlayerPierce::OnPrePiercePosLeached);
+	MoveToPrePiercePos->OnTargetLocationReached.AddDynamic(this, &UAbility_PlayerPierce::OnPrePiercePosReached);
 	MoveToPrePiercePos->ReadyForActivation();
 }
 
-void UAbility_PlayerPierce::OnPrePiercePosLeached()
+bool UAbility_PlayerPierce::CommitCheck(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, OUT FGameplayTagContainer* OptionalRelevantTags)
+{
+	const bool bValidHandle = Handle.IsValid();
+	const bool bValidActorInfoPieces = (ActorInfo && (ActorInfo->AbilitySystemComponent != nullptr));
+	const bool bValidSpecFound = bValidActorInfoPieces && (ActorInfo->AbilitySystemComponent->FindAbilitySpecFromHandle(Handle) != nullptr);
+
+	if (!bValidHandle || !bValidActorInfoPieces || !bValidSpecFound)
+	{
+		ABILITY_LOG(Warning, TEXT("UGameplayAbility::CommitCheck provided an invalid handle or actor info or couldn't find ability spec: %s Handle Valid: %d ActorInfo Valid: %d Spec Not Found: %d"), *GetName(), bValidHandle, bValidActorInfoPieces, bValidSpecFound);
+		return false;
+	}
+
+	if(0 < RemainPierceCount) return true;
+
+	UAbilitySystemGlobals& AbilitySystemGlobals = UAbilitySystemGlobals::Get();
+
+	if (!AbilitySystemGlobals.ShouldIgnoreCooldowns() && !CheckCooldown(Handle, ActorInfo, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	if (!AbilitySystemGlobals.ShouldIgnoreCosts() && !CheckCost(Handle, ActorInfo, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+void UAbility_PlayerPierce::CommitExecute(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+	if (RemainPierceCount <= 0) 
+	{
+		ApplyCost(Handle, ActorInfo, ActivationInfo);
+		RemainPierceCount = MaxPierceCount;
+		GetWorld()->GetTimerManager().SetTimer(EndPierceTimerHandle, this, &UAbility_PlayerPierce::EndPlayerPierce, MaxActivePierceTime);
+	}
+
+	if (RemainPierceCount == 1)
+	{
+		ApplyCooldown(Handle, ActorInfo, ActivationInfo);
+	}
+}
+
+
+void UAbility_PlayerPierce::OnPrePiercePosReached()
 {
 	APlayerCharacter* Player = Cast<APlayerCharacter>(GetAvatarActorFromActorInfo());
 
@@ -129,6 +182,9 @@ void UAbility_PlayerPierce::OnPrePiercePosLeached()
 		FRotator NewRotation = PlayerToTarget.Rotation();
 
 		Player->SetActorRotation(NewRotation);
+
+		NewRotation.Pitch = -20;
+		Player->GetController()->SetControlRotation(NewRotation);
 	}
 
 	//꿰뚫기 끝지점 구하기
@@ -158,9 +214,15 @@ void UAbility_PlayerPierce::OnPrePiercePosLeached()
 	}
 
 
-	UAbilityTask_MoveToLocation* MoveToPiercePos = UAbilityTask_MoveToLocation::MoveToLocation(this, "PrePierceMove", PierceEndLocation, 0.1, nullptr, nullptr);
+	UAbilityTask_MoveToLocation* MoveToPiercePos = UAbilityTask_MoveToLocation::MoveToLocation(this, "PrePierceMove", PierceEndLocation, 0.2, nullptr, nullptr);
 	MoveToPiercePos->OnTargetLocationReached.AddDynamic(this, &UAbility_PlayerPierce::OnPierceEnd);
 	MoveToPiercePos->ReadyForActivation();
+
+	/*
+	UAbilityTask_CustomTick* CameraRotationTick = UAbilityTask_CustomTick::CustomTick(this, "CameraRotationTick", 0.4);
+	CameraRotationTick->OnCustomTickEvent.AddDynamic(this, &UAbility_PlayerPierce::CameraRotate);
+	CameraRotationTick->ReadyForActivation();
+	*/
 
 	GetAbilitySystemComponentFromActorInfo()->CurrentMontageJumpToSection("Looping");
 }
@@ -169,12 +231,20 @@ void UAbility_PlayerPierce::OnPierceEnd()
 {
 	GetAbilitySystemComponentFromActorInfo()->CurrentMontageJumpToSection("End");
 
+	/*
 	APlayerCharacter* Player = Cast<APlayerCharacter>(GetAvatarActorFromActorInfo());
 	if (!IsValid(Player)) return;
+	*/
+	
+}
 
-	FRotator NewCameraRotator = Player->GetActorRotation();
-	NewCameraRotator.Yaw = NewCameraRotator.Yaw + 180;
-	NewCameraRotator.Pitch -= 20;
+void UAbility_PlayerPierce::CameraRotate(float DeltaTime)
+{
+	APlayerCharacter* Player = Cast<APlayerCharacter>(GetAvatarActorFromActorInfo());
+	if (!IsValid(Player)) return;
+	
+	FRotator NewCameraRotator = Player->GetController()->GetControlRotation();
+	NewCameraRotator.Yaw = NewCameraRotator.Yaw + DeltaTime * 450;
 
 	Player->GetController()->SetControlRotation(NewCameraRotator);
 }

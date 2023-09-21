@@ -12,7 +12,7 @@
  */
 
 
-UCLASS()
+UCLASS(Abstract)
 class ACTIONPORTFOLIO_API UGameplayAbility_Meelee : public UActionPFGameplayAbility
 {
 	GENERATED_BODY()

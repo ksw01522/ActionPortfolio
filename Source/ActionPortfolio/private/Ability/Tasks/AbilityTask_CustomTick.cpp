@@ -32,21 +32,16 @@ void UAbilityTask_CustomTick::Activate()
 	bCustomTickFinished = false;
 	TimeStarted = GetWorld()->GetTimeSeconds();
 	Time = 0;
-
-	UE_LOG(LogTemp, Warning, TEXT("nngg"));
-
 }
 
 void UAbilityTask_CustomTick::TickTask(float DeltaTime)
 {
-	
-	UE_LOG(LogTemp, Warning, TEXT("nn"));
-
 	if (bCustomTickFinished) {
 		return;
 	}
 
-	if(ShouldBroadcastAbilityTaskDelegates()) OnCustomTickEvent.Broadcast(DeltaTime);
+	if(ShouldBroadcastAbilityTaskDelegates())
+				{ OnCustomTickEvent.Broadcast(DeltaTime); }
 
 	if (bWantsTickFinish)
 	{

@@ -184,6 +184,4 @@ public:
 	float GetBrightness() const;
 
 
-private:
-	void ForStudy();
 };

@@ -23,13 +23,11 @@ struct FActionPFEffectContainer
 	TArray<TSubclassOf<UGameplayEffect>> EffectClasses;
 };
 
-UCLASS()
+UCLASS(Abstract)
 class ACTIONPORTFOLIO_API UActionPFGameplayAbility : public UGameplayAbility
 {
 	GENERATED_BODY()
 	
-protected:
-
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Ability")
@@ -54,7 +52,13 @@ protected:
 	UPROPERTY(Transient)
 	FGameplayTagContainer TempCooldownTags;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+		TSoftObjectPtr<UTexture2D> AbilityIconTexture;
+
 public:
 	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const override;
 	virtual const FGameplayTagContainer* GetCooldownTags() const override;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Ability")
+	virtual TSoftObjectPtr<UTexture2D> GetAbilityIconTexture() const;
 };

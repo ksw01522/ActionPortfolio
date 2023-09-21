@@ -54,8 +54,14 @@ EBTNodeResult::Type UBTTask_FocusToTarget::ExecuteTask(UBehaviorTreeComponent& O
 	}
 
 	AActor* Instigator = OwnerComp.GetAIOwner()->GetPawn();
+	
 	FVector Dir = TargetLocation - Instigator->GetActorLocation();
-	Instigator->SetActorRotation(Dir.Rotation());
+	FRotator ToTargetRotation = Dir.Rotation();
+	ToTargetRotation.Pitch = 0;
+	ToTargetRotation.Roll = 0;
+
+
+	Instigator->SetActorRotation(ToTargetRotation);
 
 	return EBTNodeResult::Succeeded;
 }

@@ -9,7 +9,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(Abstract)
 class ACTIONPORTFOLIO_API UAbility_BossRush : public UGameplayAbility_Meelee
 {
 	GENERATED_BODY()

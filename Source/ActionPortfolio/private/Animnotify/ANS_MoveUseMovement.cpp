@@ -17,13 +17,19 @@ void UANS_MoveUseMovement::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSe
 
 	FinalDirection = FinalDirection.X * Char->GetActorForwardVector() + FinalDirection.Y * Char->GetActorRightVector();
 
-	MovementComponent = Char->GetCharacterMovement();
-	MovementComponent->Velocity = FinalDirection * MoveSpeed;
-	MovementComponent->MaxWalkSpeed = MoveSpeed;
+	UCharacterMovementComponent* MovementComponent = Char->GetCharacterMovement();
+	if (IsValid(MovementComponent)) {
+		MovementComponent->Velocity = FinalDirection * MoveSpeed;
+		MovementComponent->MaxWalkSpeed = MoveSpeed;
+	}
 }
 
 void UANS_MoveUseMovement::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference)
 {
+	AActionPortfolioCharacter* Char = MeshComp->GetOwner<AActionPortfolioCharacter>();
+	if (!IsValid(Char)) return;
+
+	UCharacterMovementComponent* MovementComponent = Char->GetCharacterMovement();
 	if (!IsValid(MovementComponent)) {
 		return;
 	}

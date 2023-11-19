@@ -64,8 +64,10 @@ private:
 
 	int MainUIHideCount = 0;
 
-private:
+public:
+	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player|UI")
 	void HideMainUI();
+	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player|UI")
 	void DisplayMainUI();
 
 private:

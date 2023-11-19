@@ -124,6 +124,9 @@ void SNPCInteractWidget::Construct(const FArguments& InArgs)
 
 	const TArray<UNPCInteract*>& NPCInteracts = NPCInteractionSystem->GetAbleNPCInteractions(OwnerPlayer);
 
+	FSlateBrush* EmptyBrush = new FSlateBrush();
+	EmptyBrush->TintColor = FLinearColor(0,0,0,0);
+
 	for (auto NPCInteract : NPCInteracts)
 	{
 		if(NPCInteract == nullptr) continue;
@@ -186,6 +189,7 @@ void SNPCInteractWidget::Construct(const FArguments& InArgs)
 				SNew(SBorder)
 				.HAlign(HAlign_Fill)
 				.VAlign(VAlign_Fill)
+				.BorderImage(EmptyBrush)
 				.OnMouseButtonDown(this, &SNPCInteractWidget::MouseButtonDownInDialogueBox)
 				[
 					SAssignNew(NPCDialogueTextBox, SNPCDialogueBox)
@@ -199,6 +203,7 @@ void SNPCInteractWidget::Construct(const FArguments& InArgs)
 			.Offset(FMargin(0, -120, ButtonsWidth ,  NPCInteracts.Num() * (ButtonsHeight + ButtonSpaceSize) + ButtonsHeight) )
 			[
 				SAssignNew(BTNBoxBorder, SBorder)
+				.BorderImage(EmptyBrush)
 				[
 					NPCInteractBTNBox.ToSharedRef()
 				]

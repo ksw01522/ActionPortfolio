@@ -11,8 +11,7 @@
 
 UDialogueManager* UDialogueBFL::GetDialogueManager()
 {
-	if(GEngine == nullptr) return nullptr;
-	if(GEngine->GameViewport == nullptr) return nullptr;
+	if(GEngine == nullptr || GEngine->GameViewport == nullptr) return nullptr;
 	UWorld* World = GEngine->GameViewport->GetWorld();
 	if (World == nullptr) return nullptr;
 	UDialogueManager* DialogueManager = UGameInstance::GetSubsystem<UDialogueManager>(World->GetGameInstance());
@@ -21,4 +20,18 @@ UDialogueManager* UDialogueBFL::GetDialogueManager()
 		return nullptr;
 	}
 	return DialogueManager;
+}
+
+UDialogueManager* UDialogueBFL::TestGetManager(UObject* WorldContextObject)
+{
+	if (UWorld* World = GEngine->GetWorldFromContextObjectChecked(WorldContextObject); World == nullptr)
+	{
+		LOG_ERROR(TEXT("Can't find World by Context Object."));
+		return nullptr;
+	}
+
+
+	LOG_ERROR(TEXT("find World by Context Object."));
+
+	return nullptr;
 }

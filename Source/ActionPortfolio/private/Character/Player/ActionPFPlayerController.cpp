@@ -201,7 +201,6 @@ UWidget_PlayerMainUI* AActionPFPlayerController::CreatePlayerMainUI()
 
 	if (IsValid(PlayerMainUI))
 	{
-		PlayerMainUI->RemoveFromViewport();
 		PlayerMainUI->RemoveFromParent();
 	}
 
@@ -233,7 +232,7 @@ void AActionPFPlayerController::DisplayMainUI()
 void AActionPFPlayerController::OpenMenu()
 {
 	UUserWidget* CurrentMenuWidget = GetMenuWidget();
-	if(CurrentMenuWidget == nullptr) return;
+	if(CurrentMenuWidget == nullptr || CurrentMenuWidget->GetVisibility() == ESlateVisibility::Visible) return;
 
 	ChangeUIInputMode();
 	CurrentMenuWidget->SetVisibility(ESlateVisibility::Visible);
@@ -243,7 +242,7 @@ void AActionPFPlayerController::OpenMenu()
 void AActionPFPlayerController::CloseMenu()
 {
 	UUserWidget* CurrentMenuWidget = GetMenuWidget();
-	if (CurrentMenuWidget == nullptr) return;
+	if (CurrentMenuWidget == nullptr || CurrentMenuWidget->GetVisibility() == ESlateVisibility::Collapsed) return;
 
 	ChangeGameInputMode();
 	CurrentMenuWidget->SetVisibility(ESlateVisibility::Collapsed);

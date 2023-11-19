@@ -27,5 +27,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "DialogueBFL|Manager")
 	static UDialogueManager* GetDialogueManager();
 
-
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "DialogueBFL|Manager", meta = (WorldContext = "WorldContextObject"))
+	static UDialogueManager* TestGetManager(UObject* WorldContextObject);
 };

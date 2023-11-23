@@ -71,7 +71,7 @@ public:
 	EDialogueNodeType GetDialogueNodeType() const { return DialogueNodeType; }
 
 	UFUNCTION(BlueprintCallable, Category = "DialogueNode")
-	void CallEvents(const FActingDialogueHandle& Handle);
+	virtual void CallEvents(const FDialogueHandle& Handle);
 
 #if WITH_EDITOR
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "DialogueNode")

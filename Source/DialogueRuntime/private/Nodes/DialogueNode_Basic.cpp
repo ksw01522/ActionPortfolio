@@ -6,7 +6,7 @@
 #include "DialogueSession.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "DialogueStructs.h"
-
+#include "DialogueBFL.h"
 
 #define LOCTEXT_NAMESPACE "DialogueNode"
 
@@ -318,6 +318,12 @@ void UDialogueNode_Basic::OnChanged_PreviewLanguage()
 void UDialogueNode_Basic::OnChangedDialogueTextStyle()
 {
 	OnChangedDialogueStyle.ExecuteIfBound();
+}
+void UDialogueNode_Basic::CallEvents(const FDialogueHandle& Handle)
+{
+	UDialogueBFL::GetDialogueManager()->PlayAnimationInDialogue(DialoguerAnimations);
+
+	Super::CallEvents(Handle);
 }
 #endif
 

@@ -34,17 +34,17 @@ public:
 	EDialougeEventInstancingPolicy InstancingPolicy;
 
 protected:
-	FActingDialogueHandle CalledDialogueID;
+	FDialogueHandle CalledDialogueID;
 
 public:
-	void CallEvent(const FActingDialogueHandle& Handle);
+	void CallEvent(const FDialogueHandle& Handle);
 	void CallEndEvent(bool bIsCancelled) { OnEndEvent(bIsCancelled); }
 
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
 	bool CanEnterNextNode();
 
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
-	void OnCalledEvent(const FActingDialogueHandle& Handle);
+	void OnCalledEvent(const FDialogueHandle& Handle);
 
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
 	void OnEndEvent(bool bIsCancelled);
@@ -52,7 +52,7 @@ public:
 protected:
 	virtual bool CanEnterNextNode_Implementation() { return true; }
 
-	virtual void OnCalledEvent_Implementation(FActingDialogueHandle& Handle) {}
+	virtual void OnCalledEvent_Implementation(FDialogueHandle& Handle) {}
 
 	virtual void OnEndEvent_Implementation(bool bIsCancelled) {}
 };

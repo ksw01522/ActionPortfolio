@@ -9,6 +9,7 @@
 #include "SRichTextBlockDecorator.h"
 #include "Components/RichTextBlockDecorator.h"
 #include "Events/CustomDialogueEventObject.h"
+#include "Nodes/DialogueNode_Basic.h"
 
 ////////////////////////////////////////// FActingDialogueData /////////////////////////////////////////////
 FActingDialogueData::FActingDialogueData(TArray<UDialoguerComponent*> NewDialoguers, UDialogueSession* Session)
@@ -37,11 +38,11 @@ bool FActingDialogueData::IsValidDialogue() const
 
 
 ///////////////////////////////////////// Add And Remove Dialogue ///////////////////////////////////////////
-FActingDialogueHandle UDialogueManager::EnterDialogue(const TArray<FString>& DialoguerIDs, UDialogueSession* Session)
+FDialogueHandle UDialogueManager::EnterDialogue(const TArray<FString>& DialoguerIDs, UDialogueSession* Session)
 {
 	if(Session == nullptr){ 
 		LOG_ERROR(TEXT("Dialogue Session in null."));
-		return FActingDialogueHandle(); 
+		return FDialogueHandle(); 
 		}
 
 	TArray<UDialoguerComponent*> Dialoguers;
@@ -61,7 +62,7 @@ FActingDialogueHandle UDialogueManager::EnterDialogue(const TArray<FString>& Dia
 		}
 	}
 
-	FActingDialogueHandle Handle(GDialogueHandleID++);
+	FDialogueHandle Handle(GDialogueHandleID++);
 	FActingDialogueData Data(Dialoguers, Session);
 
 	ActingDialogueMap.Add(Handle, Data);
@@ -80,7 +81,18 @@ FActingDialogueHandle UDialogueManager::EnterDialogue(const TArray<FString>& Dia
 
 
 
-void UDialogueManager::RemoveDialogue(const FActingDialogueHandle& Target)
+void UDialogueManager::Initialize(FSubsystemCollectionBase& Collection)
+{
+	GDialogueHandleID = 0;
+	ActingDialogueMap.Empty();
+	DialoguerMap.Empty();
+}
+
+void UDialogueManager::Deinitialize()
+{
+}
+
+void UDialogueManager::RemoveDialogue(const FDialogueHandle& Target)
 {
 	if (!Target.IsValid()) return;
 
@@ -103,7 +115,7 @@ void UDialogueManager::RemoveDialogue(const FActingDialogueHandle& Target)
 //////////////////////////////////////////////// Get ////////////////////////////////////////////////////////
 
 // 등록된 대화 데이터 가져오기
-FActingDialogueData* UDialogueManager::GetActingDialogueData(const FActingDialogueHandle& Handle)
+FActingDialogueData* UDialogueManager::GetActingDialogueData(const FDialogueHandle& Handle)
 {
 	if(!CheckDialogueFromHandle(Handle)) {return nullptr;}
 	
@@ -112,7 +124,7 @@ FActingDialogueData* UDialogueManager::GetActingDialogueData(const FActingDialog
 	return ReturnData;
 }
 
-bool UDialogueManager::IsCanEnterNextNode(FActingDialogueHandle& Handle)
+bool UDialogueManager::IsCanEnterNextNode(FDialogueHandle& Handle)
 {
 	FActingDialogueData* Data = GetActingDialogueData(Handle);
 	if(Data == nullptr) return false;
@@ -127,7 +139,7 @@ bool UDialogueManager::IsCanEnterNextNode(FActingDialogueHandle& Handle)
 }
 
 // 대화사람들 가져오기
-bool UDialogueManager::GetDialoguersInDialog(TArray<UDialoguerComponent*>& OutDialoguers, const FActingDialogueHandle& Handle)
+bool UDialogueManager::GetDialoguersInDialog(TArray<UDialoguerComponent*>& OutDialoguers, const FDialogueHandle& Handle)
 {
 	FActingDialogueData* Data = GetActingDialogueData(Handle);
 	if (Data == nullptr) { return false; }
@@ -203,7 +215,7 @@ void UDialogueManager::GetElementsFromData(TArray<FDialogueElement>& OutElements
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-bool UDialogueManager::CheckDialogueFromHandle(const FActingDialogueHandle& Handle)
+bool UDialogueManager::CheckDialogueFromHandle(const FDialogueHandle& Handle)
 {
 	LOG_INFO(TEXT("Check Dialogue Handle."));
 	if(!Handle.IsValid()) {
@@ -233,7 +245,7 @@ bool UDialogueManager::CheckDialogueFromHandle(const FActingDialogueHandle& Hand
 EDialogueNodeType UDialogueManager::EnterNextNode(TArray<FDialogueElement>& OutElements, UDialoguerComponent* Dialoguer)
 {
 	if(!IsValid(Dialoguer)) return EDialogueNodeType::None;
-	FActingDialogueHandle& Handle = Dialoguer->GetDialogueHandle();
+	FDialogueHandle& Handle = Dialoguer->GetDialogueHandle();
 
 	FActingDialogueData* Data = GetActingDialogueData(Handle);
 	if(Data == nullptr) { 
@@ -291,7 +303,7 @@ EDialogueNodeType UDialogueManager::EnterNextNode(TArray<FDialogueElement>& OutE
 
 /////////////////////////////////////// Events ///////////////////////////////////////////////////
 
-bool UDialogueManager::AddDialogueEvent(UDialogueEvent* NewEvent, const FActingDialogueHandle& Handle)
+bool UDialogueManager::AddDialogueEvent(UDialogueEvent* NewEvent, const FDialogueHandle& Handle)
 {
 	if(!IsValid(NewEvent)) return false;
 
@@ -303,7 +315,7 @@ bool UDialogueManager::AddDialogueEvent(UDialogueEvent* NewEvent, const FActingD
 	return true;
 }
 
-bool UDialogueManager::RemoveDialogueEvent(UDialogueEvent* RemoveEvent, const FActingDialogueHandle& Handle)
+bool UDialogueManager::RemoveDialogueEvent(UDialogueEvent* RemoveEvent, const FDialogueHandle& Handle)
 {
 	FActingDialogueData* Data = GetActingDialogueData(Handle);
 	if(Data == nullptr) return false;
@@ -359,8 +371,29 @@ UCustomDialogueEventObject* UDialogueManager::MakeCustomEvent(int NewEventID, TS
 	return NewCustomEvent;
 }
 
+void UDialogueManager::PlayAnimationInDialogue(TArray<FAnimInDialogueStruct>& AnimInDialogueStructs)
+{
+	for (auto& E : AnimInDialogueStructs)
+	{
+		if (!DialoguerMap.Contains(E.DialoguerID)) {
+			LOG_ERROR(TEXT("Can't find Dialoguer for play Animation by key : %s"), *E.DialoguerID);
+			continue;
+		}
 
-void UDialogueManager::RemoveAllEvents(FActingDialogueHandle& Handle)
+		UDialoguerComponent* TargetDialoguer = DialoguerMap[E.DialoguerID].Get();
+		if (TargetDialoguer == nullptr)
+		{
+			LOG_ERROR(TEXT("Can't find Dialoguer for play Animation by key : %s"), *E.DialoguerID);
+			DialoguerMap.Remove(E.DialoguerID);
+			continue;
+		}
+
+		TargetDialoguer->PlayAnimationMontage(E.MontageToPlay);
+	}
+}
+
+
+void UDialogueManager::RemoveAllEvents(FDialogueHandle& Handle)
 {
 	FActingDialogueData* Data = GetActingDialogueData(Handle);
 	RemoveAllEvents(Data);

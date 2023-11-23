@@ -41,15 +41,15 @@ private:
 private:
 
 	UFUNCTION(Client, unreliable)
-	void Client_PlaySound2D(const TArray<UDialoguerComponent*>& Dialoguers, FActingDialogueHandle Handle);
+	void Client_PlaySound2D(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle);
 
-	void Client_PlaySound2D_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FActingDialogueHandle Handle);
+	void Client_PlaySound2D_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle);
 
 	UFUNCTION(Client, unreliable)
-	void Client_PlaySoundFromActor(const TArray<UDialoguerComponent*>& Dialoguers, FActingDialogueHandle Handle);
-	void Client_PlaySoundFromActor_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FActingDialogueHandle Handle);
+	void Client_PlaySoundFromActor(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle);
+	void Client_PlaySoundFromActor_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle);
 
 	virtual void OnEndEvent_Implementation(bool bIsCancelled) override;
-	virtual void OnCalledEvent_Implementation(FActingDialogueHandle& Handle) override;
+	virtual void OnCalledEvent_Implementation(FDialogueHandle& Handle) override;
 
 };

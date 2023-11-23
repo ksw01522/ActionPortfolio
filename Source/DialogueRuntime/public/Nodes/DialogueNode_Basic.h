@@ -11,11 +11,33 @@
  * 
  */
 
+ class UAnimMontage;
+
 UENUM(BlueprintType)
 enum class ERichTextBlockType : uint8
 {
 	UMG,
 	SLATE
+};
+
+USTRUCT(BlueprintType)
+struct FAnimInDialogueStruct
+{
+	GENERATED_BODY()
+
+	FAnimInDialogueStruct() : DialoguerID(""), MontageToPlay(nullptr), AnimPlayLate(1)
+	{
+
+	}
+public:
+	UPROPERTY(EditAnywhere)
+	FString DialoguerID;
+
+	UPROPERTY(EditAnywhere)
+	UAnimMontage* MontageToPlay;
+
+	UPROPERTY(EditAnywhere)
+	float AnimPlayLate;
 };
 
 UCLASS()
@@ -137,4 +159,11 @@ private:
 
 #endif
 	
+protected:
+	UPROPERTY(EditAnywhere, Category = "Animation")
+	TArray<FAnimInDialogueStruct> DialoguerAnimations;
+
+protected:
+	virtual void CallEvents(const FDialogueHandle& Handle) override;
+
 };

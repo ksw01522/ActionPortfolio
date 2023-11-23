@@ -7,6 +7,10 @@
 #include "DialogueRuntime.h"
 #include "DialogueBFL.h"
 
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Components/SkeletalMeshComponent.h"
+
 // Sets default values for this component's properties
 UDialoguerComponent::UDialoguerComponent()
 {
@@ -19,6 +23,45 @@ UDialoguerComponent::UDialoguerComponent()
 
 
 
+bool UDialoguerComponent::AllocateAnimInstance()
+{
+	if (AActor* OwnerActor = GetOwner(); IsValid(OwnerActor))
+	{
+		if (USkeletalMeshComponent* Skel = Cast<USkeletalMeshComponent>(OwnerActor->GetComponentByClass(USkeletalMeshComponent::StaticClass())))
+		{
+			DialoguerAnimInstance = Skel->GetAnimInstance();
+		}
+		else {
+			LOG_ERROR(TEXT("Dialgouer's Owner doesn't have SkeletalMeshComponent : %s"), *OwnerActor->GetFName().ToString());
+			return false;
+
+		}
+	}
+	else
+	{
+		LOG_ERROR(TEXT("Dialoguer's Owner is not valid."));
+		return false;
+
+	}
+	return true;
+}
+
+bool UDialoguerComponent::PlayAnimationMontage(UAnimMontage* ToPlayMontage, float PlayLate)
+{
+	if (!DialoguerAnimInstance.IsValid() && !AllocateAnimInstance()) {
+		return false;
+	}
+	if (ToPlayMontage == nullptr)
+	{
+		LOG_ERROR(TEXT("To Play Montage is nullptr In Dialoguer %s"), *DialoguerID);
+		return false;
+	}
+
+	DialoguerAnimInstance->Montage_Play(ToPlayMontage, PlayLate);
+
+	return true;
+}
+
 // Called when the game starts
 void UDialoguerComponent::BeginPlay()
 {
@@ -28,6 +71,8 @@ void UDialoguerComponent::BeginPlay()
 	if (IsValid(DialogueManager)) {
 		DialogueManager->RegisterDialoguer(this);
 	}
+
+	AllocateAnimInstance();
 }
 
 void UDialoguerComponent::BeginDestroy()
@@ -50,7 +95,7 @@ void UDialoguerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 }
 
 
-void UDialoguerComponent::OnEnteredDialogue(const FActingDialogueHandle& Handle)
+void UDialoguerComponent::OnEnteredDialogue(const FDialogueHandle& Handle)
 {
 	DialogueHandle = Handle;
 }

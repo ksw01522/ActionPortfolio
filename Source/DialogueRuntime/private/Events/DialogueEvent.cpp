@@ -6,7 +6,7 @@
 #include "DialogueRuntime.h"
 #include "DialogueBFL.h"
 
-void UDialogueEvent::CallEvent(const FActingDialogueHandle& Handle)
+void UDialogueEvent::CallEvent(const FDialogueHandle& Handle)
 {
 	if (!Handle.IsValid()) {
 		LOG_ERROR(TEXT("Dialogue Handle Is Not Valid."));

@@ -5,7 +5,7 @@
 #include "WorldEventSubsystem.h"
 #include "ActionPortfolio.h"
 
-void UDialogueEvent_CallWorldEvent::OnCalledEvent_Implementation(FActingDialogueHandle& Handle)
+void UDialogueEvent_CallWorldEvent::OnCalledEvent_Implementation(FDialogueHandle& Handle)
 {
 	if (GEngine == nullptr) return ;
 	if (GEngine->GameViewport == nullptr) return ;

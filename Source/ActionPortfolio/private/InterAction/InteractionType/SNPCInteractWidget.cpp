@@ -115,7 +115,7 @@ void SNPCInteractWidget::Construct(const FArguments& InArgs)
 	NPCInteractionSystem = InArgs._NPCInteractionSystem;
 
 	// 블러강도 0~100
-	const float BlurStrength = 20;
+	const float BlurStrength = 0;
 	const float ButtonsWidth = 160;
 	const float ButtonsHeight = 40;
 	const float ButtonSpaceSize = 8;

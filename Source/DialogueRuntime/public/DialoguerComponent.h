@@ -8,7 +8,8 @@
 #include "DialoguerComponent.generated.h"
 
 
-
+class UAnimInstance;
+class UAnimMontage;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class DIALOGUERUNTIME_API UDialoguerComponent : public UActorComponent
@@ -26,21 +27,22 @@ private:
 	FString DialoguerID;
 
 	UPROPERTY(Transient)
-	FActingDialogueHandle DialogueHandle;
+	FDialogueHandle DialogueHandle;
+
 
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 	virtual void BeginDestroy() override;
 
-	FActingDialogueHandle& GetDialogueHandle() { return DialogueHandle; };
+	FDialogueHandle& GetDialogueHandle() { return DialogueHandle; };
 
 public:		
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
-	void OnEnteredDialogue(const FActingDialogueHandle& Handle);
+	void OnEnteredDialogue(const FDialogueHandle& Handle);
 
 public:
 
@@ -49,5 +51,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Dialogue")
 	bool IsInDialogue();
+
+
+//애니메이션
+private:
+	TWeakObjectPtr<UAnimInstance> DialoguerAnimInstance;
+
+	bool AllocateAnimInstance();
+	bool PlayAnimationMontage(UAnimMontage* ToPlayMontage, float PlayLate = 1);
 
 };

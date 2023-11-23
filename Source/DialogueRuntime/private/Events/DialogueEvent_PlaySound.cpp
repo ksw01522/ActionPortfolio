@@ -9,13 +9,13 @@
 #include "DialogueBFL.h"
 
 
-void UDialogueEvent_PlaySound::Client_PlaySound2D_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FActingDialogueHandle Handle)
+void UDialogueEvent_PlaySound::Client_PlaySound2D_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle)
 {
 	UAudioComponent* NewAudio = UGameplayStatics::SpawnSound2D(GetWorld(), SoundSource);
 	InstanceAudio = NewAudio;
 }
 
-void UDialogueEvent_PlaySound::Client_PlaySoundFromActor_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FActingDialogueHandle Handle)
+void UDialogueEvent_PlaySound::Client_PlaySoundFromActor_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle)
 {
 	for (auto Dialoguer : Dialoguers) {
 		if(!IsValid(Dialoguer) || Dialoguer->GetDialoguerID() != LocationDialoguerID) continue;
@@ -33,7 +33,7 @@ void UDialogueEvent_PlaySound::OnEndEvent_Implementation(bool bIsCancelled)
 	MarkAsGarbage();
 }
 
-void UDialogueEvent_PlaySound::OnCalledEvent_Implementation(FActingDialogueHandle& Handle)
+void UDialogueEvent_PlaySound::OnCalledEvent_Implementation(FDialogueHandle& Handle)
 {
 	if (SoundSource == nullptr) {
 		LOG_WARNING(TEXT("not valid SoundSource."));

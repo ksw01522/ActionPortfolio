@@ -6,22 +6,28 @@
 #include "DialogueRuntime.h"
 #include "DialogueBFL.h"
 
-void UDialogueEvent::CallEvent(const FDialogueHandle& Handle)
+void UDialogueEvent::CallEvent()
 {
-	if (!Handle.IsValid()) {
-		LOG_ERROR(TEXT("Dialogue Handle Is Not Valid."));
-		return;
-	}
+	OnCalledEvent();
+}
 
+void UDialogueEvent::CallEndEvent(bool bIsCancelled)
+{
+	OnEndEvent(bIsCancelled);
+
+	if(InstancingPolicy != EDialougeEventInstancingPolicy::NotInstanced){MarkAsGarbage();}
+}
+
+UDialogueEvent* UDialogueEvent::GetEventForCall()
+{
+	UDialogueEvent* ReturnEvent = nullptr;
+	
 	if (InstancingPolicy == EDialougeEventInstancingPolicy::NotInstanced) {
-		OnCalledEvent(Handle);
-		CalledDialogueID = Handle;
+		ReturnEvent = this;
 	}
 	else if (InstancingPolicy == EDialougeEventInstancingPolicy::InstancedPerExecution) {
-		UDialogueEvent* InstancedObject = NewObject<UDialogueEvent>(GetTransientPackage(), GetClass(), NAME_None, EObjectFlags::RF_NoFlags, this);
-		UDialogueManager* Manager = UDialogueBFL::GetDialogueManager();
-		Manager->AddDialogueEvent(InstancedObject, Handle);
-		InstancedObject->OnCalledEvent(Handle);
-		InstancedObject->CalledDialogueID = Handle;
+		ReturnEvent = NewObject<UDialogueEvent>(GetTransientPackage(), GetClass(), NAME_None, EObjectFlags::RF_NoFlags, this);
 	}
+
+	return ReturnEvent;
 }

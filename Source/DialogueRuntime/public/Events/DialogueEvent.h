@@ -4,8 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
-#include "DialogueStructs.h"
-#include "DialogueManager.h"
 #include "GameplayTagContainer.h"
 #include "DialogueEvent.generated.h"
 
@@ -33,26 +31,29 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DialogueEvent")
 	EDialougeEventInstancingPolicy InstancingPolicy;
 
-protected:
-	FDialogueHandle CalledDialogueID;
 
 public:
-	void CallEvent(const FDialogueHandle& Handle);
-	void CallEndEvent(bool bIsCancelled) { OnEndEvent(bIsCancelled); }
+	void CallEvent();
+	void CallEndEvent(bool bIsCancelled);
 
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
-	bool CanEnterNextNode();
+	bool CanEnterNextNode() const;
 
+	UDialogueEvent* GetEventForCall();
+
+	EDialougeEventInstancingPolicy GetInstancingPolicy() const { return InstancingPolicy; }
+
+public:
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
-	void OnCalledEvent(const FDialogueHandle& Handle);
+	void OnCalledEvent();
 
 	UFUNCTION(BlueprintNativeEvent, Category = "DialogueEvent")
 	void OnEndEvent(bool bIsCancelled);
 
 protected:
-	virtual bool CanEnterNextNode_Implementation() { return true; }
+	virtual bool CanEnterNextNode_Implementation() const { return true; }
 
-	virtual void OnCalledEvent_Implementation(FDialogueHandle& Handle) {}
+	virtual void OnCalledEvent_Implementation() {}
 
 	virtual void OnEndEvent_Implementation(bool bIsCancelled) {}
 };

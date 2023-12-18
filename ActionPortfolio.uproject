@@ -15,7 +15,9 @@
 				"CoreUObject",
 				"GameplayAbilities",
 				"AIModule",
-				"UMG"
+				"UMG",
+				"Slate",
+				"SlateCore"
 			]
 		},
 		{

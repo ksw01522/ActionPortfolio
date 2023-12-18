@@ -24,4 +24,8 @@ public:
 
 	virtual FText GetNodeTitle() override;
 #endif
+
+protected:
+	virtual void GetDialogueElementContainer(FDialogueElementContainer& OutElement) const override;
+
 };

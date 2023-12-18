@@ -5,8 +5,32 @@
 #include "Events/DialogueEvent.h"
 #include "DialogueSession.h"
 #include "DialogueRuntime.h"
+#include "DialogueStructs.h"
+#include "DialogueManager.h"
+#include "DialogueEdge.h"
+#include "Engine/CompositeDataTable.h"
 
 #define LOCTEXT_NAMESPACE "DialogueNode"
+
+FString FDialogueLocalization::GetStringByLanguage(EDialogueLanguage Language) const
+{
+	FString ReturnString;
+
+	switch (Language)
+	{
+	case EDialogueLanguage::Korean:
+		ReturnString = Korean;
+		break;
+
+	case EDialogueLanguage::English:
+		ReturnString = English;
+		break;
+	}
+
+	return ReturnString;
+}
+
+
 
 UDialogueNode::UDialogueNode()
 {
@@ -23,18 +47,34 @@ UDialogueSession* UDialogueNode::GetDialogueSession() const
 	return DialogueSession;
 }
 
-void UDialogueNode::CallEvents(const FDialogueHandle& Handle)
+void UDialogueNode::GetDialogueElementContainer(FDialogueElementContainer& OutElement) const
 {
-	if(!Handle.IsValid()) return;
-
-	for (auto Event : EnterEvents) {
-		Event->CallEvent(Handle);
-	}
+	OutElement.ContainerType = GetDialogueNodeType();
 }
 
-UDialogueEdge* UDialogueNode::GetEdge(UDialogueNode* ChildNode)
+const UDialogueNode* UDialogueNode::GetNextDialogueNode(FNextDialogueNodeOptionalStruct* OptionalStruct) const
 {
-	return nullptr;
+	const UDialogueNode* NextNode = nullptr;
+
+	for (const auto* Child : ChildrenNodes)
+	{
+		const UDialogueEdge* Edge = GetEdge(Child);
+		if (Edge->CanEnterNextNode()) {
+			NextNode = Child;
+			break;
+		}
+	}
+
+	return NextNode;
+}
+
+
+
+const UDialogueEdge* UDialogueNode::GetEdge(const UDialogueNode* ChildNode) const
+{
+	if(!Edges.Contains(ChildNode)) return nullptr;
+
+	return Edges[ChildNode];
 }
 
 bool UDialogueNode::IsLeafNode() const
@@ -103,6 +143,12 @@ bool UDialogueNode::CanCreateConnectionFrom(UDialogueNode* Other, int32 NumberOf
 
 #endif
 
-#undef LOCTEXT_NAMESPACE
+void FDialogueElementContainer::Clear()
+{
+	ContainerType = EDialogueNodeType::None;
+	Elements.Empty();
+}
 
+
+#undef LOCTEXT_NAMESPACE
 

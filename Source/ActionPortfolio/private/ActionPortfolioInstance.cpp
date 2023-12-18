@@ -9,6 +9,8 @@
 #include "Kismet/KismetInternationalizationLibrary.h"
 #include "Settings/GameSettingSubsystem.h"
 
+UActionPortfolioInstance* UActionPortfolioInstance::ActionPFInstance = nullptr;
+
 UActionPortfolioInstance::UActionPortfolioInstance()
 {
 	SlowDialogueAnimTime = 0.15f;
@@ -21,6 +23,8 @@ void UActionPortfolioInstance::Init()
 	Super::Init();
 
 	FActionPortfolioWidgetStyle::Initialize();
+
+	ActionPFInstance = this;
 
 }
 

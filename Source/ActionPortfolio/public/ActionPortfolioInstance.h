@@ -21,6 +21,8 @@ class ACTIONPORTFOLIO_API UActionPortfolioInstance : public UGameInstance
 public:
 	UActionPortfolioInstance();
 
+	static UActionPortfolioInstance* ActionPFInstance;
+
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ActionPF|Widget", meta = (AllowPrivateAccess = "true"))
 	float SlowDialogueAnimTime;

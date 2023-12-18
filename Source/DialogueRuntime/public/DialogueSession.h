@@ -15,6 +15,8 @@
  class UDialogueNode;
  class UDataTable;
 
+ enum class EDialogueLanguage : uint8;
+
  UENUM(BlueprintType)
 	 enum class ECustomNodeTypeHidden : uint8
  {
@@ -44,6 +46,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dialogue")
 	bool bEdgeEnabled;
 
+
+
 public:
 #if WITH_EDITOR
 	//UFUNCTION(BlueprintCallable, Category = "Dialogue")
@@ -72,10 +76,10 @@ public:
 
 #if WITH_EDITORONLY_DATA
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue", meta = (RowType = "FDialogueLocalization"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue", meta = (RequiredAssetDataTags = "RowStructure=/Script/DialogueRuntime.DialogueLocalization"))
 	UDataTable* DialoguerNameTable;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue", meta = (RowType = "FDialogueLocalization"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue", meta = (RequiredAssetDataTags = "RowStructure=/Script/DialogueRuntime.DialogueLocalization"))
 	UDataTable* DialogueStringTable;
 
 	UPROPERTY(EditAnywhere, Category = "DialogueEditor")

@@ -24,9 +24,7 @@ class DIALOGUERUNTIME_API UDialogueBFL : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 	
 public:
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "DialogueBFL|Manager")
-	static UDialogueManager* GetDialogueManager();
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Dialogue")
+	static UDialoguerComponent* GetDialoguer(const FString& DialoguerID);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "DialogueBFL|Manager", meta = (WorldContext = "WorldContextObject"))
-	static UDialogueManager* TestGetManager(UObject* WorldContextObject);
 };

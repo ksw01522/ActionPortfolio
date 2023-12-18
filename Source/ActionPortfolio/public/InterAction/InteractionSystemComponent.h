@@ -32,7 +32,7 @@ protected:
 
 private:
 	virtual void Interact_CPP(AActor* InteractActor) {}
-	virtual bool CanInteract_CPP(AActor* InteractActor) const;
+	virtual bool CanInteract_CPP(AActor* InteractActor) const {return true;};
 
 protected:
 	// Called when the game starts

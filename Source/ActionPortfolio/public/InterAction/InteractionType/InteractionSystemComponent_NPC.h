@@ -40,7 +40,7 @@ protected:
 public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "NPCInteraction")
-	UDialogueSession* GetGreetingDialogue(const AActionPFPlayerController* PlayerController) const;
+	const UDialogueSession* GetGreetingDialogue(const AActionPFPlayerController* PlayerController) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "NPCInteraction")
 	const TArray<UNPCInteract*>& GetNPCInteractions() const {return NPCInteractions;}

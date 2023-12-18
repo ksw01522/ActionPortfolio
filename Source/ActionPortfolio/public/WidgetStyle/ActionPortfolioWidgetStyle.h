@@ -6,6 +6,7 @@
 #include "Styling/AppStyle.h"
 #include "Styling/SlateStyle.h"
 
+struct FAnchors;
 
 class FActionPortfolioWidgetStyle
 {
@@ -19,34 +20,34 @@ private:
 	static TSharedPtr<FSlateStyleSet> StyleSet;
 
 public:
-	static FSlateStyleSet* GetActionPFWidgetStyleSet();
-	static FButtonStyle* MakeDefaultButtonStyle();
+	static FSlateStyleSet* Get();
 };
 
-namespace DialoguerNameStyle 
+
+
+namespace DialogueStyle
 {
-	namespace Font
+	namespace TextStyle
 	{
-		static const FName Default = "Dialogue.Name.Font.Default";
+		static const FName Default = "Dialogue.TextStyle.Default";
 	};
 
-	namespace Color
-	{
-		static const FName Default = "Dialogue.Name.Color.Default";
-	};
-};
-
-namespace CustomUIStyle
-{
-	namespace BorderImage
+	namespace BlockStyle
 	{
 		static const FName Default = "Dialogue.BorderImage.Default";
 	}
 
-	namespace Button
+	namespace ButtonStyle
 	{
-		static const FName Normal = "NPCInteract.Button.Normal";
-		static const FName Hovered = "NPCInteract.Button.Hovered";
-		static const FName Pressed = "NPCInteract.Button.Pressed";
+		static const FName AnswerButton = "Dialogue.ButtonStyle.Answer";
 	}
+}
+
+namespace ActionPFStyle
+{
+	namespace ButtonStyle
+	{
+		static const FName Default = "ActionPFStyle.ButtonStyle.Default";
+	}
+
 }

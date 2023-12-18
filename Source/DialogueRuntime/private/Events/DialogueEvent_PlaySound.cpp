@@ -9,19 +9,22 @@
 #include "DialogueBFL.h"
 
 
-void UDialogueEvent_PlaySound::Client_PlaySound2D_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle)
+UDialogueEvent_PlaySound::UDialogueEvent_PlaySound()
+{
+	InstancingPolicy = EDialougeEventInstancingPolicy::InstancedPerExecution;
+}
+
+void UDialogueEvent_PlaySound::Client_PlaySound2D_Implementation()
 {
 	UAudioComponent* NewAudio = UGameplayStatics::SpawnSound2D(GetWorld(), SoundSource);
 	InstanceAudio = NewAudio;
 }
 
-void UDialogueEvent_PlaySound::Client_PlaySoundFromActor_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle)
+void UDialogueEvent_PlaySound::Client_PlaySoundFromActor_Implementation()
 {
-	for (auto Dialoguer : Dialoguers) {
-		if(!IsValid(Dialoguer) || Dialoguer->GetDialoguerID() != LocationDialoguerID) continue;
-		UAudioComponent* NewAudio =  UGameplayStatics::SpawnSoundAttached(SoundSource, Dialoguer->GetOwner()->GetRootComponent(), NAME_None, FVector(0,0,0), EAttachLocation::KeepRelativeOffset, true);
-		InstanceAudio = NewAudio;
-	}
+	UDialoguerComponent* Dialoguer = UDialogueBFL::GetDialoguer(LocationDialoguerID);
+	UAudioComponent* NewAudio = UGameplayStatics::SpawnSoundAttached(SoundSource, Dialoguer->GetOwner()->GetRootComponent(), NAME_None, FVector(0, 0, 0), EAttachLocation::KeepRelativeOffset, true);
+	InstanceAudio = NewAudio;
 }
 
 void UDialogueEvent_PlaySound::OnEndEvent_Implementation(bool bIsCancelled)
@@ -33,25 +36,11 @@ void UDialogueEvent_PlaySound::OnEndEvent_Implementation(bool bIsCancelled)
 	MarkAsGarbage();
 }
 
-void UDialogueEvent_PlaySound::OnCalledEvent_Implementation(FDialogueHandle& Handle)
+void UDialogueEvent_PlaySound::OnCalledEvent_Implementation()
 {
-	if (SoundSource == nullptr) {
-		LOG_WARNING(TEXT("not valid SoundSource."));
-		return;
-	}
-	
-	TArray<UDialoguerComponent*> Dialoguers;
-	bool bCanGetDialoguers = UDialogueBFL::GetDialogueManager()->GetDialoguersInDialog(Dialoguers, Handle);
-	if (!bCanGetDialoguers) {
-		LOG_ERROR(TEXT("Can't Get Dialoguers."));
-		return;
-	}
+	ensure(SoundSource);
 
+	if (PlaySoundType == EPlaySoundType::FromActor) { Client_PlaySoundFromActor(); }
+	else if (PlaySoundType == EPlaySoundType::Anywhere) { Client_PlaySound2D(); }
 
-	if (PlaySoundType == EPlaySoundType::FromActor) { Client_PlaySoundFromActor(Dialoguers, Handle); }
-	else if (PlaySoundType == EPlaySoundType::Anywhere) { Client_PlaySound2D(Dialoguers, Handle); }
-	else {
-		LOG_ERROR(TEXT("Can't Find PlaySoundType."));
-	}
-	
 }

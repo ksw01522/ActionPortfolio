@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "EdGraph/EdGraphSchema.h"
-#include "DialogueStructs.h"
 #include "EdSchema_Dialogue.generated.h"
 
 /**
@@ -12,6 +11,8 @@
  */
  class UEdGraphNode_Dialogue;
  class UEdGraphNode_DialogueEdge;
+
+ enum class EDialogueNodeType : uint8;
 
  USTRUCT()
  struct FEdSchemaAction_Dialogue_NewNode : public FEdGraphSchemaAction

@@ -21,6 +21,7 @@ UNPCInteract::UNPCInteract()
 UNPCInteract_Dialogue::UNPCInteract_Dialogue()
 {
 	NPCInteractionName = LOCTEXT("Name_Dialogue", "대화하기");
+
 }
 
 bool UNPCInteract_Dialogue::IsCanNPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const
@@ -30,25 +31,8 @@ bool UNPCInteract_Dialogue::IsCanNPCInteract_Implementation(AActionPFPlayerContr
 
 void UNPCInteract_Dialogue::NPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const
 {
-	if(!IsCanNPCInteract(InteractPlayer)) return;
+	InteractPlayer->EnterDialogueInNPCInteract(DialogueSession);
 
-	UDialogueManager* DialogueMag = UDialogueBFL::GetDialogueManager();
-	if(!IsValid(DialogueMag)) return;
-
-	TArray<FString> DialoguerIDs;
-	DialoguerIDs.Add(InteractPlayer->GetDialoguerID());
-	
-	UDialoguerComponent* NPCDialoguer = OwnerSystem->GetNPCDialoguerComponent();
-	if (IsValid(NPCDialoguer)) {
-		DialoguerIDs.Add(NPCDialoguer->GetDialoguerID());
-	}
-
-	for (auto ExstraID : ExtraDialoguerIDs) {
-		DialoguerIDs.Add(ExstraID);
-	}
-
-	UDialogueBFL::GetDialogueManager()->EnterDialogue(DialoguerIDs, DialogueSession);
-	InteractPlayer->OnEnterDialogue(EActionPFDialogueType::NPC);
 }
 
 
@@ -88,30 +72,15 @@ bool UInteractionSystemComponent_NPC::CanInteract_CPP(AActor* InteractActor) con
 
 void UInteractionSystemComponent_NPC::Interact_CPP(AActor* InteractActor)
 {
-	if (!IsValid(InteractActor)) return;
+	ensure(IsValid(InteractActor));
 
 	AActionPFPlayerController* InteractPlayerController = InteractActor->GetInstigatorController<AActionPFPlayerController>();
 	if(!IsValid(InteractPlayerController)) return;
 
-	if (!GreetingDialogueSession.IsEmpty()) {
-		TArray<FString> DialoguerIDs;
-		DialoguerIDs.Add(InteractPlayerController->GetDialoguerID());
-		UDialoguerComponent* NPCDialoguer = GetNPCDialoguerComponent();
-		if (IsValid(NPCDialoguer)) {
-			DialoguerIDs.Add(NPCDialoguer->GetDialoguerID());
-		}
-
-		for (auto ExstraID : ExtraDialoguerIDs) {
-			DialoguerIDs.Add(ExstraID);
-		}
-
-		UDialogueBFL::GetDialogueManager()->EnterDialogue(DialoguerIDs, GetGreetingDialogue(InteractPlayerController));
-	}
-
 	InteractPlayerController->InteractWithNPC(this);
 }
 
-UDialogueSession* UInteractionSystemComponent_NPC::GetGreetingDialogue(const AActionPFPlayerController* PlayerController) const
+const UDialogueSession* UInteractionSystemComponent_NPC::GetGreetingDialogue(const AActionPFPlayerController* PlayerController) const
 {
 	if(GreetingDialogueSession.IsEmpty()) return nullptr;
 

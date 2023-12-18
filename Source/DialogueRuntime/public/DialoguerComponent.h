@@ -11,6 +11,9 @@
 class UAnimInstance;
 class UAnimMontage;
 
+class UDialogueManager;
+class IDialoguerManagerInterface;
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class DIALOGUERUNTIME_API UDialoguerComponent : public UActorComponent
 {
@@ -26,16 +29,11 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dialoguer", meta = (AllowPrivateAccess = "true"))
 	FString DialoguerID;
 
-	UPROPERTY(Transient)
-	FDialogueHandle DialogueHandle;
-
-
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 	virtual void BeginDestroy() override;
 
-	FDialogueHandle& GetDialogueHandle() { return DialogueHandle; };
 
 public:		
 	// Called every frame
@@ -48,9 +46,6 @@ public:
 
 	FString GetDialoguerID() const {return DialoguerID;}
 	
-	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Dialogue")
-	bool IsInDialogue();
 
 
 //애니메이션

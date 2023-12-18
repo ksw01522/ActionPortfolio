@@ -22,6 +22,9 @@ class DIALOGUERUNTIME_API UDialogueEvent_PlaySound : public UDialogueEvent
 {
 	GENERATED_BODY()
 	
+public:
+	UDialogueEvent_PlaySound();
+
 private:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "DialogueSound", meta = (EditCondition = "PlaySoundType == EPlaySoundType::FromActor", EditConditonHides, AllowPrivateAccess = "true"))
 	FString LocationDialoguerID;
@@ -35,21 +38,20 @@ private:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "DialogueSound", meta = (AllowPrivateAccess = "true"))
 	bool bWantStopWhenEventEnd = true;
 
-
 	TWeakObjectPtr<UAudioComponent> InstanceAudio;
 
 private:
 
 	UFUNCTION(Client, unreliable)
-	void Client_PlaySound2D(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle);
+	void Client_PlaySound2D();
 
-	void Client_PlaySound2D_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle);
+	void Client_PlaySound2D_Implementation();
 
 	UFUNCTION(Client, unreliable)
-	void Client_PlaySoundFromActor(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle);
-	void Client_PlaySoundFromActor_Implementation(const TArray<UDialoguerComponent*>& Dialoguers, FDialogueHandle Handle);
+	void Client_PlaySoundFromActor();
+	void Client_PlaySoundFromActor_Implementation();
 
 	virtual void OnEndEvent_Implementation(bool bIsCancelled) override;
-	virtual void OnCalledEvent_Implementation(FDialogueHandle& Handle) override;
+	virtual void OnCalledEvent_Implementation() override;
 
 };

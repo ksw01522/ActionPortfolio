@@ -3,9 +3,9 @@
 
 #include "DialoguerComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "DialogueHeaders.h"
 #include "DialogueRuntime.h"
 #include "DialogueBFL.h"
+#include "DialogueManager.h"
 
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
@@ -66,23 +66,19 @@ bool UDialoguerComponent::PlayAnimationMontage(UAnimMontage* ToPlayMontage, floa
 void UDialoguerComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
-	if (IsValid(DialogueManager)) {
-		DialogueManager->RegisterDialoguer(this);
-	}
-
+	IDialoguerManagerInterface* DialoguerManager = UDialogueManager::GetDialoguerManager();
+	
+	DialoguerManager->RegisterDialoguer(this);
 	AllocateAnimInstance();
 }
 
 void UDialoguerComponent::BeginDestroy()
 {
-	Super::BeginDestroy();
+	IDialoguerManagerInterface* DialoguerManager = UDialogueManager::GetDialoguerManager();
 
-	UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
-	if (IsValid(DialogueManager)) {
-		DialogueManager->UnregisterDialoguer(this);
-	}
+	if(DialoguerManager) DialoguerManager->UnregisterDialoguer(this);
+
+	Super::BeginDestroy();
 }
 
 
@@ -97,20 +93,9 @@ void UDialoguerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 void UDialoguerComponent::OnEnteredDialogue(const FDialogueHandle& Handle)
 {
-	DialogueHandle = Handle;
-}
-
-bool UDialoguerComponent::IsInDialogue()
-{
-	if(!DialogueHandle.IsValid()) return false;
-
-	UDialogueManager* DialogueMag = UDialogueBFL::GetDialogueManager();
-	if(!IsValid(DialogueMag)) return false;
-
-	return DialogueMag->CheckDialogueFromHandle(DialogueHandle);
-
 	
 }
+
 
 
 

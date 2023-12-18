@@ -11,6 +11,8 @@
 
 #define LOCTEXT_NAMESPACE "ActionPFSettings"
 
+UGameSettingSubsystem* UGameSettingSubsystem::SettingInstance = nullptr;
+
 TArray<FText> UGameSettingSubsystem::BasicLevelOptions({LOCTEXT("레벨_저", "저"), 
 														LOCTEXT("레벨_중", "중"), 
 														LOCTEXT("레벨_고", "고"),
@@ -27,6 +29,7 @@ void UGameSettingSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	UGameUserSettings* UserSettings = UGameUserSettings::GetGameUserSettings();
 	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
+	SettingInstance = this;
 
 	ScreenResolutionOptions.Add(FIntPoint(1280, 720));
 	ScreenResolutionOptions.Add(FIntPoint(1600, 900));
@@ -103,7 +106,7 @@ void UGameSettingSubsystem::SetCurrentLanguage(ELanguage NewLanguage)
 {
 	if (CurrentLanguage == NewLanguage) return;
 	CurrentLanguage = NewLanguage;
-	UDialogueManager* DialogueManager = UDialogueBFL::GetDialogueManager();
+	UDialogueManager* DialogueManager = GetGameInstance()->GetSubsystem<UDialogueManager>();
 
 	switch (CurrentLanguage)
 	{

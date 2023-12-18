@@ -23,6 +23,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetEventKey() const {return EventKey;}
 
-	virtual void OnCalledEvent_Implementation(FDialogueHandle& Handle) override;
+	virtual void OnCalledEvent_Implementation() override;
 
 };

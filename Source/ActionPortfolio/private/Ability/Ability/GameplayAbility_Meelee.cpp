@@ -30,7 +30,7 @@ UGameplayAbility_Meelee::UGameplayAbility_Meelee() : Super()
 void UGameplayAbility_Meelee::OnEventReceived(FGameplayEventData EventData)
 {
 	FActionPFEffectContainer* EffectsToApply = DamageMap.Find(EventData.EventTag);
-	if(EffectsToApply == nullptr || EffectsToApply->EffectClasses.IsEmpty() || EventData.Instigator.IsNull() || EventData.Target.IsNull()) return;
+	if(EffectsToApply == nullptr || EffectsToApply->EffectClasses.IsEmpty() || !EventData.Instigator || !EventData.Target) return;
 
 	UActionPFAbilitySystemComponent* SourceAbilitySystem = Cast<UActionPFAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	UActionPFAbilitySystemComponent* TargetAbilitySystem = nullptr;

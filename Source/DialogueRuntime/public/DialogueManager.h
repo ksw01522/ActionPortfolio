@@ -4,7 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "DialogueStructs.h"
+#include "Manager/DialogueMCManagerInterface.h"
+#include "Manager/DialoguerManagerInterface.h"
+#include "Manager/DialogueHandle.h"
 #include "DialogueManager.generated.h"
 
 /**
@@ -15,35 +17,24 @@
  class UDialogueNode_Basic;
  class UDialogueSession;
  class UDialogueEvent;
+ class UDataTable;
+ class UDialogueMCComponent;
+
  struct FAnimInDialogueStruct;
+ struct FDialogueElement;
+ struct FNextDialogueNodeOptionalStruct;
 
-USTRUCT(BlueprintType)
-struct FDialogueHandle
+ enum class EDialogueNodeType : uint8;
+
+UENUM(BlueprintType)
+enum class EDialogueLanguage : uint8
 {
-	GENERATED_BODY()
+	Korean		UMETA(DisplayName = "Korean"),
+	English		UMETA(DisplayName = "English")
+};
 
-	friend UDialogueManager;
 
-	FDialogueHandle() {}
-	FDialogueHandle(uint32 ID) : ID(ID) {}
 
-private:
-	void Invalidate() { ID = INDEX_NONE; }
-
-public:
-	bool IsValid() const { return ID != INDEX_NONE; }
-
-	bool operator==(const FDialogueHandle& Other) const { return ID == Other.ID; }
-	bool operator!=(const FDialogueHandle& Other) const { return ID != Other.ID; }
-
-	friend uint32 GetTypeHash(const FDialogueHandle& InHandle)
-	{
-		return InHandle.ID;
-	}
-
-private:
-	uint32 ID = INDEX_NONE;
- };
 
 USTRUCT(BlueprintType)
 struct DIALOGUERUNTIME_API FActingDialogueData
@@ -52,34 +43,39 @@ struct DIALOGUERUNTIME_API FActingDialogueData
 
 	friend UDialogueManager;
 
-	FActingDialogueData() : DialogueSession(nullptr), CurrentNode(nullptr) { Dialoguers.Empty(); DialogueEvents.Empty(); }
-	FActingDialogueData(TArray<UDialoguerComponent*> NewDialoguers, UDialogueSession* Session);
-	~FActingDialogueData() {}
+	FActingDialogueData() : DialogueSession(nullptr), CurrentNode(nullptr) {DialogueEvents.Empty(); }
+	FActingDialogueData(const UDialogueSession* Session);
+	~FActingDialogueData();
 
 private:
-	TArray<TWeakObjectPtr<UDialoguerComponent>> Dialoguers;
+	TWeakObjectPtr<const UDialogueSession> DialogueSession;
 
-	TWeakObjectPtr<UDialogueSession> DialogueSession;
-
-	TWeakObjectPtr<UDialogueNode> CurrentNode;
+	TWeakObjectPtr<const UDialogueNode> CurrentNode;
 
 	UPROPERTY(Transient)
 	TArray<UDialogueEvent*> DialogueEvents;
+
 private:
 
 public:
 	bool IsValidDialogue() const;
 };
  
-
-
+ struct UDialogueElelement;
+ 
 UCLASS(BlueprintType, Config = CustomDialogue)
-class DIALOGUERUNTIME_API UDialogueManager : public UGameInstanceSubsystem
+class DIALOGUERUNTIME_API UDialogueManager : public UGameInstanceSubsystem, public IDialogueMCManagerInterface, public IDialoguerManagerInterface
 {
 	GENERATED_BODY()
 	
 private:
-	UDialogueManager() {}
+	UDialogueManager();
+
+public:
+	static UDialogueManager* ManagerInstance;
+
+	static IDialoguerManagerInterface* GetDialoguerManager();
+	static IDialogueMCManagerInterface* GetDialogueMCManager();
 
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -89,66 +85,56 @@ protected:
 private:
 	uint32 GDialogueHandleID = 0;
 
-	UPROPERTY(Transient)
 	TMap<FDialogueHandle, FActingDialogueData> ActingDialogueMap;
 
-	EDialogueLanguage CurrentLanguage = EDialogueLanguage::Korean;
+	UPROPERTY(Config)
+	EDialogueLanguage CurrentLanguage;
 
 	TMap<FString, TWeakObjectPtr<UDialoguerComponent>> DialoguerMap;
 
-
-
-private:
-
-	void RemoveDialogue(const FDialogueHandle& Target);
-
-	bool GetElementFromNode(TArray<FDialogueElement>& OutElements, UDialogueNode_Basic* BasicNode) const;
-	void GetElementsFromData(TArray<FDialogueElement>& OutElements, FActingDialogueData* Data) const;
-
+	const FActingDialogueData* GetActingDialogueData(const FDialogueHandle& Handle) const;
 	FActingDialogueData* GetActingDialogueData(const FDialogueHandle& Handle);
 
 
 
+
+/////////////////////////////////// Dialogue MC Manager ///////////////////////////////
+private:
+	virtual void EnterDialogue(FDialogueHandle& Handle, const UDialogueSession* Session) override;
+	virtual bool ExitDialogue(FDialogueHandle& Handle) override;
+
+	virtual bool EnterNextNode(FDialogueElementContainer& OutElements, FDialogueHandle& Handle, FNextDialogueNodeOptionalStruct* OptionalStruct = nullptr) override;
+
+	virtual bool CanEnterNextNode(FDialogueHandle& Handle) const override;
+
+	virtual bool IsActingDialogue(FDialogueHandle& Handle) const override;
+
+
 public:
-	UFUNCTION(BlueprintCallable, Category = "DialogueManager")
-	FDialogueHandle EnterDialogue(const TArray<FString>& DialoguerIDs, UDialogueSession* Session);
+	inline EDialogueLanguage GetCurrentLanguage() const { return CurrentLanguage; }
+	void SetCurrentLanguage(EDialogueLanguage Lan);
 
-	UFUNCTION(BlueprintCallable, Category = "DialogueManager")
-	EDialogueNodeType EnterNextNode(TArray<FDialogueElement>& OutElements, UDialoguerComponent* Dialoguer);
-
-	void SetCurrentLanguage(EDialogueLanguage Lan) { CurrentLanguage = Lan; SaveConfig(); }
-
-	UFUNCTION(BlueprintCallable, Category = "DialoguerManager")
-	bool GetDialoguersInDialog(TArray<UDialoguerComponent*>& OutDialoguers, const FDialogueHandle& Handle);
-
-	bool CheckDialogueFromHandle(const FDialogueHandle& Handle);
 
 	/////////////////Events
 private:
-	void RemoveAllEvents(FDialogueHandle& Handle);
-	void RemoveAllEvents(FActingDialogueData* Data);
+	void RegisterAndCallEvents(FActingDialogueData* DialogueData);
 
-	void CallEndEvents(FActingDialogueData* Data, bool bIsCancelled);
+	void CallDialogueEventsEnd(FActingDialogueData* Data, bool bIsCancelled);
 
-	bool IsCanEnterNextNode(FDialogueHandle& Handle);
 
 public:
-	bool AddDialogueEvent(UDialogueEvent* NewEvent, const FDialogueHandle& Handle);
-	bool RemoveDialogueEvent(UDialogueEvent* RemoveEvent, const FDialogueHandle& Handle);
 
-	void RegisterDialoguer(UDialoguerComponent* NewDialoguer);
-	void UnregisterDialoguer(UDialoguerComponent* TargetDialoguer);
 
+
+///////////////// Dialoguer Manager ///////////////////////////
 private:
-	TMap<int, TArray<UCustomDialogueEventObject*>> CustomEventMap;
+	virtual void RegisterDialoguer(UDialoguerComponent* NewDialoguer) override;
+	virtual void UnregisterDialoguer(UDialoguerComponent* TargetDialoguer) override;
 
 public:
-	void CallCustomEvent(int ID);
+	UDialoguerComponent* GetDialoguer(const FString& DialoguerID) const;
 
-	UFUNCTION(BlueprintCallable, Category = "DialogueManager")
-	class UCustomDialogueEventObject* MakeCustomEvent(int NewEventID, TSubclassOf<UCustomDialogueEventObject> EventClass);
-
-/////////////////Events
+///////////////// Animation
 public:
 	void PlayAnimationInDialogue(TArray<FAnimInDialogueStruct>& AnimInDialogueStructs);
 };

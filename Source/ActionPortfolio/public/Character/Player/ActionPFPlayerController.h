@@ -13,7 +13,15 @@
  * 
  */
 class UDialoguerComponent;
-class SNPCInteractWidget;
+class UWidget_PlayerMainUI;
+class UUserWidget;
+class UInteractionSystemComponent_NPC;
+class UPlayerDialogueMCComponent;
+class SActionPFMainSlate;
+class SNPCInteractButton;
+class UDialogueSession;
+
+struct FDialogueElementContainer;
 
 UENUM()
 enum class EActionPFDialogueType : uint8
@@ -29,10 +37,6 @@ class ACTIONPORTFOLIO_API AActionPFPlayerController : public APlayerController, 
 	GENERATED_BODY()
 
 	AActionPFPlayerController();
-
-private:
-	FTimerHandle DialogueAnimHandle_NPC;
-	FTimerDelegate DialogueAnimDel_NPC;
 
 protected:
 	virtual void Tick(float DeltaSeconds) override;
@@ -55,7 +59,7 @@ protected:
 ///////////////////¸Þ´º À§Á¬
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UserWidget", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<class UWidget_PlayerMainUI> PlayerMainUIClass;
+	TSubclassOf<UWidget_PlayerMainUI> PlayerMainUIClass;
 
 	UPROPERTY()
 	UWidget_PlayerMainUI* PlayerMainUI;
@@ -64,16 +68,18 @@ private:
 
 	int MainUIHideCount = 0;
 
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player|UI")
 	void HideMainUI();
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player|UI")
 	void DisplayMainUI();
 
+
 private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UserWidget", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<class UUserWidget> MenuWidgetClass;
+	TSubclassOf<UUserWidget> MenuWidgetClass;
 
 	UPROPERTY()
 	UUserWidget* MenuWidget;
@@ -87,20 +93,6 @@ private:
 	UUserWidget* GetMenuWidget();
 
 protected:
-	TSharedPtr<SNPCInteractWidget> NPCInteractWidget;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dialoguer")
-	UDialoguerComponent* PlayerDialoguer;
-
-private:
-	void EnterNextDialogue(EActionPFDialogueType Type);
-	void AnimDialogue(EActionPFDialogueType Type);
-
-	void ForceDialogueAnimComplete(EActionPFDialogueType Type);
-
-	void OnCompleteDialogueAnim(EActionPFDialogueType Type);
-
-protected:
 	UFUNCTION(BlueprintCallable, Category = "PlayerController")
 	void ChangeUIInputMode();
 
@@ -111,30 +103,9 @@ public:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 
-	void InteractWithNPC(class UInteractionSystemComponent_NPC* NPCInteracts);
-	
-	void ExitInteractNPC();
-	void OnMouseButtonDownInDialogueBox_NPC();
-
-	FString GetDialoguerID() const;
-
-	void OnEnterDialogue(EActionPFDialogueType Type);
-
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 
-protected:
-	TSharedPtr<class SDialogueSlate> DialogueSlate;
-	FTimerHandle DialogueAnimHandle_Basic;
-	FTimerDelegate DialogueAnimDel_Basic;
-
-	void EndDialogueSlate();
-
-public:
-	void OnMouseButtonDownInDialogueBox();
-
-	UFUNCTION(BlueprintCallable, Category = "ActionPF|Dialogue")
-	void EnterDialogueBasic(class UDialogueSession* NewSession);
 
 //////////////////////// Team /////////////////////
 private:
@@ -145,4 +116,55 @@ public:
 
 	/** Retrieve team identifier in form of FGenericTeamId */
 	virtual FGenericTeamId GetGenericTeamId() const { return TeamID; }
+
+/////////////////////// Slate /////////////////////
+private:
+	TSharedPtr<SActionPFMainSlate> PlayerMainSlate;
+
+	void CreatePlayerSlates();
+
+
+private:
+	int ForceHiddenSlateCount;
+	int CountSlateinMain;
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Slate", meta = (AllowPrivateAccess = "true"))
+	bool bVisibleSlateInStart;
+#endif
+
+#if WITH_EDITOR
+	EVisibility GetSlateVisiblityForDebug() const { return bVisibleSlateInStart ? EVisibility::Visible : EVisibility::Collapsed; };
+#endif
+
+public:
+	void HideMainSlate();
+	void DisplayMainSlate();
+
+/////////////////////// Player Dialogue MC ////////////////
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dialogue", meta = (AllowPrivateAccess = "true"))
+	UPlayerDialogueMCComponent* PlayerDialogueMC;
+
+public:
+	UPlayerDialogueMCComponent* GetPlayerDialogueMCComponent() const { return PlayerDialogueMC; };
+
+/////////////////////// Interact NPC /////////////////////
+private:
+	TWeakPtr<SVerticalBox> NPCInteractBTNBox;
+	TArray<TWeakPtr<SNPCInteractButton>> NPCInteractBTNs;
+
+	void AssginNPCInteractButton(UInteractionSystemComponent_NPC* NPCInteracts);
+	void CheckAndCreateNPCinteractBTNs(int TargetCount);
+
+	void ShowNPCInteractBTNs();
+	void HideNPCInteractBTNs();
+
+public:
+	void InteractWithNPC(UInteractionSystemComponent_NPC* NPCInteracts);
+
+	void ExitInteractNPC();
+	FReply OnClickExitInteractNPC();
+
+	void EnterDialogueInNPCInteract(const UDialogueSession* NewSession);
 };

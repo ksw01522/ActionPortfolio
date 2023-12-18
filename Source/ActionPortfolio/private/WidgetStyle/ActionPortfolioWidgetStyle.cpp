@@ -8,6 +8,7 @@
 #include "Fonts/SlateFontInfo.h"
 #include "Brushes/SlateBoxBrush.h"
 #include "ActionPortfolio.h"
+#include "Widgets/Layout/Anchors.h"
 
 TSharedPtr<FSlateStyleSet> FActionPortfolioWidgetStyle::StyleSet = nullptr;
 
@@ -22,30 +23,71 @@ TSharedPtr<FSlateStyleSet> FActionPortfolioWidgetStyle::StyleSet = nullptr;
 void FActionPortfolioWidgetStyle::Initialize()
 {
 	if (StyleSet.IsValid()) { return; }
+	StyleSet = MakeShareable(new FSlateStyleSet("ActionPFWidgetStyleSet"));
+	StyleSet->SetContentRoot(FPaths::ProjectDir() / TEXT("Content/WidgetStyle"));
+
+	//Text Size
+	const float TextSize_Small = 18;
+	const float TextSize_Normal = 24;
+	const float TextSize_Big = 30;
+
+	StyleSet->Set(FName("ActionPF.TextSize.Small"), TextSize_Small);
+	StyleSet->Set(FName("ActionPF.TextSize.Normal"), TextSize_Normal);
+	StyleSet->Set(FName("ActionPF.TextSize.Big"), TextSize_Big);
 
 	const FVector2D Icon20x20(20.0f, 20.0f);
 	const FVector2D Icon40x40(40.0f, 40.0f);
 	const FVector2D Icon64x64(64.0f, 64.0f);
 
-	StyleSet = MakeShareable(new FSlateStyleSet("ActionPFWidgetStyleSet"));
-
-	StyleSet->SetContentRoot(FPaths::ProjectDir() / TEXT("Content/WidgetStyle"));
-
 
 	//Dialogue Box Style	
-	StyleSet->Set(DialoguerNameStyle::Font::Default, TTF_FONT("NPCInteract/Font/Default", 28));
-	
-	StyleSet->Set(DialoguerNameStyle::Color::Default, FLinearColor(1, 0.6f, 0, 1));
+	FSlateFontInfo DialogueDefaultFont(TTF_FONT("NPCInteract/Font/Default", 28));
+	FLinearColor DialogueDefaultColor(1, 0.6f, 0, 1);
 
-	FSlateBoxBrush* DialogueBoxBrush = new BOX_BRUSH("NPCInteract/BorderDefault", FMargin(0.07));
-	DialogueBoxBrush->TintColor = FLinearColor(1,1,1,1);
+	FTextBlockStyle DialogueDefaultTextStyle;
+	DialogueDefaultTextStyle.SetFont(DialogueDefaultFont);
+	DialogueDefaultTextStyle.SetColorAndOpacity(FSlateColor(DialogueDefaultColor));
+	DialogueDefaultTextStyle.SetFontSize(TextSize_Normal);
 
-	StyleSet->Set(CustomUIStyle::BorderImage::Default, DialogueBoxBrush);
+	StyleSet->Set(DialogueStyle::TextStyle::Default, DialogueDefaultTextStyle);
+
+	FSlateBoxBrush* DialogueBoxBrush = new BOX_BRUSH("NPCInteract/BorderDefault", FMargin(0.05f), FSlateColor(FLinearColor(1,1,1)));
+
+	StyleSet->Set(DialogueStyle::BlockStyle::Default, DialogueBoxBrush);
+
 
 	//Button Style
-	StyleSet->Set(CustomUIStyle::Button::Normal, new BOX_BRUSH("NPCInteract/Normal", FMargin(0.1f)));
-	StyleSet->Set(CustomUIStyle::Button::Hovered, new BOX_BRUSH("NPCInteract/Hovered", FMargin(0.1f)));
-	StyleSet->Set(CustomUIStyle::Button::Pressed, new BOX_BRUSH("NPCInteract/Pressed", FMargin(0.1f)));
+	FSlateBoxBrush DefaultBTNStyle_Normal = BOX_BRUSH("NPCInteract/Normal", FVector2D(32,32), 8.0f / 32.0f);
+
+	FSlateBoxBrush DefaultBTNStyle_Hovered = BOX_BRUSH("NPCInteract/Hovered", FVector2D(32, 32), 8.0f / 32.0f);
+
+	FSlateBoxBrush DefaultBTNStyle_Pressed = BOX_BRUSH("NPCInteract/Pressed", FVector2D(32, 32), 8.0f / 32.0f);
+
+
+	const FButtonStyle DefaultBTNStyle = FButtonStyle()
+				.SetNormal(DefaultBTNStyle_Normal)
+				.SetHovered(DefaultBTNStyle_Hovered)
+				.SetPressed(DefaultBTNStyle_Pressed)
+				.SetNormalPadding(FMargin(2, 2, 2, 2))
+				.SetPressedPadding(FMargin(2, 3, 2, 1));
+
+	StyleSet->Set(ActionPFStyle::ButtonStyle::Default, DefaultBTNStyle);
+
+	FSlateBoxBrush AnswerBTNStyle_Normal = *DialogueBoxBrush;
+	FSlateBoxBrush AnswerBTNStyle_Horvered = *DialogueBoxBrush;
+	AnswerBTNStyle_Horvered.TintColor = FSlateColor(FLinearColor(0.75f, 0.75f, 0.75f));
+
+	FSlateBoxBrush AnswerBTNStyle_Pressed = *DialogueBoxBrush;
+	AnswerBTNStyle_Pressed.TintColor = FSlateColor(FLinearColor(0.4f, 0.4f, 0.4f));
+
+	const FButtonStyle AnswerBTNStyle = FButtonStyle()
+					.SetNormal(AnswerBTNStyle_Normal)
+					.SetHovered(AnswerBTNStyle_Horvered)
+					.SetPressed(AnswerBTNStyle_Pressed)
+					.SetNormalPadding(FMargin(2, 2, 2, 2))
+					.SetPressedPadding(FMargin(2, 3, 2, 1));
+
+	StyleSet->Set(DialogueStyle::ButtonStyle::AnswerButton, AnswerBTNStyle);
 
 	FSlateStyleRegistry::RegisterSlateStyle(*StyleSet.Get());
 }
@@ -65,22 +107,11 @@ const FName& FActionPortfolioWidgetStyle::GetStyleSetName()
 	return StyleSet->GetStyleSetName();
 }
 
-FSlateStyleSet* FActionPortfolioWidgetStyle::GetActionPFWidgetStyleSet()
+FSlateStyleSet* FActionPortfolioWidgetStyle::Get()
 {
 	return StyleSet.Get();
 }
 
-FButtonStyle* FActionPortfolioWidgetStyle::MakeDefaultButtonStyle()
-{
-	FSlateStyleSet* ActionPFSlateStyleSet = FActionPortfolioWidgetStyle::GetActionPFWidgetStyleSet();
-
-	FButtonStyle* DefaultBTNStyle = new FButtonStyle();
-	DefaultBTNStyle->SetNormal(*ActionPFSlateStyleSet->GetBrush(CustomUIStyle::Button::Normal));
-	DefaultBTNStyle->SetHovered(*ActionPFSlateStyleSet->GetBrush(CustomUIStyle::Button::Hovered));
-	DefaultBTNStyle->SetPressed(*ActionPFSlateStyleSet->GetBrush(CustomUIStyle::Button::Pressed));
-
-	return DefaultBTNStyle;
-}
 
 #undef IMAGE_BRUSH
 #undef BOX_BRUSH

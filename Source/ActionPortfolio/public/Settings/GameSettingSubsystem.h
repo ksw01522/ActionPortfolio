@@ -24,6 +24,9 @@ private:
 	static TArray<FText> BasicLevelOptions;
 
 public:
+	static UGameSettingSubsystem* SettingInstance;
+
+public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 ///////////// ¿œπ› /////////////

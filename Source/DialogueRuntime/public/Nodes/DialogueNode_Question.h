@@ -10,6 +10,20 @@
 /**
  * 
  */
+struct FNextDialogueNodeOptionalStruct_Question : public FNextDialogueNodeOptionalStruct
+{
+	FNextDialogueNodeOptionalStruct_Question() : AnswerIndex(-1)
+	{}
+
+	FNextDialogueNodeOptionalStruct_Question(int Idx) : AnswerIndex(Idx)
+	{}
+
+	~FNextDialogueNodeOptionalStruct_Question(){}
+
+public:
+	int AnswerIndex;
+};
+
 UCLASS()
 class DIALOGUERUNTIME_API UDialogueNode_Question : public UDialogueNode_Basic
 {
@@ -17,13 +31,17 @@ class DIALOGUERUNTIME_API UDialogueNode_Question : public UDialogueNode_Basic
 public:
 	UDialogueNode_Question();
 
-public:
-	//virtual bool CanCreateConnection(UDialogueNode* Other, FText& ErrorMessage) override;
+protected:
 #if WITH_EDITOR
+	//virtual bool CanCreateConnection(UDialogueNode* Other, FText& ErrorMessage) override;
+
 	virtual bool CanCreateConnectionTo(UDialogueNode* Other, int32 NumberOfChildrenNodes, FText& ErrorMessage) override;
 
 	virtual FText GetNodeTitle() override;
 	#endif
-	UFUNCTION(BlueprintCallable, Category = "Dialogue")
-	TArray<UDialogueNode_Answer*> GetAnswers();
+
+
+	virtual void GetDialogueElementContainer(FDialogueElementContainer& OutElement) const override;
+
+	virtual const UDialogueNode* GetNextDialogueNode(FNextDialogueNodeOptionalStruct* OptionalStruct = nullptr) const override;
 };

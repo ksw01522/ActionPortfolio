@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "DialogueNode.h"
-#include "DialogueStructs.h"
 #include "DialogueNode_Basic.generated.h"
 
 /**
@@ -13,32 +12,7 @@
 
  class UAnimMontage;
 
-UENUM(BlueprintType)
-enum class ERichTextBlockType : uint8
-{
-	UMG,
-	SLATE
-};
 
-USTRUCT(BlueprintType)
-struct FAnimInDialogueStruct
-{
-	GENERATED_BODY()
-
-	FAnimInDialogueStruct() : DialoguerID(""), MontageToPlay(nullptr), AnimPlayLate(1)
-	{
-
-	}
-public:
-	UPROPERTY(EditAnywhere)
-	FString DialoguerID;
-
-	UPROPERTY(EditAnywhere)
-	UAnimMontage* MontageToPlay;
-
-	UPROPERTY(EditAnywhere)
-	float AnimPlayLate;
-};
 
 UCLASS()
 class DIALOGUERUNTIME_API UDialogueNode_Basic : public UDialogueNode
@@ -112,14 +86,17 @@ public:
 	TArray<TSubclassOf<class URichTextBlockDecorator>> GetUMGDecoClasses() const;
 	TArray<TSubclassOf<class USRichTextBlockDecorator>> GetSlateDecoClasses() const;
 
-	FString GetDialoguerName(EDialogueLanguage Language);
-	FString GetDialogueString(EDialogueLanguage Language);
+	FString GetDialoguerName(EDialogueLanguage Language) const;
+	FString GetDialogueString(EDialogueLanguage Language) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "DialogueStyle")
 	ERichTextBlockType GetRichTextBlockType() const {return RichTextBlockType;}
 
-#if WITH_EDITOR
+protected:
+	virtual void GetDialogueElementContainer(FDialogueElementContainer& OutElement) const override;
 
+#if WITH_EDITOR
+public:
 	UFUNCTION(BlueprintCallable, BlueprintGetter, Category = "Dialogue")
 	FString GetDialoguerName_InEditor() const;
 
@@ -163,7 +140,5 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	TArray<FAnimInDialogueStruct> DialoguerAnimations;
 
-protected:
-	virtual void CallEvents(const FDialogueHandle& Handle) override;
 
 };

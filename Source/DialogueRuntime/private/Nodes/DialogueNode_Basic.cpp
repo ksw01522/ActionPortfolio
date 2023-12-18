@@ -7,6 +7,8 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "DialogueStructs.h"
 #include "DialogueBFL.h"
+#include "DialogueManager.h"
+#include "Kismet/KismetInternationalizationLibrary.h"
 
 #define LOCTEXT_NAMESPACE "DialogueNode"
 
@@ -19,6 +21,9 @@ UDialogueNode_Basic::UDialogueNode_Basic()
 #endif
 	DialogueTextStyleSet = nullptr;
 	DialogueNodeType = EDialogueNodeType::Basic;
+	DialogueUMGDecoratorClasses.Empty();
+	DialogueSlateDecoratorClasses.Empty();
+	DialoguerAnimations.Empty();
 }
 
 UDataTable* UDialogueNode_Basic::GetDialogueTextStyleSet() const
@@ -26,64 +31,69 @@ UDataTable* UDialogueNode_Basic::GetDialogueTextStyleSet() const
 	return DialogueTextStyleSet;	
 }
 
-TArray<TSubclassOf<class URichTextBlockDecorator>> UDialogueNode_Basic::GetUMGDecoClasses() const
+TArray<TSubclassOf<URichTextBlockDecorator>> UDialogueNode_Basic::GetUMGDecoClasses() const
 {
 	return DialogueUMGDecoratorClasses;
 }
 
-TArray<TSubclassOf<class USRichTextBlockDecorator>> UDialogueNode_Basic::GetSlateDecoClasses() const
+TArray<TSubclassOf<USRichTextBlockDecorator>> UDialogueNode_Basic::GetSlateDecoClasses() const
 {
 	return DialogueSlateDecoratorClasses;
 }
 
-FString UDialogueNode_Basic::GetDialoguerName(EDialogueLanguage Language)
+FString UDialogueNode_Basic::GetDialoguerName(EDialogueLanguage Language) const
 {
 	FString ReturnString = "Narration";
 
 #if WITH_EDITOR
-	OnChanged_DialoguerNameCode();
+	//OnChanged_DialoguerNameCode();
 #endif
 
 	if(Dialogue_Name.Original == "") return ReturnString;
 
-	switch (Language) {
-		case EDialogueLanguage::Korean:
-			ReturnString = Dialogue_Name.Korean;
-		break;
-
-		case EDialogueLanguage::English:
-			ReturnString = Dialogue_Name.English;
-		break;
-	}
+	ReturnString = Dialogue_Name.GetStringByLanguage(Language);
 
 	return ReturnString;
 }
 
-FString UDialogueNode_Basic::GetDialogueString(EDialogueLanguage Language)
+FString UDialogueNode_Basic::GetDialogueString(EDialogueLanguage Language) const
 {
 	FString ReturnString;
 
 #if WITH_EDITOR
-	OnChanged_DialogueStringCode();
+	//OnChanged_DialogueStringCode();
 #endif
 
-	switch (Language) {
-	case EDialogueLanguage::Korean:
-		ReturnString = Dialogue_String.Korean;
-		break;
-
-	case EDialogueLanguage::English:
-		ReturnString = Dialogue_String.English;
-		break;
-	}
+	ReturnString = Dialogue_String.GetStringByLanguage(Language);
 
 	return ReturnString;
 }
 
 
+void UDialogueNode_Basic::GetDialogueElementContainer(FDialogueElementContainer& OutElement) const
+{
+	EDialogueLanguage Language = UDialogueManager::ManagerInstance->GetCurrentLanguage();
 
+	FString ReturnName = GetDialoguerName(Language);
+	FString ReturnDialogueString = GetDialogueString(Language);
+
+
+	FDialogueElement TempElement;
+	TempElement.Name = ReturnName;
+	TempElement.DialogueString = ReturnDialogueString;
+	TempElement.DialogueStyleSet = DialogueTextStyleSet;
+	TempElement.DialogueSlateDecorators = DialogueSlateDecoratorClasses;
+	TempElement.DialogueUMGDecorators = DialogueUMGDecoratorClasses;
+
+	OutElement.Elements.Add(TempElement);
+
+	//OutElement.Elements.Emplace(ReturnName, ReturnDialogueString, DialogueTextStyleSet, DialogueSlateDecoratorClasses, DialogueUMGDecoratorClasses);
+	OutElement.ContainerType = GetDialogueNodeType();
+}
 
 #if WITH_EDITOR
+
+
 
 FString UDialogueNode_Basic::GetDialoguerName_InEditor() const
 {
@@ -319,12 +329,7 @@ void UDialogueNode_Basic::OnChangedDialogueTextStyle()
 {
 	OnChangedDialogueStyle.ExecuteIfBound();
 }
-void UDialogueNode_Basic::CallEvents(const FDialogueHandle& Handle)
-{
-	UDialogueBFL::GetDialogueManager()->PlayAnimationInDialogue(DialoguerAnimations);
 
-	Super::CallEvents(Handle);
-}
 #endif
 
 #undef LOCTEXT_NAMESPACE

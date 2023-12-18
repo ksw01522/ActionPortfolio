@@ -24,10 +24,7 @@ void UInteractionSystemComponent::BeginPlay()
 }
 
 
-bool UInteractionSystemComponent::CanInteract_CPP(AActor* InteractActor) const
-{
-	return false;
-}
+
 
 // Called every frame
 void UInteractionSystemComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)

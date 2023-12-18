@@ -13,6 +13,8 @@
  class UDialogueNode;
  class UDialogueSession;
 
+
+
 UCLASS()
 class DIALOGUERUNTIME_API UDialogueEdge : public UObject
 {
@@ -37,13 +39,13 @@ public:
 
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditDefaultsOnly, Category = "DialogueNode_Editor")
-		bool bShouldDrawTitle = false;
+	bool bShouldDrawTitle = false;
 
 	UPROPERTY(EditDefaultsOnly, Category = "DialogueNode_Editor")
-		FText NodeTitle;
+	FText NodeTitle;
 
 	UPROPERTY(EditDefaultsOnly, Category = "DialogueEdge")
-		FLinearColor EdgeColor = FLinearColor(0.9f, 0.9f, 0.9f, 1.0f);
+	FLinearColor EdgeColor = FLinearColor(0.9f, 0.9f, 0.9f, 1.0f);
 #endif
 
 #if WITH_EDITOR
@@ -52,4 +54,20 @@ public:
 
 	virtual void SetNodeTitle(const FText& NewTitle);
 #endif
+private:
+	UPROPERTY(EditAnywhere, Category = "DialogueCondition", instanced)
+	TArray<UEnterNextCondtion*> EnterNextConditions;
+
+public:
+	bool CanEnterNextNode() const;
+};
+
+UCLASS(DefaultToInstanced, ClassGroup = (Dialogue), BlueprintType, Abstract, Blueprintable, EditInlineNew)
+class DIALOGUERUNTIME_API UEnterNextCondtion : public UObject
+{
+	GENERATED_BODY()
+	friend class UDialogueEdge;
+
+protected:
+	virtual bool CanEnterNextNode() const { return true; };
 };

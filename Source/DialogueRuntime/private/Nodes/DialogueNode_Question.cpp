@@ -33,20 +33,28 @@ FText UDialogueNode_Question::GetNodeTitle()
 	return GetDialogueString_InEditor().IsEmpty() ? LOCTEXT("Empty Question Title", "Empty Question String") : FText::FromString(GetDialogueString_InEditor());
 }
 #endif
-TArray<UDialogueNode_Answer*> UDialogueNode_Question::GetAnswers()
+
+
+void UDialogueNode_Question::GetDialogueElementContainer(FDialogueElementContainer& OutElement) const
 {
-	TArray<UDialogueNode_Answer*> Answers;
+	Super::GetDialogueElementContainer(OutElement);
 
-	for (int i = 0; i < ChildrenNodes.Num(); i++)
+	for (const auto& answer : ChildrenNodes)
 	{
-		UDialogueNode_Answer* Answer = Cast<UDialogueNode_Answer>(ChildrenNodes[i]);
-		if (IsValid(Answer))
-		{
-			Answers.AddUnique(Answer);
-		}
+		answer->GetDialogueElementContainer(OutElement);
 	}
+}
+	
+const UDialogueNode* UDialogueNode_Question::GetNextDialogueNode(FNextDialogueNodeOptionalStruct* OptionalStruct) const
+{
+	FNextDialogueNodeOptionalStruct_Question* QuestionOptionalStruct = static_cast<FNextDialogueNodeOptionalStruct_Question*>(OptionalStruct);
 
-	return Answers;
+	ensureMsgf(QuestionOptionalStruct != nullptr , TEXT("Call GetNextDialogueNode By nullptr Optional Strcut"));
+	ensureMsgf(QuestionOptionalStruct->AnswerIndex < ChildrenNodes.Num(), TEXT("Try Get Range Out AnswerNode, AnswerNode Count : %d, Try Get Idx : %d."), ChildrenNodes.Num(), QuestionOptionalStruct->AnswerIndex);
+	
+	const UDialogueNode* NextDialogueNode = ChildrenNodes[QuestionOptionalStruct->AnswerIndex]->GetNextDialogueNode();
+
+	return NextDialogueNode;
 }
 
 

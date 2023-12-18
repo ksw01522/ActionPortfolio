@@ -3,6 +3,7 @@
 
 #include "Nodes/DialogueNode_Answer.h"
 #include "Nodes/DialogueNode_Question.h"
+#include "DialogueManager.h"
 
 #define LOCTEXT_NAMESPACE "DialogueNode"
 
@@ -31,6 +32,16 @@ bool UDialogueNode_Answer::CanCreateConnectionFrom(UDialogueNode* Other, int32 N
 FText UDialogueNode_Answer::GetNodeTitle()
 {
 	return GetDialogueString_InEditor().IsEmpty() ? LOCTEXT("Empty Answer Title", "Empty Answer String") : FText::FromString(GetDialogueString_InEditor());
+}
+void UDialogueNode_Answer::GetDialogueElementContainer(FDialogueElementContainer& OutElement) const
+{
+	EDialogueLanguage Language = UDialogueManager::ManagerInstance->GetCurrentLanguage();
+
+	FString ReturnName = GetDialoguerName(Language);
+	FString ReturnDialogueString = GetDialogueString(Language);
+
+	OutElement.Elements.Emplace(ReturnName, ReturnDialogueString, DialogueTextStyleSet, DialogueSlateDecoratorClasses, DialogueUMGDecoratorClasses);
+
 }
 #endif
 #undef LOCTEXT_NAMESPACE

@@ -28,6 +28,20 @@ void UDialogueEdge::SetNodeTitle(const FText& NewTitle)
 	NodeTitle = NewTitle;
 }
 
+
 #endif
+
+bool UDialogueEdge::CanEnterNextNode() const
+{
+	bool CanEnter = true;
+
+	for (const auto Condition: EnterNextConditions)
+	{
+		CanEnter = CanEnter && Condition->CanEnterNextNode();
+	}
+
+	return CanEnter;
+}
+
 
 #undef LOCTEXT_NAMESPACE

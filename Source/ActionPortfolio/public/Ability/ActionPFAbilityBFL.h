@@ -10,6 +10,8 @@
 /**
  * 
  */
+ class UActionPFAbilitySystemComponent;
+
 UCLASS()
 class ACTIONPORTFOLIO_API UActionPFAbilityBFL : public UBlueprintFunctionLibrary
 {
@@ -17,6 +19,8 @@ class ACTIONPORTFOLIO_API UActionPFAbilityBFL : public UBlueprintFunctionLibrary
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = "Ability|ActionPF")
-		static FGameplayEventData MakeEventDataForAbility(AActor* instigator, TArray<AActor*> TargetArray);
+	static FGameplayEventData MakeEventDataForAbility(AActor* instigator, TArray<AActor*> TargetArray);
 
+	UFUNCTION(BlueprintCallable, Category = "Ability|ActionPF")
+	static UActionPFAbilitySystemComponent* GetAbilitySystemComponent(AActor* Target);
 };

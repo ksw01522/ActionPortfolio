@@ -23,28 +23,35 @@ class ACTIONPORTFOLIO_API UActionPFAttributeSet : public UAttributeSet
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(BlueprintReadOnly, Category = "Level")
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
 	FGameplayAttributeData CharacterLevel;
 	ATTRIBUTE_ACCESSORS(UActionPFAttributeSet, CharacterLevel)
 
-	UPROPERTY(BlueprintReadOnly, Category = "Health")
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
 	FGameplayAttributeData Health;
 	GAMEPLAYATTRIBUTE_PROPERTY_GETTER(UActionPFAttributeSet, Health)
 	GAMEPLAYATTRIBUTE_VALUE_GETTER(Health)
 	void SetHealth(float NewVal);
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(Health)
 
-	UPROPERTY(BlueprintReadOnly, Category = "Health")
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
 	FGameplayAttributeData MaxHealth;
 	GAMEPLAYATTRIBUTE_PROPERTY_GETTER(UActionPFAttributeSet, MaxHealth)
 	GAMEPLAYATTRIBUTE_VALUE_GETTER(MaxHealth)
 	void SetMaxHealth(float NewVal);
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(MaxHealth)
 
-	UPROPERTY(BlueprintReadOnly, Category = "Damage")
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
 	FGameplayAttributeData Damage;
-	
 	ATTRIBUTE_ACCESSORS(UActionPFAttributeSet, Damage)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
+	FGameplayAttributeData AttackP;
+	ATTRIBUTE_ACCESSORS(UActionPFAttributeSet, AttackP)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
+	FGameplayAttributeData DefenseP;
+	ATTRIBUTE_ACCESSORS(UActionPFAttributeSet, DefenseP)
 
 protected:
 	void AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float OldMaxValue, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);

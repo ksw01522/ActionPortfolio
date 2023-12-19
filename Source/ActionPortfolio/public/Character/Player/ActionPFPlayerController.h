@@ -123,19 +123,8 @@ private:
 
 	void CreatePlayerSlates();
 
-
 private:
 	int ForceHiddenSlateCount;
-	int CountSlateinMain;
-
-#if WITH_EDITORONLY_DATA
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Slate", meta = (AllowPrivateAccess = "true"))
-	bool bVisibleSlateInStart;
-#endif
-
-#if WITH_EDITOR
-	EVisibility GetSlateVisiblityForDebug() const { return bVisibleSlateInStart ? EVisibility::Visible : EVisibility::Collapsed; };
-#endif
 
 public:
 	void HideMainSlate();

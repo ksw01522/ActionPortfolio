@@ -22,3 +22,13 @@ FGameplayEventData UActionPFAbilityBFL::MakeEventDataForAbility(AActor* instigat
 
 	return ReturnEvent;
 }
+
+UActionPFAbilitySystemComponent* UActionPFAbilityBFL::GetAbilitySystemComponent(AActor* Target)
+{
+	if(!IsValid(Target)) return nullptr;
+
+	IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Target);
+	if(ASI == nullptr) return nullptr;
+
+	return Cast<UActionPFAbilitySystemComponent>(ASI->GetAbilitySystemComponent());
+}

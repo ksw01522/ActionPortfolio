@@ -27,12 +27,6 @@
 AActionPFPlayerController::AActionPFPlayerController()
 {
 	PlayerDialogueMC = CreateDefaultSubobject<UPlayerDialogueMCComponent>("PlayerDialogueMC");
-
-#if WITH_EDITORONLY_DATA
-	bVisibleSlateInStart = true;
-#endif
-
-	
 }
 
 void AActionPFPlayerController::Tick(float DeltaSeconds)
@@ -264,7 +258,7 @@ void AActionPFPlayerController::DisplayMainSlate()
 
 	ensure(0 <= ForceHiddenSlateCount);
 
-	if (ForceHiddenSlateCount == 0 && 0 < CountSlateinMain)
+	if (ForceHiddenSlateCount == 0)
 	{
 		PlayerMainSlate->SetVisibility(EVisibility::SelfHitTestInvisible);
 	}

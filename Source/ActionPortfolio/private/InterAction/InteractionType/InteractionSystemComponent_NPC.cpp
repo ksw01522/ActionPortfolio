@@ -103,29 +103,5 @@ const TArray<UNPCInteract*> UInteractionSystemComponent_NPC::GetAbleNPCInteracti
 	return ReturnInteractions;
 }
 
-UDialoguerComponent* UInteractionSystemComponent_NPC::GetNPCDialoguerComponent()
-{
-	if(DialoguerComponent.IsValid()) return DialoguerComponent.Get();
-	
-	ensure(IsValid(GetOwner()));
-
-	DialoguerComponent = Cast<UDialoguerComponent>( GetOwner()->GetComponentByClass(UDialoguerComponent::StaticClass()));
-
-	if(!DialoguerComponent.IsValid()) PFLOG(Warning, TEXT("Can't find Dialoguer Component from %s"), *GetOwner()->GetName());
-
-	return DialoguerComponent.Get();
-}
-
-void UInteractionSystemComponent_NPC::SetNPCDialoguerComponent(UDialoguerComponent* NewDialoguer)
-{
-	DialoguerComponent = NewDialoguer;
-}
-
-
-
-
-
-
-
 #undef LOCTEXT_NAMESPACE
 

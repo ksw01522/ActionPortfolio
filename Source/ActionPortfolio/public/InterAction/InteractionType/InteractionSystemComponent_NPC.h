@@ -48,10 +48,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "NPCInteraction")
 	const TArray<UNPCInteract*> GetAbleNPCInteractions(class AActionPFPlayerController* PlayerController) const;
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "NPCInteraction")
-	UDialoguerComponent* GetNPCDialoguerComponent();
-
-	void SetNPCDialoguerComponent(UDialoguerComponent* NewDialoguer);
 };
 
 

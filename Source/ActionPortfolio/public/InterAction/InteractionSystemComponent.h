@@ -8,7 +8,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInteractDelegate, AActor*, InteractActor);
 
-class UCanInteractionCondition;
+class UShapeComponent;
 
 UCLASS( ClassGroup=(InteractSystem), Abstract, Blueprintable, BlueprintType)
 class ACTIONPORTFOLIO_API UInteractionSystemComponent : public UActorComponent
@@ -47,11 +47,14 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Interaction")
 	bool CanInteract(AActor* InteractActor) const;
 
-	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void Interact(AActor* InteractActor);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Interaction", BlueprintGetter)
 	const FText& GetInteractionName() const {return InteractionName;}
+
+	//¼öÁ¤ÇÊ
+	virtual void OnFocusedOn(){}
+	virtual void OnFocusedOff(){}
 };
 
 UCLASS(ClassGroup = (InteractSystem), Abstract, Blueprintable, BlueprintType, EditInlineNew, DefaultToInstanced)

@@ -23,16 +23,23 @@
 
 #include "Blueprint/UserWidget.h"
 
+#include "Kismet/KismetSystemLibrary.h"
 
 AActionPFPlayerController::AActionPFPlayerController()
 {
 	PlayerDialogueMC = CreateDefaultSubobject<UPlayerDialogueMCComponent>("PlayerDialogueMC");
+
+#if WITH_EDITORONLY_DATA
+	bDrawTraceInteractionLine = true;
+#endif
 }
 
 void AActionPFPlayerController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	//Interaction Tick
+	TraceInteractions();
 }
 
 void AActionPFPlayerController::OnPossess(APawn* aPawn)
@@ -41,8 +48,6 @@ void AActionPFPlayerController::OnPossess(APawn* aPawn)
 
 	APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(aPawn);
 	if (!IsValid(PlayerChar)) return;
-
-	PFLOG(Warning,TEXT("check"));
 
 	if (IsValid(PlayerMainUI)) {
 		PlayerMainUI->LinkASC();
@@ -55,6 +60,12 @@ void AActionPFPlayerController::OnPossess(APawn* aPawn)
 
 }
 
+void AActionPFPlayerController::OnUnPossess()
+{
+	ClearForInteraction();
+	Super::OnUnPossess();
+}
+
 void AActionPFPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
@@ -62,12 +73,14 @@ void AActionPFPlayerController::SetupInputComponent()
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent)) {
 		
 		EnhancedInputComponent->BindAction(OpenMenuAction, ETriggerEvent::Started, this, &AActionPFPlayerController::OpenMenu);
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AActionPFPlayerController::InteractFocusedInteraction);
+	
+		
 
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(ControllerMappingContext, 0);
 		}
-
 	}
 }
 
@@ -80,9 +93,11 @@ void AActionPFPlayerController::PostInitializeComponents()
 
 	SetGenericTeamId(1);
 
-	int NPCInteractButtonsReserveCount = 4;
+	//NPC와의 상호작용을 위한 예상 버튼개수만큼 미리 메모리 잡기
+	NPCInteractBTNs.Reserve(4);
 
-	NPCInteractBTNs.Reserve(NPCInteractButtonsReserveCount);
+	//겹치게 될 Interaction들의 예상 최대개수만큼 미리 메모리 잡기 : 한 Actor에 여러개의 상호작용이 있을 수도 있으니
+	PrevTracedInteractions.Reserve(4);
 }
 
 void AActionPFPlayerController::BeginPlay()
@@ -91,6 +106,8 @@ void AActionPFPlayerController::BeginPlay()
 
 	ChangeGameInputMode();
 	if (!PlayerMainSlate.IsValid()) { CreatePlayerSlates(); }
+
+	
 }
 
 
@@ -261,6 +278,117 @@ void AActionPFPlayerController::DisplayMainSlate()
 	if (ForceHiddenSlateCount == 0)
 	{
 		PlayerMainSlate->SetVisibility(EVisibility::SelfHitTestInvisible);
+	}
+}
+
+void AActionPFPlayerController::TraceInteractions()
+{
+	APawn* PlayerPawn = GetPawn();
+	if (!IsValid(PlayerPawn)){return;}
+
+	TArray<UInteractionSystemComponent*> CurrentTracedInteractions;
+
+	//Trace를 위한 매개변수들
+	static const float TraceDistance = 200;
+	TArray<FHitResult> HitResults;
+	FVector TraceStart = PlayerPawn->GetActorLocation();
+	FVector TraceEnd = TraceStart + TraceDistance * PlayerPawn->GetActorForwardVector();
+	FCollisionQueryParams CQP(FName("Player Trace Interactions"), false, PlayerPawn);
+
+	//Trace
+	//ECC_GameTraceChannel1 == InteractorSensor
+	GetWorld()->LineTraceMultiByChannel(HitResults, TraceStart, TraceEnd, ECC_GameTraceChannel1, CQP);
+
+
+#if WITH_EDITOR
+	if (bDrawTraceInteractionLine)
+	{
+		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, HitResults.IsEmpty() ? FColor::Red : FColor::Green);
+	}
+
+#endif
+
+	//Trace에 걸린 Actor들이 있을 시에 UInteractionSystemComponent를 TracedInteractions에 추가
+	for (const auto& HitResult : HitResults)
+	{
+		AActor* TracedActor = HitResult.GetActor();
+
+		TArray<UActorComponent*> TempComponents = TracedActor->GetComponentsByClass(UInteractionSystemComponent::StaticClass());
+		for (const auto& TempComponent : TempComponents)
+		{
+			UInteractionSystemComponent* TempInteraction = Cast<UInteractionSystemComponent>(TempComponent);
+			if(TempInteraction) CurrentTracedInteractions.AddUnique(TempInteraction);
+		}
+	}
+	
+	//기존에 트레이스에 걸린 상호작용이 벗어나면 목록에서 삭제
+	int PrevInteractionsNum = PrevTracedInteractions.Num();
+	for (int i = 0; i < PrevInteractionsNum; i++)
+	{
+		if (CurrentTracedInteractions.Contains(PrevTracedInteractions[i])) continue;
+
+		PrevTracedInteractions.RemoveAt(i);
+		--i;
+		--PrevInteractionsNum;
+	}
+
+	//이번에 트레이스에 걸린 상호작용들을 AddUnique로 중복적용을 피하며 등록
+	for (auto& NewInteraction : CurrentTracedInteractions)
+	{
+		PrevTracedInteractions.AddUnique(NewInteraction);
+	}
+
+	//새로이 Focus가 될 상호작용이 있는지 체크
+	CheckFocusInteraction();
+}
+
+void AActionPFPlayerController::CheckValidInteraction()
+{
+	int Length = PrevTracedInteractions.Num();
+	for (int i = 0; i < Length; i++)
+	{
+		if (PrevTracedInteractions[i].IsValid()) continue;
+		
+		PrevTracedInteractions.RemoveAt(i);
+		--i;
+		--Length;
+	}
+}
+
+void AActionPFPlayerController::CheckFocusInteraction()
+{
+	UInteractionSystemComponent* NewFocusInteraction = nullptr;
+	if(!PrevTracedInteractions.IsEmpty()) NewFocusInteraction = PrevTracedInteractions[0].Get();
+	if(FocusInteraction == NewFocusInteraction) return;
+
+	if (FocusInteraction.IsValid())
+	{
+		FocusInteraction->OnFocusedOff();
+	}
+
+	FocusInteraction = NewFocusInteraction;
+	if(FocusInteraction.IsValid()) FocusInteraction->OnFocusedOn();
+}
+
+void AActionPFPlayerController::InteractFocusedInteraction()
+{
+#if WITH_EDITOR
+	PFLOG(Warning, TEXT("Try Interact FocusedInteraction"));
+#endif
+	if(!FocusInteraction.IsValid()) return;
+#if WITH_EDITOR
+	PFLOG(Warning, TEXT("Call Interact FocusedInteraction"));
+#endif
+
+	FocusInteraction->Interact(GetPawn());
+}
+
+void AActionPFPlayerController::ClearForInteraction()
+{
+	if (!PrevTracedInteractions.IsEmpty()) PrevTracedInteractions.Empty();
+	if (FocusInteraction.IsValid()) {
+		FocusInteraction->OnFocusedOff();
+		FocusInteraction.Reset();
 	}
 }
 

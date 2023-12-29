@@ -2,6 +2,8 @@
 
 
 #include "Interaction/InteractionSystemComponent.h"
+#include "Components/ShapeComponent.h"
+#include "ActionPortfolio.h"
 
 // Sets default values for this component's properties
 UInteractionSystemComponent::UInteractionSystemComponent()
@@ -20,7 +22,20 @@ void UInteractionSystemComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// ...
-	
+	TArray<UActorComponent*> SensorComponents = GetOwner()->GetComponentsByTag(UShapeComponent::StaticClass(), FName("InteractionSensor"));
+	const FName CollisionProfile;
+	for (auto& SensorComponent : SensorComponents)
+	{
+		UShapeComponent* SensorShape = Cast<UShapeComponent>(SensorComponent);
+		if (SensorShape == nullptr)
+		{
+			PFLOG(Error, TEXT("Not Shape has InteractionsSensor Tag from : %s"), *GetOwner()->GetName());
+			continue;
+		}
+
+		SensorShape->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECollisionResponse::ECR_Overlap);
+		SensorShape->UpdateOverlaps();
+	}
 }
 
 
@@ -31,7 +46,7 @@ void UInteractionSystemComponent::TickComponent(float DeltaTime, ELevelTick Tick
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
+
 }
 
 bool UInteractionSystemComponent::CanInteract(AActor* InteractActor) const
@@ -57,6 +72,8 @@ void UInteractionSystemComponent::Interact(AActor* InteractActor)
 	if(Del_Interact.IsBound()) {Del_Interact.Broadcast(InteractActor); }
 	Interact_CPP(InteractActor);
 }
+
+
 
 bool UCanInteractionCondition::CanInteractCondition(AActor* InteractActor)
 {

@@ -20,8 +20,6 @@
 
 APlayerCharacter::APlayerCharacter()
 {
-
-
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -63,52 +61,9 @@ void APlayerCharacter::BeginPlay()
 	
 }
 
-
 void APlayerCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-}
-
-void APlayerCharacter::InteractFocusedInteraction()
-{
-	UInteractionSystemComponent* FocusedInteraction = GetFocusedInteraction();
-	if (!IsValid(FocusedInteraction)) return;
-
-	FocusedInteraction->Interact(this);
-}
-
-void APlayerCharacter::AddInteraction(UInteractionSystemComponent* NewSystem)
-{
-	if (!IsValid(NewSystem)) return;
-
-	InteractionSystemArray.AddUnique(NewSystem);
-}
-
-void APlayerCharacter::RemoveInteraction(UInteractionSystemComponent* TargetSystem)
-{
-	if (!IsValid(TargetSystem)) return;
-
-	InteractionSystemArray.Remove(TargetSystem);
-}
-
-UInteractionSystemComponent* APlayerCharacter::GetFocusedInteraction()
-{
-	if (!InteractionSystemArray.IsValidIndex(0)) ChangeFocusInteraction();
-	if (InteractionSystemArray.IsEmpty())	return nullptr;
-
-	return InteractionSystemArray[0].Get();
-}
-
-void APlayerCharacter::ChangeFocusInteraction()
-{
-	if (InteractionSystemArray.IsEmpty())	return;
-
-	TWeakObjectPtr<UInteractionSystemComponent> Temp = InteractionSystemArray[0];
-	do {
-		InteractionSystemArray.RemoveAt(0);
-	} while (!InteractionSystemArray.IsEmpty() && !InteractionSystemArray.IsValidIndex(0));
-
-	if (Temp.IsValid()) InteractionSystemArray.AddUnique(Temp);
 }
 
 TSubclassOf<class UActionPFGameplayAbility> APlayerCharacter::GetPlayerAbilityClass(EPlayerAbilityInputID ID)
@@ -158,9 +113,6 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 
 		//Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
-
-		//Interact
-		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &APlayerCharacter::InteractFocusedInteraction);
 
 		EnhancedInputComponent->BindAction(Ability_LMB_Action.InputAction, ETriggerEvent::Started, this, &APlayerCharacter::ActivateInputAbility, EPlayerAbilityInputID::Ability_LMB);
 		EnhancedInputComponent->BindAction(Ability_RMB_Action.InputAction, ETriggerEvent::Started, this, &APlayerCharacter::ActivateInputAbility, EPlayerAbilityInputID::Ability_RMB);

@@ -22,16 +22,8 @@ private:
 	class UInteractionSystemComponent_NPC* InteractionSystem;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
-	class USphereComponent* InteractionSensor;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
 	class UDialoguerComponent* DialoguerComponet;
 
-private:
-	UFUNCTION()
-	void OnInteractionSensorBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	UFUNCTION()
-	void OnInteractionSensorEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 public:
 	virtual UInteractionSystemComponent* GetInteractionSystemComponent() override;

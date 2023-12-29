@@ -15,6 +15,7 @@
 class UDialoguerComponent;
 class UWidget_PlayerMainUI;
 class UUserWidget;
+class UInteractionSystemComponent;
 class UInteractionSystemComponent_NPC;
 class UPlayerDialogueMCComponent;
 class SActionPFMainSlate;
@@ -52,8 +53,8 @@ private:
 
 protected:
 	virtual void OnPossess(APawn* aPawn) override;
+	virtual void OnUnPossess() override;
 	virtual void SetupInputComponent() override;
-
 	
 
 ///////////////////¸Þ´º À§Á¬
@@ -130,6 +131,28 @@ public:
 	void HideMainSlate();
 	void DisplayMainSlate();
 
+///////////////////////// Interaction //////////////////////////
+private:
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug|Interaction", meta = (AllowPrivateAccess = "true"))
+	bool bDrawTraceInteractionLine;
+#endif
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* InteractAction;
+
+	TArray<TWeakObjectPtr<UInteractionSystemComponent>> PrevTracedInteractions;
+	TWeakObjectPtr<UInteractionSystemComponent> FocusInteraction;
+
+	void TraceInteractions();
+
+	void CheckValidInteraction();
+	void CheckFocusInteraction();
+
+	void InteractFocusedInteraction();
+
+	void ClearForInteraction();
+
 /////////////////////// Player Dialogue MC ////////////////
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dialogue", meta = (AllowPrivateAccess = "true"))
@@ -156,4 +179,7 @@ public:
 	FReply OnClickExitInteractNPC();
 
 	void EnterDialogueInNPCInteract(const UDialogueSession* NewSession);
+
+
+
 };

@@ -66,9 +66,6 @@ private:
 	UInputAction* LookAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* InteractAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	FPlayerInputAbilityStruct Ability_LMB_Action;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	FPlayerInputAbilityStruct Ability_RMB_Action;
@@ -109,16 +106,7 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-private:
-	TArray<TWeakObjectPtr<UInteractionSystemComponent>> InteractionSystemArray;
-
-	void InteractFocusedInteraction();
 public:
-	void AddInteraction(UInteractionSystemComponent* NewSystem);
-	void RemoveInteraction(UInteractionSystemComponent* TargetSystem);
-	UInteractionSystemComponent* GetFocusedInteraction();
-	void ChangeFocusInteraction();
-
 	UFUNCTION(BlueprintCallable, Category = "Player|Ability")
 	TSubclassOf<class UActionPFGameplayAbility> GetPlayerAbilityClass(EPlayerAbilityInputID ID);
 };

@@ -76,7 +76,7 @@ void UDialoguerComponent::BeginDestroy()
 {
 	IDialoguerManagerInterface* DialoguerManager = UDialogueManager::GetDialoguerManager();
 
-	if(DialoguerManager) DialoguerManager->UnregisterDialoguer(this);
+	if(DialoguerManager != nullptr) DialoguerManager->UnregisterDialoguer(this);
 
 	Super::BeginDestroy();
 }

@@ -72,7 +72,7 @@ FString UDialogueNode_Basic::GetDialogueString(EDialogueLanguage Language) const
 
 void UDialogueNode_Basic::GetDialogueElementContainer(FDialogueElementContainer& OutElement) const
 {
-	EDialogueLanguage Language = UDialogueManager::ManagerInstance->GetCurrentLanguage();
+	EDialogueLanguage Language = UDialogueManager::GetManagerInstance()->GetCurrentLanguage();
 
 	FString ReturnName = GetDialoguerName(Language);
 	FString ReturnDialogueString = GetDialogueString(Language);

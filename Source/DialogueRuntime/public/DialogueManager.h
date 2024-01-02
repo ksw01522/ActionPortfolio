@@ -71,9 +71,11 @@ class DIALOGUERUNTIME_API UDialogueManager : public UGameInstanceSubsystem, publ
 private:
 	UDialogueManager();
 
-public:
+private:
 	static UDialogueManager* ManagerInstance;
 
+public:
+	static UDialogueManager* GetManagerInstance() {return ManagerInstance;}
 	static IDialoguerManagerInterface* GetDialoguerManager();
 	static IDialogueMCManagerInterface* GetDialogueMCManager();
 

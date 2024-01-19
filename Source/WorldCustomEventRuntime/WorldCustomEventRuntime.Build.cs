@@ -23,6 +23,7 @@ public class WorldCustomEventRuntime : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine"});
 
+		/*
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -31,5 +32,6 @@ public class WorldCustomEventRuntime : ModuleRules
 				"UMG",
                 "RenderCore"
             });
+		*/
 	}
 }

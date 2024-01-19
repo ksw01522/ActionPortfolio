@@ -25,13 +25,13 @@ public:
 	virtual ~UDialogueEdge();
 
 	UPROPERTY(VisibleAnywhere, Category = "DialogueEdge")
-	UDialogueSession* DialogueSession;
+	TObjectPtr<UDialogueSession> DialogueSession;
 
 	UPROPERTY(BlueprintReadOnly, Category = "DialogueEdge")
-	UDialogueNode* StartNode;
+	TObjectPtr<UDialogueNode> StartNode;
 
 	UPROPERTY(BlueprintReadOnly, Category = "DialogueEdge")
-	UDialogueNode* EndNode;
+	TObjectPtr<UDialogueNode> EndNode;
 
 	UFUNCTION(BlueprintPure, Category = "DialogueEdge")
 	UDialogueSession* GetDialogueSession();
@@ -56,7 +56,7 @@ public:
 #endif
 private:
 	UPROPERTY(EditAnywhere, Category = "DialogueCondition", instanced)
-	TArray<UEnterNextCondtion*> EnterNextConditions;
+	TArray<TObjectPtr<UEnterNextCondtion>> EnterNextConditions;
 
 public:
 	bool CanEnterNextNode() const;

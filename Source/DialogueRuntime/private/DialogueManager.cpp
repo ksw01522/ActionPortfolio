@@ -64,6 +64,8 @@ void UDialogueManager::Initialize(FSubsystemCollectionBase& Collection)
 
 void UDialogueManager::Deinitialize()
 {
+	ManagerInstance = nullptr;
+
 	ActingDialogueMap.Empty();
 	DialoguerMap.Empty();
 }

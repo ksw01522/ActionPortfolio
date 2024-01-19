@@ -27,18 +27,10 @@ public class WorldCustomEventUncooked : ModuleRules
 			new string[]
 			{
 				"WorldCustomEventRuntime",
-				"AssetTools",
-				"Slate",
-				"InputCore",
-				"SlateCore",
-				"GraphEditor",
-				"PropertyEditor",
-				"EditorStyle",
                 "BlueprintGraph",
                 "Core", 
 				"CoreUObject", 
 				"Engine", 
-				"UnrealEd",
 				"KismetCompiler"
 				// ... add private dependencies that you statically link with here ...
 			}

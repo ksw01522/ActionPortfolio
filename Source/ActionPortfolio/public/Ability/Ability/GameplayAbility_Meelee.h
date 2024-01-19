@@ -21,7 +21,7 @@ public:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee", meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* MeeleeMontage;
+	TObjectPtr<UAnimMontage> MeeleeMontage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee", meta = (AllowPrivateAccess = "true"))
 	FName TaskInstanceName;

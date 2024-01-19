@@ -21,7 +21,7 @@ class ACTIONPORTFOLIO_API UAbilityTask_Timeline : public UAbilityTask
 	
 private:
 	FTimeline Timeline;
-	UCurveFloat* CurveFloat;
+	TObjectPtr<UCurveFloat> CurveFloat;
 
 private:
 	void CallFloatEvent(float Value);
@@ -29,10 +29,10 @@ private:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Tasks", meta = (HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "TRUE"))
-		static UAbilityTask_Timeline* PlayTimeline(
-													UGameplayAbility* OwningAbility,
-													FName TaskInstanceName
-													);
+	static UAbilityTask_Timeline* PlayTimeline(
+												UGameplayAbility* OwningAbility,
+												FName TaskInstanceName
+												);
 
 	virtual void Activate() override;
 	virtual void ExternalCancel() override;

@@ -11,6 +11,14 @@
 #include "UI/DialogueSlate.h"
 #include "WidgetStyle/ActionPortfolioWidgetStyle.h"
 
+#include "Items/Widget/SInventorySlate.h"
+
+//인벤토리 테스트를 위한 헤더
+#include "Items/ItemManagerSubsystem.h"
+#include "Items/ItemBase.h"
+
+#include "ActionPortfolio.h"
+
 #define LOCTEXT_NAMESPACE "ActionPF Main Slate"
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
@@ -33,6 +41,9 @@ void SActionPFMainSlate::Construct(const FArguments& InArgs)
 
 	EVisibility TempVisibility = EVisibility::Collapsed;
 
+	FFormatOrderedArguments FormatArguments;
+	FormatArguments.Add(15);
+
 	ChildSlot
 	[
 		SNew(SConstraintCanvas)
@@ -47,7 +58,7 @@ void SActionPFMainSlate::Construct(const FArguments& InArgs)
 		//Answers Vertical Box 생성
 		+ SConstraintCanvas::Slot()
 		.Anchors(AnswersVerticalBoxAnchors)
-		.Alignment(FVector2D(0.5f))
+		.Alignment(0.5f)
 			[
 				SAssignNew(AnswersVerticalBox, SVerticalBox)
 				.Visibility(TempVisibility)
@@ -55,7 +66,7 @@ void SActionPFMainSlate::Construct(const FArguments& InArgs)
 		//NPCInteract Button Vertical Box 생성
 		+ SConstraintCanvas::Slot()
 		.Anchors(NPCInteractBTNsAnchors)
-		.Alignment(FVector2D(0.5f))
+		.Alignment(0.5f)
 			[
 				SAssignNew(NPCInteractBTNBox, SVerticalBox)
 				.Visibility(TempVisibility)
@@ -73,8 +84,9 @@ void SActionPFMainSlate::Construct(const FArguments& InArgs)
 						.ContentPadding(FMargin(10,10))
 					]
 			]
-
 	];
+
+
 }
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 

@@ -49,38 +49,38 @@ public:
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ground")
-	UAnimMontage* Ground_Front;
+	TObjectPtr<UAnimMontage> Ground_Front;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ground")
-	UAnimMontage* Ground_Back;
+	TObjectPtr<UAnimMontage> Ground_Back;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ground")
-	UAnimMontage* Ground_Right;
+	TObjectPtr<UAnimMontage> Ground_Right;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ground")
-	UAnimMontage* Ground_Left;
+	TObjectPtr<UAnimMontage> Ground_Left;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "InAir")
-	UAnimMontage* InAir_Front;
+	TObjectPtr<UAnimMontage> InAir_Front;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "InAir")
-	UAnimMontage* InAir_Back;
+	TObjectPtr<UAnimMontage> InAir_Back;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "InAir")
-	UAnimMontage* InAir_Right;
+	TObjectPtr<UAnimMontage> InAir_Right;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "InAir")
-	UAnimMontage* InAir_Left;
+	TObjectPtr<UAnimMontage> InAir_Left;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Down")
-	UAnimMontage* Down;
+	TObjectPtr<UAnimMontage> Down;
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Down")
-	UAnimMontage* DownedRecovery;
+	TObjectPtr<UAnimMontage> DownedRecovery;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Death")
-	UAnimMontage* Death;
+	TObjectPtr<UAnimMontage> Death;
 };
 
 UCLASS(config=Game)
@@ -90,13 +90,13 @@ class AActionPortfolioCharacter : public ACharacter, public IAbilitySystemInterf
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
-	class UActionPFAbilitySystemComponent* AbilitySystem;
+	TObjectPtr<class UActionPFAbilitySystemComponent> AbilitySystem;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
-	class UActionPFAttributeSet* AttributeSet;
+	TObjectPtr<class UActionPFAttributeSet> AttributeSet;
 
 	UPROPERTY(Transient)
-	TMap<FName, class UShapeComponent*> AttackShapeMap;
+	TMap<FName, TObjectPtr<class UShapeComponent>> AttackShapeMap;
 
 	TWeakObjectPtr<AActionPortfolioCharacter> LastAttackedTarget;
 public:

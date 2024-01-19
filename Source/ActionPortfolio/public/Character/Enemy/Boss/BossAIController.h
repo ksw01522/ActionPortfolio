@@ -22,7 +22,7 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BossHPBar")
 	TSubclassOf<class UWidget_HPBar_Basic> HPBarClass;
-	UWidget_HPBar_Basic* HPBarWidget;
+	TObjectPtr<UWidget_HPBar_Basic> HPBarWidget;
 
 protected:
 	virtual void Tick(float DeltaTime) override;

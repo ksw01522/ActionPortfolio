@@ -23,7 +23,7 @@ void UInteractionSystemComponent::BeginPlay()
 
 	// ...
 	TArray<UActorComponent*> SensorComponents = GetOwner()->GetComponentsByTag(UShapeComponent::StaticClass(), FName("InteractionSensor"));
-	const FName CollisionProfile;
+
 	for (auto& SensorComponent : SensorComponents)
 	{
 		UShapeComponent* SensorShape = Cast<UShapeComponent>(SensorComponent);

@@ -13,13 +13,13 @@ class ACTIONPORTFOLIO_API ABatteryBomb : public AActor
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh", meta = (AllowPrivateAccess = "true"))
-	class UStaticMeshComponent* BatteryMesh;
+	TObjectPtr<class UStaticMeshComponent> BatteryMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh", meta = (AllowPrivateAccess = "true"))
-	class UCapsuleComponent* Collider;
+	TObjectPtr<class UCapsuleComponent> Collider;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bomb", meta = (AllowPrivateAccess = "true"))
-	class UParticleSystem* BombParticle;
+	TObjectPtr<class UParticleSystem> BombParticle;
 
 public:	
 	// Sets default values for this actor's properties

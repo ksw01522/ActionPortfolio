@@ -33,4 +33,7 @@ public:
 	static UActionPFAbilitySystemComponent* GetAbilitySystemComponentFromActor(const AActor* Actor, bool LookForComponent = false);
 
 	bool GetCooldownRemainingAndDurationByTag(FGameplayTagContainer CooldownTags, float& TimeRemaining, float& CooldownDuration);
+
+	bool CanActivateAbility(TSubclassOf<UActionPFGameplayAbility> AbilityClass);
+
 };

@@ -10,10 +10,25 @@
 /**
  * 
  */
+ class UDataTable;
+
+USTRUCT()
+struct FItemManagerProperty
+{
+	GENERATED_BODY()
+
+	friend class UItemManagerSubsystem;
+
+	FItemManagerProperty() {
+
+	}
+
+private:
+
+};
 
 
-
-UCLASS(Config = ActionPortfolioSetting)
+UCLASS()
 class ACTIONPORTFOLIO_API UActionPortfolioInstance : public UGameInstance
 {
 	GENERATED_BODY()
@@ -42,4 +57,41 @@ public:
 	ELanguage GetCurrentLanguage() const;
 
 
+///////////////////////////////////// Item Manager ///////////////////////////////
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "ItemManager", meta = (RequiredAssetDataTags = "RowStructure=/Script/ActionPortfolio.ItemData_Equipment"))
+	TSoftObjectPtr<UDataTable> ItemDataTable_Equipment;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemManager", meta = (RequiredAssetDataTags = "RowStructure=/Script/ActionPortfolio.ItemData_Consumption"))
+	TSoftObjectPtr<UDataTable> ItemDataTable_Consumption;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemManager", meta = (RequiredAssetDataTags = "RowStructure=/Script/ActionPortfolio.ItemData_Material"))
+	TSoftObjectPtr<UDataTable> ItemDataTable_Material;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemManager|DropItem")
+	int DropItemPoolSize;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemManager|DropItem|Bounce")
+	TSoftObjectPtr<UCurveFloat> DefaultDIBounceCurve;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemManager|DropItem|Bounce")
+	float BouncePower;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemManager|DropItem|Bounce")
+	float BounceHeight;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemManager|DropItem|Magnetized")
+	TSoftObjectPtr<UCurveFloat> DefaultDIMagnetizedCurve;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
+	int InventorySize;
+
+public:
+	TArray<TSoftObjectPtr<UDataTable>> GetItemDataTables() const;
+	int GetDropItemPoolSize() const {return DropItemPoolSize;}
+	TSoftObjectPtr<UCurveFloat> GetDefaultDIBounceCurve() const {return DefaultDIBounceCurve;}
+	float GetBouncePower() const {return BouncePower;}
+	float GetBounceHeight() const {return BounceHeight;}
+	TSoftObjectPtr<UCurveFloat> GetDefaultDIMagnetizedCurve() const {return DefaultDIMagnetizedCurve;}
+	int GetInventorySize() const { return InventorySize; }
 };

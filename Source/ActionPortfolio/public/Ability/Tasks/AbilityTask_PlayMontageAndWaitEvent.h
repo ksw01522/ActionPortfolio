@@ -60,7 +60,7 @@ public:
 
 private:
 	UPROPERTY()
-	UAnimMontage* MontageToPlay;
+	TObjectPtr<UAnimMontage> MontageToPlay;
 
 	UPROPERTY()
 	FGameplayTagContainer EventTags;

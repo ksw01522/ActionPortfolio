@@ -11,6 +11,8 @@
 class AActionPFPlayerController;
 class SDialogueBox;
 class SVerticalBox;
+class SInventorySlot;
+
 
 class ACTIONPORTFOLIO_API SActionPFMainSlate : public SCompoundWidget
 {

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "SlateBasics.h"
 #include "SlateExtras.h"
+#include "Widgets/Input/SButton.h"
 #include "Framework/Text/ITextDecorator.h"
 
 class STextBlock;
@@ -12,7 +13,7 @@ class UDataTable;
 class SRichTextBlock;
 class USRichTextBlockDecorator;
 class ITextDecorator;
-class SButton;
+
 
 struct FDialogueElement;
 
@@ -40,7 +41,7 @@ private:
 	TSharedPtr<STextBlock> DialoguerNameBlock;
 	TSharedPtr<SRichTextBlock> DialogueTextBlock;
 
-	UDataTable* TextStyleSet;
+	TObjectPtr<UDataTable> TextStyleSet;
 	FTextBlockStyle TextBlockStyle;
 
 	TSharedPtr<FSlateStyleSet> StyleInstance;
@@ -81,7 +82,7 @@ public:
 	void ClearDialogueText();
 };
 
-class ACTIONPORTFOLIO_API SAnswerButton : public SCompoundWidget
+class ACTIONPORTFOLIO_API SAnswerButton : public SButton
 {
 public:
 	SLATE_BEGIN_ARGS(SAnswerButton) {}

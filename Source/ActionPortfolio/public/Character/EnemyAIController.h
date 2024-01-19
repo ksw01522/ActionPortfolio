@@ -20,19 +20,19 @@ public:
 private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ActionPF|AI", meta = (AllowPrivateAccess = "true"))
-	class UBehaviorTree* BT_AI;
+	TObjectPtr<class UBehaviorTree> BT_AI;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ActionPF|AI", meta = (AllowPrivateAccess = "true"))
-	class UBlackboardData* BB_AI;
+	TObjectPtr<class UBlackboardData> BB_AI;
 
 	TArray<TWeakObjectPtr<AActor>> DetectedHostileTargets;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AIPerception)
-	class UAIPerceptionComponent* AIPerception;
+	TObjectPtr<class UAIPerceptionComponent> AIPerception;
 
 	UPROPERTY()
-	class UAISenseConfig_Sight* Sight_Config;
+	TObjectPtr<class UAISenseConfig_Sight> Sight_Config;
 
 
 	static const FName FocusedHostileTargetKey;

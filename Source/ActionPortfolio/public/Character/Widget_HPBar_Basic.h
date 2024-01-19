@@ -19,7 +19,7 @@ protected:
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "HPBar", meta = (AllowPrivateAccess = "true", BindWidget))
-	class UProgressBar* HPBar;
+	TObjectPtr<class UProgressBar> HPBar;
 
 protected:
 	TWeakObjectPtr<class AActionPortfolioCharacter> RegistedCharacter;

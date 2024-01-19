@@ -17,7 +17,7 @@ class ACTIONPORTFOLIO_API AGAEffectBoxActor : public AGAEffectActor
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EffectCollider", meta = (AllowPrivateAccess = "true"))
-	class UBoxComponent* BoxComponent;
+	TObjectPtr<class UBoxComponent> BoxComponent;
 
 #if WITH_EDITORONLY_DATA
 	UPROPERTY()

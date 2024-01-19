@@ -18,13 +18,13 @@ class ACTIONPORTFOLIO_API ACharacterBoss : public AActionPortfolioCharacter
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
-	class UBoxComponent* LeftPunchBox;
+	TObjectPtr<class UBoxComponent> LeftPunchBox;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
-	UBoxComponent* RightPunchBox;
+	TObjectPtr<UBoxComponent> RightPunchBox;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
-	UBoxComponent* BossRushBox;
+	TObjectPtr<UBoxComponent> BossRushBox;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss", meta = (AllowPrivateAccess = "true", ClampMin = 1))
 	int CollisionCountForStun;

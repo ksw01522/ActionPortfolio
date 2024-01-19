@@ -25,13 +25,23 @@
 
 #include "Kismet/KismetSystemLibrary.h"
 
+#include "Character/Player/InventoryComponent.h"
+#include "Items/ItemBase.h"
+#include "Items/ItemManagerSubsystem.h"
+#include "Character/CharacterStatusComponent.h"
+
 AActionPFPlayerController::AActionPFPlayerController()
 {
 	PlayerDialogueMC = CreateDefaultSubobject<UPlayerDialogueMCComponent>("PlayerDialogueMC");
 
-#if WITH_EDITORONLY_DATA
+	Inventory = CreateDefaultSubobject<UInventoryComponent>("PlayerInventory");
+
+
+#if WITH_EDITOR
 	bDrawTraceInteractionLine = true;
 #endif
+
+	
 }
 
 void AActionPFPlayerController::Tick(float DeltaSeconds)
@@ -49,6 +59,8 @@ void AActionPFPlayerController::OnPossess(APawn* aPawn)
 	APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(aPawn);
 	if (!IsValid(PlayerChar)) return;
 
+	PlayerChar->Tags.AddUnique(FName("PlayerCharacter"));
+
 	if (IsValid(PlayerMainUI)) {
 		PlayerMainUI->LinkASC();
 	}
@@ -63,6 +75,11 @@ void AActionPFPlayerController::OnPossess(APawn* aPawn)
 void AActionPFPlayerController::OnUnPossess()
 {
 	ClearForInteraction();
+
+	APawn* PossessedPawn = GetPawn();
+	if(IsValid(PossessedPawn)){
+		PossessedPawn->Tags.Remove(FName("PlayerCharacter"));
+	}
 	Super::OnUnPossess();
 }
 
@@ -98,6 +115,8 @@ void AActionPFPlayerController::PostInitializeComponents()
 
 	//겹치게 될 Interaction들의 예상 최대개수만큼 미리 메모리 잡기 : 한 Actor에 여러개의 상호작용이 있을 수도 있으니
 	PrevTracedInteractions.Reserve(4);
+
+	Inventory->OnChangedInventory.AddDynamic(this, &AActionPFPlayerController::UpdateInventoryWidget);
 }
 
 void AActionPFPlayerController::BeginPlay()
@@ -109,21 +128,6 @@ void AActionPFPlayerController::BeginPlay()
 
 	
 }
-
-
-
-
-
-
-
-UAbilitySystemComponent* AActionPFPlayerController::GetAbilitySystemComponent() const
-{
-	AActionPortfolioCharacter* ControlPawn = GetPawn<AActionPortfolioCharacter>();
-	if(!IsValid(ControlPawn)) return nullptr;
-
-	return ControlPawn->GetAbilitySystemComponent();
-}
-
 
 
 
@@ -510,3 +514,73 @@ void AActionPFPlayerController::EnterDialogueInNPCInteract(const UDialogueSessio
 	HideNPCInteractBTNs();
 }
 
+void AActionPFPlayerController::PickUpItem(ADroppedItem* Target)
+{
+	if (!IsValid(Target))
+	{
+		PFLOG(Error, TEXT("Try Pick Up Invalidate DroppedItem."));
+		return;
+	}
+
+	Inventory->AddItemByDropItem(*Target);
+}
+
+
+bool AActionPFPlayerController::TryEquipItemInInventory(APlayerCharacter* Target, int idx)
+{
+	if(!IsValid(Target)) return false;
+
+	FInventorySlot* InventorySlot = Inventory->GetInventorySlot(EItemType::Equipment, idx);
+
+	if (InventorySlot == nullptr || InventorySlot->IsEmpty())
+	{
+		return false;
+	}
+
+	UItemBase_Equipment* TargetEquipment = Cast<UItemBase_Equipment>(InventorySlot->GetItemInSlot());
+	UItemBase_Equipment* AlreadyEquipment = Target->GetEquipment(TargetEquipment->GetEquipmentPart());
+
+	bool bResult = Target->EquipItem(TargetEquipment);
+
+	if(bResult)
+	{
+		InventorySlot->SetSlot(AlreadyEquipment, 1);
+		UpdateInventoryWidget(EItemType::Equipment, idx);
+	}
+
+	return bResult;
+}
+
+bool AActionPFPlayerController::TryUnequipItem(APlayerCharacter* Target, EEquipmentPart Part)
+{
+	FInventorySlot* EmptySlot = Inventory->GetEmptySlot(EItemType::Equipment);
+	if(EmptySlot == nullptr) return false;
+
+	return Target->UnequipItem(Target->GetEquipment(Part));
+}
+
+void AActionPFPlayerController::UpdateInventoryWidget(EItemType InventoryType, int Idx)
+{
+	FInventorySlot* InventorySlot = Inventory->GetInventorySlot(InventoryType, Idx);
+	if (InventorySlot == nullptr) {
+		ensureMsgf(false, TEXT("Can't find Inventory Slot."));
+		return;
+	}
+
+	TSoftObjectPtr<UMaterialInterface> UpdateIcon;
+	int UpdateCount = 0;
+	EItemGrade UpdateItemGrade = EItemGrade::None;
+
+
+	if (!InventorySlot->IsEmpty())
+	{
+		UItemManagerSubsystem* ItemManager = UItemManagerSubsystem::GetManagerInstance();
+		const UItemBase* TempItem = InventorySlot->GetItemInSlot();
+
+		UpdateIcon = TempItem->GetIconMaterial();
+		UpdateCount = InventorySlot->GetCount();
+		UpdateItemGrade = TempItem->GetItemGrade();
+	}
+
+	PlayerMainUI->UpdateInventorySlot(InventoryType, Idx, UpdateIcon, UpdateItemGrade, UpdateCount);
+}

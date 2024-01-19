@@ -5,6 +5,10 @@
 #include "Character/Player/PlayerCharacter.h"
 #include "Ability/Widget_AbilityNode.h"
 #include "Ability/ActionPFAbilitySystemComponent.h"
+
+#include "Items/ItemBase.h"
+#include "Items/Widget/InventoryWidget.h"
+
 #include "ActionPortfolio.h"
 
 void UWidget_PlayerMainUI::NativeConstruct()
@@ -25,6 +29,9 @@ void UWidget_PlayerMainUI::NativeTick(const FGeometry& MyGeometry, float InDelta
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 }
+
+
+
 
 void UWidget_PlayerMainUI::LinkASC()
 {
@@ -59,4 +66,9 @@ void UWidget_PlayerMainUI::LinkASC()
 		PFLOG(Error, TEXT("Can't Link ASC With Ability Nodes"));
 	}
 #endif
+}
+
+void UWidget_PlayerMainUI::UpdateInventorySlot(EItemType InventoryType, int idx, TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount)
+{
+	InventoryWidget->UpdateSlotWidget(InventoryType, idx, NewImage, ItemGrade, NewCount);
 }

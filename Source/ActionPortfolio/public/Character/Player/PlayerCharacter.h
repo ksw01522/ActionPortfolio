@@ -4,11 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "Character/ActionPortfolioCharacter.h"
+#include "Items/ItemUserInterface.h"
 #include "PlayerCharacter.generated.h"
 
 /**
  * 
  */
+ enum class EEquipmentPart : uint8;
+
 UENUM(BlueprintType)
 enum class EPlayerAbilityInputID : uint8
 {
@@ -27,7 +30,7 @@ struct FPlayerInputAbilityStruct
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	UInputAction* InputAction;
+	TObjectPtr<UInputAction> InputAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<class UActionPFGameplayAbility> AbilityClass;
@@ -35,7 +38,7 @@ public:
 };
 
 UCLASS()
-class ACTIONPORTFOLIO_API APlayerCharacter : public AActionPortfolioCharacter
+class ACTIONPORTFOLIO_API APlayerCharacter : public AActionPortfolioCharacter, public IItemUserInterface
 {
 	GENERATED_BODY()
 public:
@@ -44,26 +47,26 @@ public:
 private:
 		/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class USpringArmComponent* CameraBoom;
+	TObjectPtr<class USpringArmComponent> CameraBoom;
 
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* FollowCamera;
+	TObjectPtr<class UCameraComponent> FollowCamera;
 
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputMappingContext* DefaultMappingContext;
+	TObjectPtr<class UInputMappingContext> DefaultMappingContext;
 
 	/** Move Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* MoveAction;
+	TObjectPtr<UInputAction> MoveAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* JumpAction;
+	TObjectPtr<UInputAction> JumpAction;
 
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* LookAction;
+	TObjectPtr<UInputAction> LookAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	FPlayerInputAbilityStruct Ability_LMB_Action;
@@ -109,4 +112,33 @@ public:
 public:
 	UFUNCTION(BlueprintCallable, Category = "Player|Ability")
 	TSubclassOf<class UActionPFGameplayAbility> GetPlayerAbilityClass(EPlayerAbilityInputID ID);
+
+////////////////////////////////////////// ItemUserInterface /////////////////////////////////
+private:
+	UPROPERTY(Transient)
+	TMap<EEquipmentPart, TObjectPtr<UItemBase_Equipment>> EquipmentSlots;
+
+	bool bInitializedItemUser;
+
+	virtual void InitializeItemUser() override;
+
+	
+
+	virtual void OnEquipItem(UItemBase_Equipment* NewItem) override;
+	virtual void OnUnequipItem(UItemBase_Equipment* NewItem) override;
+
+public:
+	virtual class UActionPFAbilitySystemComponent* GetASCForItemUser() const override;
+
+	virtual bool CanEquipItem(UItemBase_Equipment* NewItem) const;
+
+	virtual bool EquipItem(UItemBase_Equipment* NewItem) override;
+
+	virtual bool UnequipItem(UItemBase_Equipment* NewItem) override;
+
+	UItemBase_Equipment* GetEquipment(EEquipmentPart Part) const;
+
+#if WITH_EDITOR
+	virtual FName GetUserName() const override;
+#endif
 };

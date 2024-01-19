@@ -109,6 +109,17 @@ bool UActionPFAbilitySystemComponent::GetCooldownRemainingAndDurationByTag(FGame
 	return true;
 }
 
+bool UActionPFAbilitySystemComponent::CanActivateAbility(TSubclassOf<UActionPFGameplayAbility> AbilityClass)
+{
+	const UGameplayAbility* AbilityCDO = AbilityClass.GetDefaultObject();
+
+	if(AbilityCDO == nullptr) return false;
+
+	FGameplayAbilitySpec Spec(AbilityClass, 1, -1, GetOwner());
+
+	return AbilityCDO->CanActivateAbility(Spec.Handle, AbilityActorInfo.Get());
+}
+
 
 
 

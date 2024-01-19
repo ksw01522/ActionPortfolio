@@ -11,30 +11,42 @@ enum class EItemType : uint8;
 
 struct FItemData_Base;
 
+class UItemBase;
 class ADroppedItem;
 
 struct FInventorySlot
 {
 	friend class UInventoryComponent;
-
-	FInventorySlot() : ItemCode(), Count(0) {}
+	friend struct FInventorySlotContainer;
+private:
+	FInventorySlot() : Item(nullptr), Count(0) {}
+public:
 	virtual ~FInventorySlot(){}
 
 private:
-	FName ItemCode;
-	uint8 Count;
-	uint8 StackSize;
+	UPROPERTY(Transient)
+	TObjectPtr<UItemBase> Item;
+	int Count;
+	int Index;
 
-	void SetSlot(const FName& NewItemCode, int& NewCount, uint8 NewStackSize);
-	void AddCount(int& AddCount);
-	void RemoveCount(int& RemoveCount);
-	void ClearSlot() { ItemCode = NAME_None; Count = 0; StackSize = 0;}
+	void CheckCount();
 
 public:
-	bool IsEmpty() const { return Count <= 0 || ItemCode == NAME_None; }
-	FName GetItemCode() const { return ItemCode; }
+	bool IsEmpty() const;
+	
+	UItemBase* GetItemInSlot(){ return Item.Get(); }
+
+	FName GetItemCode() const;
 	uint8 GetCount() const {return Count;}
-	bool IsFull() const { return Count == StackSize;}
+
+	int GetIndex() const {return Index;}
+
+	void SetSlot(UItemBase* Item, int NewCount);
+	void SetCount(int NewCount);
+
+	void AddCount(int AddCount);
+	void RemoveCount(int RemoveCount);
+	void ClearSlot() { Item = nullptr; Count = 0; }
 };
 
 struct FInventorySlotContainer
@@ -45,19 +57,21 @@ struct FInventorySlotContainer
 	virtual ~FInventorySlotContainer(){}
 
 private:
-	TArray<FInventorySlot> Cells;
+	TArray<FInventorySlot> Slots;
 
-	void InitializeCells(int NewSize);
-	FInventorySlot* GetEmptyCell(int StartIndex = 0) const;
-	FInventorySlot* FindCellByCode(const FName& ItemCode, bool bFindIncludeFullCell) const;
+	void InitializeSlots(int NewSize);
+	FInventorySlot* GetEmptySlot(int StartIndex = 0);
+	FInventorySlot* FindSlotByCode(const FName& ItemCode, int StartIndex = 0);
 
 public:
-	bool IsValidIndex(int Idx) const{return Cells.IsValidIndex(Idx); };
-	bool IsEmptyIndex(int Idx) const{return !IsValidIndex(Idx) || Cells[Idx].IsEmpty(); };
+	bool IsValidIndex(int Idx) const{return Slots.IsValidIndex(Idx); };
+	bool IsEmptyIndex(int Idx) const{return !IsValidIndex(Idx) || Slots[Idx].IsEmpty(); };
+	int GetSize() const {return Slots.Num(); }
+
 
 	FInventorySlot& operator[](const int& Index)
 	{
-		return Cells[Index];
+		return Slots[Index];
 	}
 };
 
@@ -66,6 +80,8 @@ UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ACTIONPORTFOLIO_API UInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
+
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnChangedInventory, EItemType, InventoryType, int, Idx);
 
 public:	
 	// Sets default values for this component's properties
@@ -83,11 +99,28 @@ public:
 private:
 	TMap<EItemType, FInventorySlotContainer> Inventory;
 
-	mutable FCriticalSection CSInventory;
+public:
+	FOnChangedInventory OnChangedInventory;
 
 public:
-	void GetItemIn(const FName& ItemCode, int& Count);
-	void GetItemOut(const FName& ItemCode, int& Count);
+	void AddItemByDropItem(class ADroppedItem& DropItem);
+	
+	//Return Remain Item Count
+	int AddItemByCode(const FName& ItemCode, int Count);
+	int AddItemByObject(UItemBase* TargetItem, int Count);
+	int AddItemByIndex(EItemType InventoryType, int Idx, int Count);
+
+public:
+	//Return Remain Item Count
+	int RemoveItemByCode(const FName& ItemCode, int Count);
+	int RemoveItemByObject(UItemBase* TargetItem, int Count);
+	int RemoveItemByIndex(EItemType InventoryType, int Idx, int Count);
 
 	bool TryDropItem(const EItemType& ItemType, int Idx, int Count, const FVector& DropLocation);
+
+	FInventorySlot* GetInventorySlot(EItemType InventoryType, int idx);
+	FInventorySlot* GetEmptySlot(EItemType InventoryType, int StartIdx = 0);
+
+
+	int GetCountItemInInventory(const FName& ItemCode);
 };

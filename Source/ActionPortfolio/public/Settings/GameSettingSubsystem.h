@@ -4,16 +4,27 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "Settings/CustomStructForSetting.h"
-#include "GameFramework/GameUserSettings.h"
 #include "GameSettingSubsystem.generated.h"
 
 /**
  * 
  */
- 
+ UENUM(BlueprintType)
+enum class EDialogueWidgetAnimSpeed : uint8
+{
+	SLOW = 0,
+	NORMAL = 1,
+	FAST = 2
+};
 
-UCLASS(Config = ActionPortfolioSetting)
+UENUM(BlueprintType)
+enum class ELanguage : uint8
+{
+	Korean = 0,
+	English = 1
+};
+
+UCLASS(Config=APSetting)
 class ACTIONPORTFOLIO_API UGameSettingSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
@@ -24,15 +35,22 @@ private:
 	static TArray<FText> BasicLevelOptions;
 
 public:
-	static UGameSettingSubsystem* SettingInstance;
+	static TObjectPtr<UGameSettingSubsystem> SettingInstance;
 
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 ///////////// ¿œπ› /////////////
+private:
+	UPROPERTY(GlobalConfig)
+	bool bNeedAutoSetting;
+
+private:
+
 	UPROPERTY(GlobalConfig)
 	EDialogueWidgetAnimSpeed CurrentDialogueAnimSpeed;
 
+public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Basic")
 	void SetDialogueAnimSpeed(EDialogueWidgetAnimSpeed NewSpeed) {
 		if (CurrentDialogueAnimSpeed == NewSpeed) return;
@@ -46,13 +64,13 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Basic")
 	EDialogueWidgetAnimSpeed GetCurrentDialogueAnimSpeed() const {return CurrentDialogueAnimSpeed; }
 
+private:
 	UPROPERTY(GlobalConfig)
 	ELanguage CurrentLanguage;
 
+public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Setting|Basic")
 	void SetCurrentLanguage(ELanguage NewLanguage);
-
-	
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Setting|Basic")
 	const TArray<FString> GetLanguageOptions() const;

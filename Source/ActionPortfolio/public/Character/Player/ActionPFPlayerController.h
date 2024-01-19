@@ -21,19 +21,18 @@ class UPlayerDialogueMCComponent;
 class SActionPFMainSlate;
 class SNPCInteractButton;
 class UDialogueSession;
+class APlayerCharacter;
+
+class UInventoryComponent;
 
 struct FDialogueElementContainer;
 
-UENUM()
-enum class EActionPFDialogueType : uint8
-{
-	NPC,
-	Basic,
-	Auto
-};
+enum class EItemType : uint8;
+enum class EEquipmentPart : uint8;
+
 
 UCLASS()
-class ACTIONPORTFOLIO_API AActionPFPlayerController : public APlayerController, public IAbilitySystemInterface, public IGenericTeamAgentInterface
+class ACTIONPORTFOLIO_API AActionPFPlayerController : public APlayerController, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -46,10 +45,10 @@ protected:
 ///////////////////ют╥б
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputMappingContext* ControllerMappingContext;
+	TObjectPtr<class UInputMappingContext> ControllerMappingContext;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* OpenMenuAction;
+	TObjectPtr<class UInputAction> OpenMenuAction;
 
 protected:
 	virtual void OnPossess(APawn* aPawn) override;
@@ -63,7 +62,7 @@ private:
 	TSubclassOf<UWidget_PlayerMainUI> PlayerMainUIClass;
 
 	UPROPERTY()
-	UWidget_PlayerMainUI* PlayerMainUI;
+	TObjectPtr<UWidget_PlayerMainUI> PlayerMainUI;
 
 	UWidget_PlayerMainUI* CreatePlayerMainUI();
 
@@ -83,7 +82,7 @@ private:
 	TSubclassOf<UUserWidget> MenuWidgetClass;
 
 	UPROPERTY()
-	UUserWidget* MenuWidget;
+	TObjectPtr<UUserWidget> MenuWidget;
 	
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player")
 	void OpenMenu();
@@ -103,8 +102,6 @@ protected:
 public:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
-
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 
 
@@ -139,7 +136,7 @@ private:
 #endif
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* InteractAction;
+	TObjectPtr<UInputAction> InteractAction;
 
 	TArray<TWeakObjectPtr<UInteractionSystemComponent>> PrevTracedInteractions;
 	TWeakObjectPtr<UInteractionSystemComponent> FocusInteraction;
@@ -156,7 +153,7 @@ private:
 /////////////////////// Player Dialogue MC ////////////////
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dialogue", meta = (AllowPrivateAccess = "true"))
-	UPlayerDialogueMCComponent* PlayerDialogueMC;
+	TObjectPtr<UPlayerDialogueMCComponent> PlayerDialogueMC;
 
 public:
 	UPlayerDialogueMCComponent* GetPlayerDialogueMCComponent() const { return PlayerDialogueMC; };
@@ -180,6 +177,19 @@ public:
 
 	void EnterDialogueInNPCInteract(const UDialogueSession* NewSession);
 
+	/////////////////////// Inventory /////////////////////
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInventoryComponent> Inventory;
+
+	UFUNCTION()
+	void UpdateInventoryWidget(EItemType InventoryType, int Idx);
+
+public:
+	void PickUpItem(class ADroppedItem* Target);
 
 
+public:
+	bool TryEquipItemInInventory(APlayerCharacter* Target, int idx);
+	bool TryUnequipItem(APlayerCharacter* Target, EEquipmentPart Part);
 };

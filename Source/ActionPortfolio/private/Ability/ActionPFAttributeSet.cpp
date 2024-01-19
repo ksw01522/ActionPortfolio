@@ -33,6 +33,31 @@ void UActionPFAttributeSet::SetMaxHealth(float NewVal)
 
 }
 
+void UActionPFAttributeSet::SetStamina(float NewVal)
+{
+    NewVal = FMath::Clamp<float>(NewVal, 0.0f, GetMaxStamina());
+    if (FMath::IsNearlyEqual(GetStamina(), NewVal)) return;
+
+
+    UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+    if (ensure(ASC))
+    {
+        ASC->SetNumericAttributeBase(GetStaminaAttribute(), NewVal);
+    }
+
+}
+
+void UActionPFAttributeSet::SetMaxStamina(float NewVal)
+{
+    NewVal = FMath::Max<float>(0, NewVal);
+
+    UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+    if (ensure(ASC))
+    {
+        ASC->SetNumericAttributeBase(GetMaxStaminaAttribute(), NewVal);
+    }
+}
+
 
 bool UActionPFAttributeSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data)
 {

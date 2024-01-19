@@ -19,10 +19,10 @@ public:
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NPCInteraction", Instanced, meta = (AllowPrivateAccess = "true"))
-	TArray<UNPCInteract*> NPCInteractions;
+	TArray<TObjectPtr<UNPCInteract>> NPCInteractions;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NPCInteraction", meta = (AllowPrivateAccess = "true"))
-	TArray<UDialogueSession*> GreetingDialogueSession;
+	TArray<TObjectPtr<UDialogueSession>> GreetingDialogueSession;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NPCInteraction", meta = (AllowPrivateAccess = "true"))
 	TArray<FString> ExtraDialoguerIDs;
@@ -65,7 +65,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NPCInteraction", BlueprintGetter = GetNPCInteractionName, meta = (AllowPrivateAccess = "true"))
 	FText NPCInteractionName;
 
-	UInteractionSystemComponent_NPC* OwnerSystem;
+	TWeakObjectPtr<UInteractionSystemComponent_NPC> OwnerSystem;
 
 public:
 	UFUNCTION(BlueprintPure, BlueprintCallable, Category = "NPCInteraction", BlueprintGetter)
@@ -95,9 +95,6 @@ public:
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NPCDialogue", meta = (AllowPrivateAccess = "true"))
 	class UDialogueSession* DialogueSession;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NPCDialouge", meta = (AllowPrivateAccess = "true"))
-	TArray<FString> ExtraDialoguerIDs;
 
 
 public:

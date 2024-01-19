@@ -256,22 +256,22 @@ void SAnswerButton::Construct(const FArguments& InArgs)
 	const FButtonStyle* AnswerBTNStyle = &ActionPFSlateStyleSet->GetWidgetStyle<FButtonStyle>(DialogueStyle::ButtonStyle::AnswerButton);
 	const FTextBlockStyle* DefaultTextStyle = &ActionPFSlateStyleSet->GetWidgetStyle<FTextBlockStyle>(DialogueStyle::TextStyle::Default);
 
-	ChildSlot[
-		SNew(SButton)
+	SetCanTick(false);
+
+	SButton::Construct(SButton::FArguments()
 		.ButtonStyle(AnswerBTNStyle)
 		.ContentPadding(FMargin(30, 10))
 		.OnClicked(InArgs._OnClicked)
 		.IsFocusable(true)
 		.VAlign(VAlign_Center)
 		.HAlign(HAlign_Center)
-			[
-				SAssignNew(AnswerTextBlock, STextBlock)
+		[
+			SAssignNew(AnswerTextBlock, STextBlock)
 				.TextStyle(DefaultTextStyle)
 				.AutoWrapText(true)
 				.Visibility(EVisibility::SelfHitTestInvisible)
-			]
-	];
-
+		]
+	);
 }
 
 

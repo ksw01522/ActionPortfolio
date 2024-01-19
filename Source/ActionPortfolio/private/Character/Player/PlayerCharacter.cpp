@@ -17,6 +17,10 @@
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "Ability/Ability/GameplayAbility_Meelee.h"
 #include "Ability/ActionPFAttributeSet.h"
+#include "Character/CharacterStatusComponent.h"
+
+#include "Items/ItemBase.h"
+#include "Items/ItemManagerSubsystem.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -30,6 +34,8 @@ APlayerCharacter::APlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+
+	bInitializedItemUser = false;
 }
 
 void APlayerCharacter::AddCharacterAbilities()
@@ -58,7 +64,7 @@ void APlayerCharacter::BeginPlay()
 		}
 	}
 
-	
+	InitializeItemUser();
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)
@@ -94,8 +100,76 @@ TSubclassOf<class UActionPFGameplayAbility> APlayerCharacter::GetPlayerAbilityCl
 	return nullptr;
 }
 
+void APlayerCharacter::InitializeItemUser()
+{
+	if(bInitializedItemUser) return;
+
+	EquipmentSlots.Add(EEquipmentPart::Body, nullptr);
+	EquipmentSlots.Add(EEquipmentPart::Pants, nullptr);
+	EquipmentSlots.Add(EEquipmentPart::Head, nullptr);
+	EquipmentSlots.Add(EEquipmentPart::Arm, nullptr);
+	EquipmentSlots.Add(EEquipmentPart::Foot, nullptr);
+
+	bInitializedItemUser = true;
+}
 
 
+
+void APlayerCharacter::OnEquipItem(UItemBase_Equipment* NewItem)
+{
+	EquipmentSlots[NewItem->GetEquipmentPart()] = NewItem;
+}
+
+void APlayerCharacter::OnUnequipItem(UItemBase_Equipment* NewItem)
+{
+	EquipmentSlots[NewItem->GetEquipmentPart()] = nullptr;
+}
+
+UActionPFAbilitySystemComponent* APlayerCharacter::GetASCForItemUser() const
+{
+	return Cast<UActionPFAbilitySystemComponent>(GetAbilitySystemComponent());
+}
+
+bool APlayerCharacter::CanEquipItem(UItemBase_Equipment* NewItem) const
+{
+	bool bResult = IItemUserInterface::CanEquipItem(NewItem) && EquipmentSlots.Contains(NewItem->GetEquipmentPart());
+	
+	return bResult;
+}
+
+
+
+bool APlayerCharacter::EquipItem(UItemBase_Equipment* NewItem)
+{
+	if(!CanEquipItem(NewItem)) return false;
+	UnequipItem(EquipmentSlots[NewItem->GetEquipmentPart()]);
+
+	bool bResult = NewItem->TryEquipItem(this);
+	if(bResult) OnEquipItem(NewItem);
+	return bResult;
+}
+
+bool APlayerCharacter::UnequipItem(UItemBase_Equipment* NewItem)
+{
+	if (!IsValid(NewItem)) return false;
+	bool bResult = NewItem->TryUnequipItem(this);
+	if(bResult) OnUnequipItem(NewItem);
+
+	return bResult;
+}
+
+UItemBase_Equipment* APlayerCharacter::GetEquipment(EEquipmentPart Part) const
+{
+	if(!EquipmentSlots.Contains(Part)) return nullptr;
+	return EquipmentSlots[Part];
+}
+
+#if WITH_EDITOR
+FName APlayerCharacter::GetUserName() const
+{
+	return FName("PlayerCharacter");
+}
+#endif
 
 
 

@@ -12,12 +12,17 @@ class FActionPortfolioWidgetStyle
 {
 public:
 	static void Initialize();
+
 	static void Shutdown();
 
 	static const FName& GetStyleSetName();
 
 private:
 	static TSharedPtr<FSlateStyleSet> StyleSet;
+
+	static void Initialize_InventoryWidget();
+	static void Initialize_DialogueWidget();
+	static void Initialize_InteractionWidget();
 
 public:
 	static FSlateStyleSet* Get();
@@ -50,4 +55,29 @@ namespace ActionPFStyle
 		static const FName Default = "ActionPFStyle.ButtonStyle.Default";
 	}
 
+	namespace DefaultTextSize
+	{
+		static const FName Small = "ActionPFStyle.TextSize.Small";
+		static const FName Normal = "ActionPFStyle.TextSize.Normal";
+		static const FName Big = "ActionPFStyle.TextSize.Big";
+	}
+}
+
+namespace InventoryStyle
+{
+	static const FName WindowBackground = "InventorySlot.WindowBackground";
+
+	static const FName SlotBackground = "InventorySlot.SlotBackground";
+
+	namespace SlotFrameGrade
+	{
+		static const FName Common = "InventorySlot.SlotFrameGrade.Common";
+		static const FName Uncommon = "InventorySlot.SlotFrameGrade.Uncommon";
+		static const FName Rare = "InventorySlot.SlotFrameGrade.Rare";
+		static const FName Unique = "InventorySlot.SlotFrameGrade.Unique";
+		static const FName Legendary = "InventorySlot.SlotFrameGrade.Legendary";
+		static const FName Epic = "InventorySlot.SlotFrameGrade.Epic";
+	}
+
+	static const FName CountTextStyle = "InventorySlot.CountTextStyle";
 }

@@ -17,7 +17,7 @@ class ACTIONPORTFOLIO_API UWidget_AbilityNode : public UUserWidget
 	
 private:
 	UPROPERTY(meta = (BindWidget))
-	class USizeBox* NodeSizeBox;
+	TObjectPtr<class USizeBox> NodeSizeBox;
 
 	UPROPERTY(meta = (BindWidget))
 	class UBorder* IconBorder; 

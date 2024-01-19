@@ -16,10 +16,10 @@ class ACTIONPORTFOLIO_API AChracterEnemyA : public AActionPortfolioCharacter
 	
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
-	class UBoxComponent* LeftPunchBox;
+	TObjectPtr<class UBoxComponent> LeftPunchBox;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
-	UBoxComponent* RightPunchBox;
+	TObjectPtr<UBoxComponent> RightPunchBox;
 
 public:
 	AChracterEnemyA();

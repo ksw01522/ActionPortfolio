@@ -36,13 +36,13 @@ private:
 	TWeakObjectPtr<ADangerZone> DangerZonePtr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "JumpFall", meta = (AllowPrivateAccess = "true"))
-	class UParticleSystem* OnLandParticle;
+	TObjectPtr<class UParticleSystem> OnLandParticle;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "JumpFall", meta = (AllowPrivateAccess = "true"))
-	UParticleSystem* OnJumpParticle;
+	TObjectPtr<UParticleSystem> OnJumpParticle;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "JumpFallExplosion", meta = (AllowPrivateAccess = "true"))
-	UParticleSystem* OnExplosionParticle;
+	TObjectPtr<UParticleSystem>OnExplosionParticle;
 
 	TWeakObjectPtr<class AActionPortfolioCharacter> TargetCharacter;
 

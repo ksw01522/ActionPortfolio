@@ -7,6 +7,11 @@
 #include "Character/ActionPortfolioCharacter.h"
 #include "Engine/Texture.h"
 
+
+const FGameplayTag UActionPFGameplayAbility::OnAttackStartTag = FGameplayTag::RequestGameplayTag("CommonEvent.OnAttackStart");
+const FGameplayTag UActionPFGameplayAbility::OnAttackTargetTag = FGameplayTag::RequestGameplayTag("CommonEvent.OnAttackTarget");
+const FGameplayTag UActionPFGameplayAbility::OnDamagedTag = FGameplayTag::RequestGameplayTag("CommonEvent.OnDamaged");
+
 TArray<FGameplayEffectSpecHandle> UActionPFGameplayAbility::MakeEffectSpecHandle(TArray<TSubclassOf<UGameplayEffect>> ArrayEffectClass)
 {
 	TArray<FGameplayEffectSpecHandle> ReturnArray;
@@ -21,6 +26,8 @@ TArray<FGameplayEffectSpecHandle> UActionPFGameplayAbility::MakeEffectSpecHandle
 
 void UActionPFGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
+	MustActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
 	if (bHasBlueprintActivate)
 	{
 		// A Blueprinted ActivateAbility function must call CommitAbility somewhere in its execution chain.
@@ -53,6 +60,16 @@ void UActionPFGameplayAbility::ActivateAbility_CPP(const FGameplayAbilitySpecHan
 void UActionPFGameplayAbility::ReactivateAbility()
 {
 	
+}
+
+void UActionPFGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	Super::OnAvatarSet(ActorInfo, Spec);
+
+	if (AbilityType == EAbilityType::Passive)
+	{
+		ActorInfo->AbilitySystemComponent->TryActivateAbility(Spec.Handle, false);
+	}
 }
 
 void UActionPFGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 

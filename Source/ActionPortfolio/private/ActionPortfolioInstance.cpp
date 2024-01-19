@@ -8,6 +8,8 @@
 #include "DialogueBFL.h"
 #include "Kismet/KismetInternationalizationLibrary.h"
 #include "Settings/GameSettingSubsystem.h"
+#include "Engine/DataTable.h"
+#include "Items/ItemManagerSubsystem.h"
 
 UActionPortfolioInstance* UActionPortfolioInstance::ActionPFInstance = nullptr;
 
@@ -20,19 +22,22 @@ UActionPortfolioInstance::UActionPortfolioInstance()
 
 void UActionPortfolioInstance::Init()
 {
+	ActionPFInstance = this;
+
 	Super::Init();
 
 	FActionPortfolioWidgetStyle::Initialize();
 
-	ActionPFInstance = this;
-
+	PFLOG(Warning, TEXT("Game Instance Init."));
 }
 
 void UActionPortfolioInstance::Shutdown()
 {
-	Super::Shutdown();
-
 	FActionPortfolioWidgetStyle::Shutdown();
+
+	ActionPFInstance = nullptr;
+
+	Super::Shutdown();
 }
 
 float UActionPortfolioInstance::GetDialogueAnimTime() const
@@ -55,5 +60,16 @@ float UActionPortfolioInstance::GetDialogueAnimTime() const
 ELanguage UActionPortfolioInstance::GetCurrentLanguage() const
 {
 	return GetSubsystem<UGameSettingSubsystem>(this)->CurrentLanguage;
+}
+
+TArray<TSoftObjectPtr<UDataTable>> UActionPortfolioInstance::GetItemDataTables() const
+{
+	TArray<TSoftObjectPtr<UDataTable>> ReturnTables;
+	ReturnTables.Reserve(3);
+	ReturnTables.Add(ItemDataTable_Equipment);
+	ReturnTables.Add(ItemDataTable_Consumption);
+	ReturnTables.Add(ItemDataTable_Material);
+
+	return MoveTemp(ReturnTables);
 }
 

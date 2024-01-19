@@ -19,10 +19,10 @@ public:
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
-	class UInteractionSystemComponent_NPC* InteractionSystem;
+	TObjectPtr<class UInteractionSystemComponent_NPC> InteractionSystem;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
-	class UDialoguerComponent* DialoguerComponet;
+	TObjectPtr<class UDialoguerComponent> DialoguerComponet;
 
 
 public:

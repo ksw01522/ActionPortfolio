@@ -27,7 +27,7 @@ private:
 	float FallDownHeight;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FallDown", meta = (AllowPrivateAccess = "true"))
-	class UParticleSystem* FallDownImpactParticle;
+	TObjectPtr<class UParticleSystem> FallDownImpactParticle;
 
 	FVector PreFallDownLocation;
 

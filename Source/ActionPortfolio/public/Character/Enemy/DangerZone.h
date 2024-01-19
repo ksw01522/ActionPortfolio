@@ -19,13 +19,13 @@ private:
 	static float DefaultZoneScaleRadiusRate;
 
 	UPROPERTY()
-	class USceneComponent* PivotComponent;
+	TObjectPtr<class USceneComponent> PivotComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DangerZone", meta = (AllowPrivateAccess = "true"))
-	class UStaticMeshComponent* SideMesh;
+	TObjectPtr<class UStaticMeshComponent> SideMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DangerZone", meta = (AllowPrivateAccess = "true"))
-	class UDecalComponent* Decal;
+	TObjectPtr<class UDecalComponent> Decal;
 
 protected:
 	// Called when the game starts or when spawned

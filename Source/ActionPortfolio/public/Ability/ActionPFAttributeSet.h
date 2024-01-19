@@ -42,6 +42,20 @@ public:
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(MaxHealth)
 
 	UPROPERTY(BlueprintReadOnly, Category = "Status")
+	FGameplayAttributeData Stamina;
+	GAMEPLAYATTRIBUTE_PROPERTY_GETTER(UActionPFAttributeSet, Stamina)
+	GAMEPLAYATTRIBUTE_VALUE_GETTER(Stamina)
+	void SetStamina(float NewVal);
+	GAMEPLAYATTRIBUTE_VALUE_INITTER(Stamina)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
+	FGameplayAttributeData MaxStamina;
+	GAMEPLAYATTRIBUTE_PROPERTY_GETTER(UActionPFAttributeSet, MaxStamina)
+	GAMEPLAYATTRIBUTE_VALUE_GETTER(MaxStamina)
+	void SetMaxStamina(float NewVal);
+	GAMEPLAYATTRIBUTE_VALUE_INITTER(MaxStamina)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
 	FGameplayAttributeData Damage;
 	ATTRIBUTE_ACCESSORS(UActionPFAttributeSet, Damage)
 

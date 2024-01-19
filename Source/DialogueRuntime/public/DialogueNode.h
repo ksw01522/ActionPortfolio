@@ -65,7 +65,7 @@ public:
 
 	FString DialogueString;
 
-	UDataTable* DialogueStyleSet;
+	TObjectPtr<UDataTable> DialogueStyleSet;
 
 	TArray<TSubclassOf<USRichTextBlockDecorator>> DialogueSlateDecorators;
 
@@ -106,7 +106,7 @@ public:
 	FString DialoguerID;
 
 	UPROPERTY(EditAnywhere)
-	UAnimMontage* MontageToPlay;
+	TObjectPtr<UAnimMontage> MontageToPlay;
 
 	UPROPERTY(EditAnywhere)
 	float AnimPlayLate;
@@ -160,23 +160,23 @@ public:
 
 public:
 	UPROPERTY()
-	UDialogueSession* DialogueSession;
+	TObjectPtr<UDialogueSession> DialogueSession;
 
 	UPROPERTY()
-	TArray<UDialogueNode*> ParentNodes;
+	TArray<TObjectPtr<UDialogueNode>> ParentNodes;
 
 	UPROPERTY()
-	TArray<UDialogueNode*> ChildrenNodes;
+	TArray<TObjectPtr<UDialogueNode>> ChildrenNodes;
 
 	UPROPERTY()
-	TMap<UDialogueNode*, UDialogueEdge*> Edges;
+	TMap<TObjectPtr<UDialogueNode>, TObjectPtr<UDialogueEdge>> Edges;
 
 	UPROPERTY()
 	EDialogueNodeType DialogueNodeType;
 
 private:
 	UPROPERTY(EditAnywhere, Category = "DialogueEvents", Instanced, meta = (AllowPrivateAccess = "true"))
-	TArray<UDialogueEvent*> EnterEvents;
+	TArray<TObjectPtr<UDialogueEvent>> EnterEvents;
 
 
 public:

@@ -2,7 +2,6 @@
 
 
 #include "Nodes/DialogueNode_End.h"
-#include "DialogueStructs.h"
 
 #define LOCTEXT_NAMESPACE "DialogueNode"
 

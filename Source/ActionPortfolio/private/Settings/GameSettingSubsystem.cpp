@@ -11,7 +11,7 @@
 
 #define LOCTEXT_NAMESPACE "ActionPFSettings"
 
-UGameSettingSubsystem* UGameSettingSubsystem::SettingInstance = nullptr;
+TObjectPtr<UGameSettingSubsystem> UGameSettingSubsystem::SettingInstance = nullptr;
 
 TArray<FText> UGameSettingSubsystem::BasicLevelOptions({LOCTEXT("레벨_저", "저"), 
 														LOCTEXT("레벨_중", "중"), 

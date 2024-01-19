@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Templates/SubclassOf.h"
-#include "DialogueStructs.h"
 #include "GameplayTagContainer.h"
 #include "DialogueSession.generated.h"
 
@@ -38,10 +37,10 @@ public:
 	FGameplayTagContainer DialogueTags;
 
 	UPROPERTY()
-	UDialogueNode_Start* StartNode = nullptr;
+	TObjectPtr<UDialogueNode_Start> StartNode = nullptr;
 
 	UPROPERTY()
-	TArray<UDialogueNode*> AllNodes;
+	TArray<TObjectPtr<UDialogueNode>> AllNodes;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dialogue")
 	bool bEdgeEnabled;
@@ -58,7 +57,7 @@ public:
 
 #if WITH_EDITORONLY_DATA
 	UPROPERTY()
-	class UEdGraph* EdGraph;
+	TObjectPtr<class UEdGraph> EdGraph;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Dialogue_Editor")
 	bool bCanRenameNode;
@@ -77,10 +76,10 @@ public:
 #if WITH_EDITORONLY_DATA
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue", meta = (RequiredAssetDataTags = "RowStructure=/Script/DialogueRuntime.DialogueLocalization"))
-	UDataTable* DialoguerNameTable;
+	TObjectPtr<UDataTable> DialoguerNameTable;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue", meta = (RequiredAssetDataTags = "RowStructure=/Script/DialogueRuntime.DialogueLocalization"))
-	UDataTable* DialogueStringTable;
+	TObjectPtr<UDataTable> DialogueStringTable;
 
 	UPROPERTY(EditAnywhere, Category = "DialogueEditor")
 	EDialogueLanguage PreviewLanguage;

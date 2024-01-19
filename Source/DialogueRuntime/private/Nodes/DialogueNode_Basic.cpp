@@ -5,7 +5,6 @@
 #include "DialogueRuntime.h"
 #include "DialogueSession.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "DialogueStructs.h"
 #include "DialogueBFL.h"
 #include "DialogueManager.h"
 #include "Kismet/KismetInternationalizationLibrary.h"

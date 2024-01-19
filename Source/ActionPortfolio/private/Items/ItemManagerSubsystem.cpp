@@ -9,7 +9,7 @@
 #include "Items/DropItemPoolWorldSubsystem.h"
 #include "ActionPortfolioInstance.h"
 
-UItemManagerSubsystem* UItemManagerSubsystem::ManagerInstance = nullptr;
+TObjectPtr<UItemManagerSubsystem> UItemManagerSubsystem::ManagerInstance = nullptr;
 
 UItemManagerSubsystem::UItemManagerSubsystem()
 {
@@ -133,7 +133,7 @@ void UItemManagerSubsystem::SetDropItemPoolSize(int NewSize)
 {
 	DropItemPoolSize = NewSize;
 
-	if (DropItemPool)
+	if (DropItemPool.IsValid())
 	{
 		DropItemPool->SetDropItemPoolSize(NewSize);
 	}

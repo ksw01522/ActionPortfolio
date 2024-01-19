@@ -7,7 +7,6 @@
 #include "DialogueManager.h"
 #include "DialogueSession.h"
 #include "DialoguerComponent.h"
-#include "DialogueStructs.h"
 
 
 //Events

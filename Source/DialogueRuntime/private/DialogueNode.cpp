@@ -5,7 +5,6 @@
 #include "Events/DialogueEvent.h"
 #include "DialogueSession.h"
 #include "DialogueRuntime.h"
-#include "DialogueStructs.h"
 #include "DialogueManager.h"
 #include "DialogueEdge.h"
 #include "Engine/CompositeDataTable.h"
@@ -56,7 +55,7 @@ const UDialogueNode* UDialogueNode::GetNextDialogueNode(FNextDialogueNodeOptiona
 {
 	const UDialogueNode* NextNode = nullptr;
 
-	for (const auto* Child : ChildrenNodes)
+	for (const auto Child : ChildrenNodes)
 	{
 		const UDialogueEdge* Edge = GetEdge(Child);
 		if (Edge->CanEnterNextNode()) {

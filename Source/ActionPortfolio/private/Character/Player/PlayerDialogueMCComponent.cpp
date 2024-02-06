@@ -35,7 +35,7 @@ void UPlayerDialogueMCComponent::OnSuccedEnterNextNode(FDialogueElementContainer
 
 	AnswersBox.Pin()->SetVisibility(EVisibility::Collapsed);
 
-	float TextAnimTime = UActionPortfolioInstance::ActionPFInstance->GetDialogueAnimTime();
+	float TextAnimTime = UActionPortfolioInstance::GetActionPFInstance()->GetDialogueAnimTime();
 
 	switch (Container.ContainerType)
 	{

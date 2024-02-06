@@ -20,10 +20,6 @@ public:
 private:
 	static TSharedPtr<FSlateStyleSet> StyleSet;
 
-	static void Initialize_InventoryWidget();
-	static void Initialize_DialogueWidget();
-	static void Initialize_InteractionWidget();
-
 public:
 	static FSlateStyleSet* Get();
 };

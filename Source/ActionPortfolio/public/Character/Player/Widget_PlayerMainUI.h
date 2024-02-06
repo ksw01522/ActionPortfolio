@@ -40,5 +40,4 @@ public:
 	virtual void LinkASC();
 
 	void UpdateInventorySlot(EItemType InventoryType, int idx, TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount);
-
 };

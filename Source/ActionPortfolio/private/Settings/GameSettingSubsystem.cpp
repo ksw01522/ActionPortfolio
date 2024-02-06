@@ -8,6 +8,12 @@
 #include "DialogueManager.h"
 #include "DialogueBFL.h"
 #include "Kismet/KismetInternationalizationLibrary.h"
+#include "InputMappingContext.h"
+#include "EnhancedInputLibrary.h"
+#include "ActionPortfolioInstance.h"
+
+#include "EnhancedInputLibrary.h"
+#include "EnhancedInputModule.h"
 
 #define LOCTEXT_NAMESPACE "ActionPFSettings"
 
@@ -82,6 +88,8 @@ void UGameSettingSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	}
 
 	UserSettings->ApplySettings(false);
+
+
 	SaveConfig();
 }
 
@@ -438,5 +446,8 @@ float UGameSettingSubsystem::GetBrightness() const
 	URendererSettings* RendererSettings = GetMutableDefault<URendererSettings>();
 	return 25 * RendererSettings->DefaultFeatureAutoExposureBias;
 }
+
+
+
 
 #undef LOCTEXT_NAMESPACE

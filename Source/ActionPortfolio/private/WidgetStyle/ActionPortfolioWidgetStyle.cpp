@@ -29,13 +29,115 @@ void FActionPortfolioWidgetStyle::Initialize()
 #endif
 	if (StyleSet.IsValid()) { return; }
 	StyleSet = MakeShareable(new FSlateStyleSet("ActionPFWidgetStyleSet"));
-	StyleSet->SetContentRoot(FPaths::ProjectDir() / TEXT("Content/WidgetStyle"));
+	StyleSet->SetContentRoot(FPaths::ProjectDir() + TEXT("Content/WidgetStyle"));
 
-	Initialize_DialogueWidget();
+	//Initialize Dialogue Widget
+	{
+		//Text Size
+		const float TextSize_Small = 18;
+		const float TextSize_Normal = 24;
+		const float TextSize_Big = 30;
 
-	Initialize_InteractionWidget();
+		StyleSet->Set(ActionPFStyle::DefaultTextSize::Small, TextSize_Small);
+		StyleSet->Set(ActionPFStyle::DefaultTextSize::Normal, TextSize_Normal);
+		StyleSet->Set(ActionPFStyle::DefaultTextSize::Big, TextSize_Big);
 
-	Initialize_InventoryWidget();
+
+		//Dialogue Box Style	
+		FSlateFontInfo DialogueDefaultFont(TTF_FONT("NPCInteract/Font/Default", 28));
+		FLinearColor DialogueDefaultColor(1, 0.6f, 0, 1);
+
+		FTextBlockStyle DialogueDefaultTextStyle;
+		DialogueDefaultTextStyle.SetFont(DialogueDefaultFont);
+		DialogueDefaultTextStyle.SetColorAndOpacity(FSlateColor(DialogueDefaultColor));
+		DialogueDefaultTextStyle.SetFontSize(TextSize_Normal);
+
+		StyleSet->Set(DialogueStyle::TextStyle::Default, DialogueDefaultTextStyle);
+
+		FSlateBoxBrush* DialogueBoxBrush = new BOX_BRUSH("NPCInteract/BorderDefault", FMargin(0.05f), FSlateColor(FLinearColor(1, 1, 1)));
+
+		StyleSet->Set(DialogueStyle::BlockStyle::Default, DialogueBoxBrush);
+
+		//대답 버튼 스타일
+		FSlateBoxBrush AnswerBTNStyle_Normal = *DialogueBoxBrush;
+		FSlateBoxBrush AnswerBTNStyle_Horvered = *DialogueBoxBrush;
+		AnswerBTNStyle_Horvered.TintColor = FSlateColor(FLinearColor(0.75f, 0.75f, 0.75f));
+
+		FSlateBoxBrush AnswerBTNStyle_Pressed = *DialogueBoxBrush;
+		AnswerBTNStyle_Pressed.TintColor = FSlateColor(FLinearColor(0.4f, 0.4f, 0.4f));
+
+		const FButtonStyle AnswerBTNStyle = FButtonStyle()
+			.SetNormal(AnswerBTNStyle_Normal)
+			.SetHovered(AnswerBTNStyle_Horvered)
+			.SetPressed(AnswerBTNStyle_Pressed)
+			.SetNormalPadding(FMargin(2, 2, 2, 2))
+			.SetPressedPadding(FMargin(2, 3, 2, 1));
+
+		StyleSet->Set(DialogueStyle::ButtonStyle::AnswerButton, AnswerBTNStyle);
+	}
+
+	//Initialize Interaction Widget
+	{
+		//Button Style
+		FSlateBoxBrush DefaultBTNStyle_Normal = BOX_BRUSH("NPCInteract/Normal", FVector2D(32, 32), 8.0f / 32.0f);
+
+		FSlateBoxBrush DefaultBTNStyle_Hovered = BOX_BRUSH("NPCInteract/Hovered", FVector2D(32, 32), 8.0f / 32.0f);
+
+		FSlateBoxBrush DefaultBTNStyle_Pressed = BOX_BRUSH("NPCInteract/Pressed", FVector2D(32, 32), 8.0f / 32.0f);
+
+		//기본 버튼 스타일
+		const FButtonStyle DefaultBTNStyle = FButtonStyle()
+			.SetNormal(DefaultBTNStyle_Normal)
+			.SetHovered(DefaultBTNStyle_Hovered)
+			.SetPressed(DefaultBTNStyle_Pressed)
+			.SetNormalPadding(FMargin(2, 2, 2, 2))
+			.SetPressedPadding(FMargin(2, 3, 2, 1));
+
+		StyleSet->Set(ActionPFStyle::ButtonStyle::Default, DefaultBTNStyle);
+	}
+
+	//Initialize Inventory Widget
+	{
+		//Inventory 관련 초기화
+		FVector2D InventorySlotSize(64, 64);
+
+		//Slot Item Grade Frame
+		{
+			FSlateImageBrush* InventorySlotBrush = new IMAGE_BRUSH("Inventory/InventorySlot", InventorySlotSize);
+			StyleSet->Set(InventoryStyle::SlotBackground, InventorySlotBrush);
+
+			FSlateImageBrush* CommonFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Common", InventorySlotSize);
+			StyleSet->Set(InventoryStyle::SlotFrameGrade::Common, CommonFrameBrush);
+
+			FSlateImageBrush* UncommonFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Uncommon", InventorySlotSize);
+			StyleSet->Set(InventoryStyle::SlotFrameGrade::Uncommon, UncommonFrameBrush);
+
+			FSlateImageBrush* RareFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Rare", InventorySlotSize);
+			StyleSet->Set(InventoryStyle::SlotFrameGrade::Rare, RareFrameBrush);
+
+			FSlateImageBrush* UniqueFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Unique", InventorySlotSize);
+			StyleSet->Set(InventoryStyle::SlotFrameGrade::Unique, UniqueFrameBrush);
+
+			FSlateImageBrush* LegendaryFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Legendary", InventorySlotSize);
+			StyleSet->Set(InventoryStyle::SlotFrameGrade::Legendary, LegendaryFrameBrush);
+
+			FSlateImageBrush* EpicFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Epic", InventorySlotSize);
+			StyleSet->Set(InventoryStyle::SlotFrameGrade::Epic, EpicFrameBrush);
+		}
+
+		//인벤토리 슬롯 아이템 카운트 텍스트 블록
+		{
+			FSlateFontInfo CountTextBlockFont(TTF_FONT("NPCInteract/Font/Default", 12));
+			FLinearColor CountTextBlockColor(0.7f, 0.4f, 0, 1);
+
+			FTextBlockStyle CountTextBlockStyle;
+			CountTextBlockStyle.SetFont(CountTextBlockFont);
+			CountTextBlockStyle.SetColorAndOpacity(CountTextBlockColor);
+			CountTextBlockStyle.SetShadowOffset(FVector2D(0.1f, 0.1f));
+
+			StyleSet->Set(InventoryStyle::CountTextStyle, CountTextBlockStyle);
+		}
+	}
 
 	FSlateStyleRegistry::RegisterSlateStyle(*StyleSet.Get());
 }
@@ -55,123 +157,8 @@ const FName& FActionPortfolioWidgetStyle::GetStyleSetName()
 	return StyleSet->GetStyleSetName();
 }
 
-void FActionPortfolioWidgetStyle::Initialize_InventoryWidget()
-{
-	//Inventory 관련 초기화
-	FVector2D InventorySlotSize(64, 64);
-	
-	//Slot Item Grade Frame
-	{
-		FSlateImageBrush* InventorySlotBrush = new IMAGE_BRUSH("Inventory/InventorySlot", InventorySlotSize);
-		StyleSet->Set(InventoryStyle::SlotBackground, InventorySlotBrush);
-
-		FSlateImageBrush* CommonFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Common", InventorySlotSize);
-		StyleSet->Set(InventoryStyle::SlotFrameGrade::Common, CommonFrameBrush);
-
-		FSlateImageBrush* UncommonFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Uncommon", InventorySlotSize);
-		StyleSet->Set(InventoryStyle::SlotFrameGrade::Uncommon, UncommonFrameBrush);
-
-		FSlateImageBrush* RareFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Rare", InventorySlotSize);
-		StyleSet->Set(InventoryStyle::SlotFrameGrade::Rare, RareFrameBrush);
-
-		FSlateImageBrush* UniqueFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Unique", InventorySlotSize);
-		StyleSet->Set(InventoryStyle::SlotFrameGrade::Unique, UniqueFrameBrush);
-
-		FSlateImageBrush* LegendaryFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Legendary", InventorySlotSize);
-		StyleSet->Set(InventoryStyle::SlotFrameGrade::Legendary, LegendaryFrameBrush);
-
-		FSlateImageBrush* EpicFrameBrush = new IMAGE_BRUSH("Inventory/ItemFrame/Epic", InventorySlotSize);
-		StyleSet->Set(InventoryStyle::SlotFrameGrade::Epic, EpicFrameBrush);
-	}
-
-	//인벤토리 슬롯 아이템 카운트 텍스트 블록
-	{
-		FSlateFontInfo CountTextBlockFont(TTF_FONT("NPCInteract/Font/Default", 12));
-		FLinearColor CountTextBlockColor(0.7f, 0.4f, 0, 1);
-
-		FTextBlockStyle CountTextBlockStyle;
-		CountTextBlockStyle.SetFont(CountTextBlockFont);
-		CountTextBlockStyle.SetColorAndOpacity(CountTextBlockColor);
-		CountTextBlockStyle.SetShadowOffset(FVector2D(0.1f,0.1f));
-
-		StyleSet->Set(InventoryStyle::CountTextStyle, CountTextBlockStyle);
-	}
-}
-
-void FActionPortfolioWidgetStyle::Initialize_DialogueWidget()
-{
-	//Text Size
-	const float TextSize_Small = 18;
-	const float TextSize_Normal = 24;
-	const float TextSize_Big = 30;
-
-	StyleSet->Set(ActionPFStyle::DefaultTextSize::Small, TextSize_Small);
-	StyleSet->Set(ActionPFStyle::DefaultTextSize::Normal, TextSize_Normal);
-	StyleSet->Set(ActionPFStyle::DefaultTextSize::Big, TextSize_Big);
-
-
-	//Dialogue Box Style	
-	FSlateFontInfo DialogueDefaultFont(TTF_FONT("NPCInteract/Font/Default", 28));
-	FLinearColor DialogueDefaultColor(1, 0.6f, 0, 1);
-
-	FTextBlockStyle DialogueDefaultTextStyle;
-	DialogueDefaultTextStyle.SetFont(DialogueDefaultFont);
-	DialogueDefaultTextStyle.SetColorAndOpacity(FSlateColor(DialogueDefaultColor));
-	DialogueDefaultTextStyle.SetFontSize(TextSize_Normal);
-
-	StyleSet->Set(DialogueStyle::TextStyle::Default, DialogueDefaultTextStyle);
-
-	FSlateBoxBrush* DialogueBoxBrush = new BOX_BRUSH("NPCInteract/BorderDefault", FMargin(0.05f), FSlateColor(FLinearColor(1, 1, 1)));
-
-	StyleSet->Set(DialogueStyle::BlockStyle::Default, DialogueBoxBrush);
-
-	//대답 버튼 스타일
-	FSlateBoxBrush AnswerBTNStyle_Normal = *DialogueBoxBrush;
-	FSlateBoxBrush AnswerBTNStyle_Horvered = *DialogueBoxBrush;
-	AnswerBTNStyle_Horvered.TintColor = FSlateColor(FLinearColor(0.75f, 0.75f, 0.75f));
-
-	FSlateBoxBrush AnswerBTNStyle_Pressed = *DialogueBoxBrush;
-	AnswerBTNStyle_Pressed.TintColor = FSlateColor(FLinearColor(0.4f, 0.4f, 0.4f));
-
-	const FButtonStyle AnswerBTNStyle = FButtonStyle()
-		.SetNormal(AnswerBTNStyle_Normal)
-		.SetHovered(AnswerBTNStyle_Horvered)
-		.SetPressed(AnswerBTNStyle_Pressed)
-		.SetNormalPadding(FMargin(2, 2, 2, 2))
-		.SetPressedPadding(FMargin(2, 3, 2, 1));
-
-	StyleSet->Set(DialogueStyle::ButtonStyle::AnswerButton, AnswerBTNStyle);
-}
-
-void FActionPortfolioWidgetStyle::Initialize_InteractionWidget()
-{
-	//Button Style
-	FSlateBoxBrush DefaultBTNStyle_Normal = BOX_BRUSH("NPCInteract/Normal", FVector2D(32, 32), 8.0f / 32.0f);
-
-	FSlateBoxBrush DefaultBTNStyle_Hovered = BOX_BRUSH("NPCInteract/Hovered", FVector2D(32, 32), 8.0f / 32.0f);
-
-	FSlateBoxBrush DefaultBTNStyle_Pressed = BOX_BRUSH("NPCInteract/Pressed", FVector2D(32, 32), 8.0f / 32.0f);
-
-	//기본 버튼 스타일
-	const FButtonStyle DefaultBTNStyle = FButtonStyle()
-		.SetNormal(DefaultBTNStyle_Normal)
-		.SetHovered(DefaultBTNStyle_Hovered)
-		.SetPressed(DefaultBTNStyle_Pressed)
-		.SetNormalPadding(FMargin(2, 2, 2, 2))
-		.SetPressedPadding(FMargin(2, 3, 2, 1));
-
-	StyleSet->Set(ActionPFStyle::ButtonStyle::Default, DefaultBTNStyle);
-}
-
 FSlateStyleSet* FActionPortfolioWidgetStyle::Get()
 {
-#if WITH_EDITOR
-	if (!StyleSet.IsValid())
-	{
-		Initialize();
-	}
-#endif
-
 	return StyleSet.Get();
 }
 

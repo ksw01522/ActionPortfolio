@@ -30,9 +30,6 @@ private:
 	
 #endif
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
-	FMargin WindowPadding;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot|Background", meta = (AllowPrivateAccess = "true"))
 	TSoftObjectPtr<UMaterialInterface> SlotBackgroundMaterial_Equip;
 
@@ -42,11 +39,14 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot|Background", meta = (AllowPrivateAccess = "true"))
 	TSoftObjectPtr<UMaterialInterface> SlotBackgroundMaterial_Mat;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot", meta = (AllowPrivateAccess = "true", ClampMin = 1))
+	int SlotCountByRow;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot", meta = (AllowPrivateAccess = "true"))
 	FVector2D SlotSize;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot", meta = (AllowPrivateAccess = "true"))
-	FVector2D InnerSlotPadding;
+	FMargin SlotPadding;
 
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
@@ -66,5 +66,5 @@ protected:
 
 public:
 	void UpdateSlotWidget(EItemType InventoryType, int idx, TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount);
-
+	void SetSlotCountByRow(int NewCount);
 };

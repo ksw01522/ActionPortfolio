@@ -8,7 +8,7 @@ public class ActionPortfolio : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay", "EnhancedInput", "DialogueRuntime", "GameplayTasks", "GameplayTags", "WorldCustomEventRuntime" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay", "EnhancedInput", "DialogueRuntime", "GameplayTasks", "GameplayTags", "WorldCustomEventRuntime", "CustomInputSettingRuntime" });
 		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "UMG", "RenderCore" });
 	}
 }

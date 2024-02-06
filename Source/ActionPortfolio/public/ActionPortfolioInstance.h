@@ -35,8 +35,10 @@ class ACTIONPORTFOLIO_API UActionPortfolioInstance : public UGameInstance
 	
 public:
 	UActionPortfolioInstance();
-
-	static UActionPortfolioInstance* ActionPFInstance;
+private:
+	static TObjectPtr<UActionPortfolioInstance> ActionPFInstance;
+public:
+	static UActionPortfolioInstance* GetActionPFInstance();
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ActionPF|Widget", meta = (AllowPrivateAccess = "true"))
@@ -59,6 +61,7 @@ public:
 
 ///////////////////////////////////// Item Manager ///////////////////////////////
 private:
+
 	UPROPERTY(EditDefaultsOnly, Category = "ItemManager", meta = (RequiredAssetDataTags = "RowStructure=/Script/ActionPortfolio.ItemData_Equipment"))
 	TSoftObjectPtr<UDataTable> ItemDataTable_Equipment;
 
@@ -94,4 +97,6 @@ public:
 	float GetBounceHeight() const {return BounceHeight;}
 	TSoftObjectPtr<UCurveFloat> GetDefaultDIMagnetizedCurve() const {return DefaultDIMagnetizedCurve;}
 	int GetInventorySize() const { return InventorySize; }
+
+
 };

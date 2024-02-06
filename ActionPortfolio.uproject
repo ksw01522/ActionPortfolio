@@ -11,13 +11,30 @@
 			"AdditionalDependencies": [
 				"DialogueRuntime",
 				"WorldCustomEventRuntime",
+				"CustomInputSettingRuntime",
 				"Engine",
 				"CoreUObject",
 				"GameplayAbilities",
 				"AIModule",
 				"UMG",
 				"Slate",
-				"SlateCore"
+				"SlateCore",
+				"EnhancedInput",
+				"DeveloperSettings"
+			]
+		},
+		{
+			"Name": "CustomInputSettingRuntime",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"CoreUObject",
+				"Engine",
+				"EnhancedInput",
+				"DeveloperSettings",
+				"Slate",
+				"SlateCore",
+				"UMG"
 			]
 		},
 		{

@@ -7,7 +7,9 @@
 #include "Items/ItemManagerSubsystem.h"
 #include "Items/ItemBase.h"
 
-UInventoryWidget::UInventoryWidget()
+UInventoryWidget::UInventoryWidget() : 
+                    Preview_InventorySize(64), SlotCountByRow(8), SlotSize(32, 32),
+                    SlotPadding(2)
 {}
 
 TSharedRef<SWidget> UInventoryWidget::RebuildWidget()
@@ -20,7 +22,6 @@ TSharedRef<SWidget> UInventoryWidget::RebuildWidget()
 void UInventoryWidget::ReleaseSlateResources(bool bReleaseChildren)
 {
     Super::ReleaseSlateResources(bReleaseChildren);
-
     InventorySlate.Reset();
 }
 
@@ -28,21 +29,26 @@ void UInventoryWidget::SynchronizeProperties()
 {
     Super::SynchronizeProperties();
 
+
     if (InventorySlate.IsValid())
     {
+#if WITH_EDITOR
+    PFLOG(Warning, TEXT("SynchronizeProperties"));
+#endif
         UItemManagerSubsystem* ManagerInstance = UItemManagerSubsystem::GetManagerInstance();
-        int InventorySize = 0;
+        int InventorySize = 1;
 
-        InventorySlate->SetInnerSlotPadding(InnerSlotPadding);
-
-        InventorySlate->SetWindowPadding(WindowPadding);
+        InventorySlate->SetSlotPadding(SlotPadding);
+        InventorySlate->SetSlotSize(SlotSize);
 
         InventorySlate->SetSlotBackgroundImage(EItemType::Equipment , SlotBackgroundMaterial_Equip);
         InventorySlate->SetSlotBackgroundImage(EItemType::Consumption , SlotBackgroundMaterial_Consum);
         InventorySlate->SetSlotBackgroundImage(EItemType::Material , SlotBackgroundMaterial_Mat);
+        InventorySlate->SetSlotCountByRow(SlotCountByRow);
+
 
 #if WITH_EDITOR
-        if (ManagerInstance)
+        if (ManagerInstance != nullptr)
         {
             InventorySize = ManagerInstance->GetInventorySize();
         }
@@ -87,5 +93,15 @@ void UInventoryWidget::UpdateSlotWidget(EItemType InventoryType, int idx, TSoftO
     if (InventorySlate.IsValid())
     {
         InventorySlate->UpdateSlotWidget(InventoryType, idx, NewImage, ItemGrade, NewCount);
+    }
+}
+
+void UInventoryWidget::SetSlotCountByRow(int NewCount)
+{
+    if(SlotCountByRow == NewCount) return;
+    SlotCountByRow = NewCount;
+    if (InventorySlate.IsValid())
+    {
+        InventorySlate->SetSlotCountByRow(NewCount);
     }
 }

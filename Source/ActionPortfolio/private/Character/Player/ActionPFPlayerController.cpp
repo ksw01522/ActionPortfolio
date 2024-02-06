@@ -30,12 +30,20 @@
 #include "Items/ItemManagerSubsystem.h"
 #include "Character/CharacterStatusComponent.h"
 
+#include "CustomInputHelper.h"
+#include "InputMappingContext.h"
+#include "CustomInputSettingSubsystem.h"
+#include "Widget/CustomInputSettingWidget.h"
+
 AActionPFPlayerController::AActionPFPlayerController()
 {
 	PlayerDialogueMC = CreateDefaultSubobject<UPlayerDialogueMCComponent>("PlayerDialogueMC");
 
 	Inventory = CreateDefaultSubobject<UInventoryComponent>("PlayerInventory");
 
+	bRegisteredInteractMapping = false;
+	bCanInteract = true;
+	interactMappingPriority = 1;
 
 #if WITH_EDITOR
 	bDrawTraceInteractionLine = true;
@@ -87,17 +95,14 @@ void AActionPFPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
-	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent)) {
+	if (UEnhancedInputComponent* EnhancedInput = CastChecked<UEnhancedInputComponent>(InputComponent)) {
 		
-		EnhancedInputComponent->BindAction(OpenMenuAction, ETriggerEvent::Started, this, &AActionPFPlayerController::OpenMenu);
-		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AActionPFPlayerController::InteractFocusedInteraction);
-	
-		
+		EnhancedInput->BindAction(OpenMenuAction, ETriggerEvent::Started, this, &AActionPFPlayerController::OpenMenu);
+		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &AActionPFPlayerController::InteractFocusedInteraction);
 
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(ControllerMappingContext, 0);
-		}
+		UCustomInputSettingSubsystem::GetInstance()->RegisterAffectedController(this);
+
+		GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>()->AddPlayerMappableConfig(ControllerInput);
 	}
 }
 
@@ -126,7 +131,9 @@ void AActionPFPlayerController::BeginPlay()
 	ChangeGameInputMode();
 	if (!PlayerMainSlate.IsValid()) { CreatePlayerSlates(); }
 
-	
+
+	SetInputMode(FInputModeGameAndUI());
+	SetShowMouseCursor(true);
 }
 
 
@@ -180,7 +187,7 @@ void AActionPFPlayerController::CreatePlayerSlates()
 
 	SButton* ExitNPCInteractBTN = static_cast<SButton*>(&NPCInteractBTNBox.Pin()->GetSlot(0).GetWidget().Get());
 
-	ExitNPCInteractBTN->SetOnClicked(TBaseDelegate<FReply>::CreateUObject(this, &AActionPFPlayerController::OnClickExitInteractNPC));
+	ExitNPCInteractBTN->SetOnClicked(TDelegate<FReply()>::CreateUObject(this, &AActionPFPlayerController::OnClickExitInteractNPC));
 
 	GEngine->GameViewport->AddViewportWidgetContent(PlayerMainSlate.ToSharedRef());
 }
@@ -285,6 +292,22 @@ void AActionPFPlayerController::DisplayMainSlate()
 	}
 }
 
+void AActionPFPlayerController::SetCanInteract(bool NewState)
+{
+	if(bCanInteract == NewState) return;
+
+	bCanInteract = NewState;
+
+	if (bCanInteract)
+	{
+		
+	}
+	else
+	{
+		UnregisterInteractMapping();
+	}
+}
+
 void AActionPFPlayerController::TraceInteractions()
 {
 	APawn* PlayerPawn = GetPawn();
@@ -316,84 +339,169 @@ void AActionPFPlayerController::TraceInteractions()
 	for (const auto& HitResult : HitResults)
 	{
 		AActor* TracedActor = HitResult.GetActor();
+		if(!IsValid(TracedActor)) continue;
 
-		TArray<UActorComponent*> TempComponents = TracedActor->GetComponentsByClass(UInteractionSystemComponent::StaticClass());
+		TArray<UInteractionSystemComponent*> TempComponents;
+		TracedActor->GetComponents<UInteractionSystemComponent>(TempComponents);
 		for (const auto& TempComponent : TempComponents)
 		{
-			UInteractionSystemComponent* TempInteraction = Cast<UInteractionSystemComponent>(TempComponent);
-			if(TempInteraction) CurrentTracedInteractions.AddUnique(TempInteraction);
+			CurrentTracedInteractions.AddUnique(TempComponent);
 		}
 	}
 	
-	//기존에 트레이스에 걸린 상호작용이 벗어나면 목록에서 삭제
+	//기존에 이미 주목하고있는 상호작용 체크
+	if(CurrentTracedInteractions.Contains(FocusedInteraction.Get())) { CurrentTracedInteractions.Remove(FocusedInteraction.Get()); }
+	else if (FocusedInteraction.IsValid()) 
+	{ 
+		FocusedInteraction->OnFocusedOff();
+		FocusedInteraction.Reset(); 		
+	}
+
+	
 	int PrevInteractionsNum = PrevTracedInteractions.Num();
 	for (int i = 0; i < PrevInteractionsNum; i++)
 	{
-		if (CurrentTracedInteractions.Contains(PrevTracedInteractions[i])) continue;
-
-		PrevTracedInteractions.RemoveAt(i);
-		--i;
-		--PrevInteractionsNum;
+		if (CurrentTracedInteractions.Contains(PrevTracedInteractions[i].Get()))
+		{
+			CurrentTracedInteractions.Remove(PrevTracedInteractions[i].Get());
+		}
+		else
+		{
+			PrevTracedInteractions.RemoveAt(i);
+			--i;
+			--PrevInteractionsNum;
+		}
 	}
 
-	//이번에 트레이스에 걸린 상호작용들을 AddUnique로 중복적용을 피하며 등록
-	for (auto& NewInteraction : CurrentTracedInteractions)
+	PrevTracedInteractions.Append(CurrentTracedInteractions);
+
+	if (!CheckFocusedInteraction())
 	{
-		PrevTracedInteractions.AddUnique(NewInteraction);
+		FocusNextInteraction();
 	}
 
-	//새로이 Focus가 될 상호작용이 있는지 체크
-	CheckFocusInteraction();
+	if (!FocusedInteraction.IsValid() && PrevTracedInteractions.IsEmpty())
+	{
+		UnregisterInteractMapping();
+	}
 }
 
-void AActionPFPlayerController::CheckValidInteraction()
+void AActionPFPlayerController::AddInteraction(UInteractionSystemComponent* NewInteraction)
 {
-	int Length = PrevTracedInteractions.Num();
-	for (int i = 0; i < Length; i++)
+	//상호작용이 유효한가 체크
+	if(NewInteraction == nullptr || !IsValid(NewInteraction)) return;
+	
+	//상호작용이 이미 등록되어 있는가 체크
+	if (NewInteraction == FocusedInteraction.Get() || PrevTracedInteractions.Find(NewInteraction) != INDEX_NONE) return;
+
+	//주목하고 있는 상호작용이 없다면 바로 주목하기
+	if (!FocusedInteraction.IsValid())
 	{
-		if (PrevTracedInteractions[i].IsValid()) continue;
-		
-		PrevTracedInteractions.RemoveAt(i);
-		--i;
-		--Length;
+		FocusInteraction(NewInteraction);
+	}
+	else //없다면 그냥 배열에 넣기
+	{
+		PrevTracedInteractions.Add(NewInteraction);
 	}
 }
 
-void AActionPFPlayerController::CheckFocusInteraction()
+void AActionPFPlayerController::RemoveInteraction(UInteractionSystemComponent* NewInteraction)
 {
-	UInteractionSystemComponent* NewFocusInteraction = nullptr;
-	if(!PrevTracedInteractions.IsEmpty()) NewFocusInteraction = PrevTracedInteractions[0].Get();
-	if(FocusInteraction == NewFocusInteraction) return;
+	//상호작용이 유효한가 체크
+	if (NewInteraction == nullptr || !IsValid(NewInteraction)) return;
 
-	if (FocusInteraction.IsValid())
+	if (NewInteraction == FocusedInteraction)
 	{
-		FocusInteraction->OnFocusedOff();
+		FocusedInteraction.Reset();
+		return;
 	}
 
-	FocusInteraction = NewFocusInteraction;
-	if(FocusInteraction.IsValid()) FocusInteraction->OnFocusedOn();
+	PrevTracedInteractions.Remove(NewInteraction);
 }
+
+void AActionPFPlayerController::FocusInteraction(UInteractionSystemComponent* NewInteraction)
+{
+	//상호작용이 유효한가 체크
+	if (NewInteraction == nullptr || !IsValid(NewInteraction)) return;
+
+	if (FocusedInteraction.IsValid())
+	{
+		FocusedInteraction->OnFocusedOff();
+		PrevTracedInteractions.Add(FocusedInteraction);
+	}
+	else
+	{
+		RegisterInteractMapping();
+	}
+
+	FocusedInteraction = NewInteraction;
+	FocusedInteraction->OnFocusedOn();
+}
+
+void AActionPFPlayerController::FocusNextInteraction()
+{
+	if(PrevTracedInteractions.IsEmpty()) return;
+
+	int PrevTracedNum = PrevTracedInteractions.Num();
+	for (int i = 0; i < PrevTracedNum; i++)
+	{
+		if (!PrevTracedInteractions[i].IsValid())
+		{
+			PrevTracedInteractions.RemoveAt(i);
+			--i;
+			--PrevTracedNum;
+			continue;
+		}
+
+		if (PrevTracedInteractions[i]->IsEnableInteract())
+		{
+			FocusInteraction(PrevTracedInteractions[i].Get());
+			PrevTracedInteractions.RemoveAt(i);
+			break;
+		}
+	}
+}
+
+bool AActionPFPlayerController::CheckFocusedInteraction()
+{
+	return FocusedInteraction.IsValid() && FocusedInteraction->IsEnableInteract();
+}
+
+
 
 void AActionPFPlayerController::InteractFocusedInteraction()
 {
 #if WITH_EDITOR
 	PFLOG(Warning, TEXT("Try Interact FocusedInteraction"));
 #endif
-	if(!FocusInteraction.IsValid()) return;
+	if(!FocusedInteraction.IsValid()) return;
 #if WITH_EDITOR
 	PFLOG(Warning, TEXT("Call Interact FocusedInteraction"));
 #endif
 
-	FocusInteraction->Interact(GetPawn());
+	FocusedInteraction->Interact(GetPawn());
 }
 
 void AActionPFPlayerController::ClearForInteraction()
 {
 	if (!PrevTracedInteractions.IsEmpty()) PrevTracedInteractions.Empty();
-	if (FocusInteraction.IsValid()) {
-		FocusInteraction->OnFocusedOff();
-		FocusInteraction.Reset();
+	if (FocusedInteraction.IsValid()) {
+		FocusedInteraction->OnFocusedOff();
+		FocusedInteraction.Reset();
 	}
+}
+
+void AActionPFPlayerController::RegisterInteractMapping()
+{
+	if(bRegisteredInteractMapping) return;
+	UCustomInputHelper::AddInputMapping(this, InteractMapping, interactMappingPriority);
+	bRegisteredInteractMapping = true;
+}
+
+void AActionPFPlayerController::UnregisterInteractMapping()
+{
+	if(!bRegisteredInteractMapping) return;
+	UCustomInputHelper::RemoveInputMapping(this, InteractMapping);
 }
 
 
@@ -559,10 +667,12 @@ bool AActionPFPlayerController::TryUnequipItem(APlayerCharacter* Target, EEquipm
 	return Target->UnequipItem(Target->GetEquipment(Part));
 }
 
+
 void AActionPFPlayerController::UpdateInventoryWidget(EItemType InventoryType, int Idx)
 {
 	FInventorySlot* InventorySlot = Inventory->GetInventorySlot(InventoryType, Idx);
-	if (InventorySlot == nullptr) {
+	if (InventorySlot == nullptr)
+	{
 		ensureMsgf(false, TEXT("Can't find Inventory Slot."));
 		return;
 	}

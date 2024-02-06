@@ -72,3 +72,4 @@ void UWidget_PlayerMainUI::UpdateInventorySlot(EItemType InventoryType, int idx,
 {
 	InventoryWidget->UpdateSlotWidget(InventoryType, idx, NewImage, ItemGrade, NewCount);
 }
+

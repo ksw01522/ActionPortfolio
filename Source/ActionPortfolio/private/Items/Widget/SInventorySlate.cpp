@@ -23,10 +23,24 @@
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Layout/SWrapBox.h"
 #include "Widgets/Layout/SScrollBox.h"
+#include "Widgets/Layout/SUniformGridPanel.h"
+
+#include "Types/NavigationMetaData.h"
+
+SLATE_IMPLEMENT_WIDGET(SInventorySlot)
+void SInventorySlot::PrivateRegisterAttributes(FSlateAttributeInitializer& AttributeInitializer)
+{
+
+
+}
 
 SInventorySlot::SInventorySlot()
 {
-	
+	SetCanTick(false);
+}
+
+SInventorySlot::~SInventorySlot()
+{
 }
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
@@ -34,51 +48,71 @@ BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SInventorySlot::Construct(const FArguments& InArgs)
 {
 	FSlateStyleSet* StyleSet = FActionPortfolioWidgetStyle::Get();
-	const FSlateBrush* SlotBackgroundBrush = InArgs._BackgroundBrush == nullptr ? InArgs._BackgroundBrush : StyleSet->GetBrush(InventoryStyle::SlotBackground);
+	const FSlateBrush* SlotBackgroundBrush = InArgs._BackgroundBrush;
 
 	SlotIdx = InArgs._SlotIdx;
 
-	SetCanTick(false);
 	IconBrush.DrawAs = ESlateBrushDrawType::Image;
 
-	const FTextBlockStyle* CountBlockStyle = &StyleSet->GetWidgetStyle<FTextBlockStyle>(InventoryStyle::CountTextStyle);
+#if WITH_EDITOR
+	const FTextBlockStyle* CountBlockStyle = nullptr;
 
+	if (StyleSet != nullptr)
+	{
+		CountBlockStyle = &StyleSet->GetWidgetStyle<FTextBlockStyle>(InventoryStyle::CountTextStyle);
+	}
+	else
+	{
+		FSlateFontInfo CountTextBlockFont(FPaths::ProjectContentDir() + TEXT("WidgetStyle/NPCInteract/Font/Default.ttf"), 12);
+		FLinearColor CountTextBlockColor(0.7f, 0.4f, 0, 1);
+
+		static FTextBlockStyle ForEditorCountBlockStyle;
+		ForEditorCountBlockStyle.SetFont(CountTextBlockFont);
+		ForEditorCountBlockStyle.SetColorAndOpacity(CountTextBlockColor);
+		ForEditorCountBlockStyle.SetShadowOffset(FVector2D(0.1f, 0.1f));
+		
+		CountBlockStyle = &ForEditorCountBlockStyle;
+	}
+#else
+	const FTextBlockStyle* CountBlockStyle = &StyleSet->GetWidgetStyle<FTextBlockStyle>(InventoryStyle::CountTextStyle);
+#endif
+	
 	ChildSlot
 	[
 		SNew(SOverlay)
-		+SOverlay::Slot()
-		.VAlign(VAlign_Fill)
-		.HAlign(HAlign_Fill)
-		[
-			SAssignNew(BackgroundImage, SImage)
-			.Image(SlotBackgroundBrush)
-		]
-		+SOverlay::Slot()
-		.VAlign(VAlign_Fill)
-		.HAlign(HAlign_Fill)
-		[
-			SAssignNew(IconImage, SImage)
-			.Visibility(EVisibility::Collapsed)
-			.Image(&IconBrush)
-		]
-		+ SOverlay::Slot()
-		.VAlign(VAlign_Fill)
-		.HAlign(HAlign_Fill)
-		[
-			SAssignNew(FrameImage, SImage)
-			.Visibility(EVisibility::Collapsed)
-		]
-		+ SOverlay::Slot()
-		.VAlign(VAlign_Bottom)
-		.HAlign(HAlign_Right)
-		.Padding(FMargin(0,0,5,5))
-		[
-			SAssignNew(CountBlock, STextBlock)
-			.Visibility(EVisibility::Collapsed)
-			.TextStyle(CountBlockStyle)
-		]
+			+ SOverlay::Slot()
+			.VAlign(VAlign_Fill)
+			.HAlign(HAlign_Fill)
+			[
+				SAssignNew(BackgroundImage, SImage)
+					.Visibility(EVisibility::Visible)
+					.Image(InArgs._BackgroundBrush)
+			]
+			+ SOverlay::Slot()
+			.VAlign(VAlign_Fill)
+			.HAlign(HAlign_Fill)
+			[
+				SAssignNew(IconImage, SImage)
+					.Visibility(EVisibility::Collapsed)
+					.Image(&IconBrush)
+			]
+			+ SOverlay::Slot()
+			.VAlign(VAlign_Fill)
+			.HAlign(HAlign_Fill)
+			[
+				SAssignNew(FrameImage, SImage)
+					.Visibility(EVisibility::Collapsed)
+			]
+			+ SOverlay::Slot()
+			.VAlign(VAlign_Bottom)
+			.HAlign(HAlign_Right)
+			.Padding(FMargin(0, 0, 5, 5))
+			[
+				SAssignNew(CountBlock, STextBlock)
+					.Visibility(EVisibility::Collapsed)
+					.TextStyle(CountBlockStyle)
+			]
 	];
-
 }
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
@@ -160,6 +194,101 @@ void SInventorySlot::SetIconFrame(EItemGrade ItemGrade)
 	FrameImage->SetImage(NewFrameBrush);
 }
 
+FReply SInventorySlot::OnFocusReceived(const FGeometry& MyGeometry, const FFocusEvent& InFocusEvent)
+{
+#if WITH_EDITOR
+	PFLOG(Warning, TEXT("Focus Received Inventory Slot Idx : %d"), SlotIdx);
+#endif
+
+	return FReply::Unhandled();
+}
+
+void SInventorySlot::OnFocusLost(const FFocusEvent& InFocusEvent)
+{
+#if WITH_EDITOR
+	PFLOG(Warning, TEXT("Focus Lost Inventory Slot Idx : %d"), SlotIdx);
+#endif
+
+}
+
+bool SInventorySlot::SupportsKeyboardFocus() const
+{
+	return true;
+}
+
+FReply SInventorySlot::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	return FReply::Handled();
+}
+
+FReply SInventorySlot::OnPreviewMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	return FReply::Unhandled();
+}
+
+FReply SInventorySlot::OnMouseButtonDoubleClick(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent)
+{
+	return FReply::Handled();
+}
+
+FReply SInventorySlot::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
+{
+	FReply Reply = FReply::Unhandled();
+	if(!IsEnabled())
+	{
+		Reply = SWidget::OnKeyDown(MyGeometry, InKeyEvent);
+		return MoveTemp(Reply);
+	}
+
+	FSlateApplication& SlateApp = FSlateApplication::Get();
+
+	if (SlateApp.GetNavigationActionFromKey(InKeyEvent) == EUINavigationAction::Accept)
+	{
+		if(OnAcceptEvent.IsBound()) 
+		{
+			Reply = OnAcceptEvent.Execute();
+			ensure(Reply.IsEventHandled() == true);
+		}
+		else 
+		{
+			Reply = FReply::Handled();
+		}
+	}
+	else if(SlateApp.GetNavigationActionFromKey(InKeyEvent) == EUINavigationAction::Back)
+	{
+		if (OnAcceptEvent.IsBound())
+		{
+			Reply = OnBackEvent.Execute();
+			ensure(Reply.IsEventHandled() == true);
+		}
+		else
+		{
+			Reply = FReply::Handled();
+		}
+	}
+	else 
+	{
+		Reply = SWidget::OnKeyDown(MyGeometry, InKeyEvent);
+	}
+
+	return MoveTemp(Reply);
+}
+
+void SInventorySlot::OnFocusChanging(const FWeakWidgetPath& PreviousFocusPath, const FWidgetPath& NewWidgetPath, const FFocusEvent& InFocusEvent)
+{
+	PFLOG(Warning, TEXT("%d"), PreviousFocusPath.Widgets.Num());
+}
+
+void SInventorySlot::SetAcceptEvent(const TDelegate<FReply()>& NewEvent)
+{
+	OnAcceptEvent = NewEvent;
+}
+
+void SInventorySlot::SetBackEvent(const TDelegate<FReply()>& NewEvent)
+{
+	OnBackEvent = NewEvent;
+}
+
 void SInventorySlot::UpdateSlotWidget(TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount)
 {
 #if WITH_EDITOR
@@ -201,9 +330,23 @@ void SInventorySlot::ClearInventorySlotWidget()
 
 ////////////////////////////////////////////////////// SInventoryWindow //////////////////////////////////////
 
-SInventoryWindow::SInventoryWindow()
+SLATE_IMPLEMENT_WIDGET(SInventoryWindow)
+void SInventoryWindow::PrivateRegisterAttributes(FSlateAttributeInitializer& AttributeInitializer)
+{}
+
+SInventoryWindow::SInventoryWindow() : SlotSize(32)
 {
 	bInitialized = false;
+	SetCanTick(false);
+}
+
+SInventoryWindow::~SInventoryWindow()
+{
+	if(StreamingHandle.IsValid())
+	{
+		StreamingHandle->CancelHandle();
+	}
+
 }
 
 
@@ -213,32 +356,24 @@ BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SInventoryWindow::Construct(const FArguments& InArgs)
 {
 	FSlateStyleSet* StyleSet = FActionPortfolioWidgetStyle::Get();
-	const FSlateBrush* WindowBackgroundBrush = StyleSet->GetBrush(InventoryStyle::WindowBackground);
 
-	SlotBackgroundBrush = *StyleSet->GetBrush(InventoryStyle::SlotBackground);
-	
+	CountByRow = InArgs._CountByRow;
 
-	SetCanTick(false);
+	SetSlotBackgroundImage(nullptr);
+	SetSlotSize(SlotSize);
 
 	ChildSlot
 	[
 		SNew(SInvalidationPanel)
 		[
-			SAssignNew(WindowBoder, SBorder)
-			.BorderImage(WindowBackgroundBrush)
+			SAssignNew(ScrollBox, SScrollBox)
+			+SScrollBox::Slot()
 			.HAlign(HAlign_Fill)
 			.VAlign(VAlign_Fill)
 			[
-				SAssignNew(ScrollBox, SScrollBox)
-				+SScrollBox::Slot()
-				.HAlign(HAlign_Fill)
-				.VAlign(VAlign_Fill)
-				[
-						SAssignNew(SlotWrapBox, SWrapBox)
-						.Orientation(EOrientation::Orient_Horizontal)
-						.UseAllottedSize(true)
-				]
+					SAssignNew(SlotPanel, SUniformGridPanel)
 			]
+			
 		]
 	];
 
@@ -246,6 +381,7 @@ void SInventoryWindow::Construct(const FArguments& InArgs)
 }
 
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
+
 
 void SInventoryWindow::InitializeInventoryWindow(int Count, bool bReset)
 {
@@ -256,46 +392,33 @@ void SInventoryWindow::InitializeInventoryWindow(int Count, bool bReset)
 	
 	if(Count < 0) Count = 0;
 
-	int BeforeCount = Slots.Num();
+	if(Slots.Num() == Count) return;
 
-	if (BeforeCount == Count){ return; }
-	
-	if (BeforeCount < Count)
+	for (int i = 0; i < Slots.Num(); i++)
 	{
-		Slots.Reserve(Count);
-
-		for (int i = BeforeCount; i < Count; ++i)
-		{
-			TSharedPtr<SInventorySlot> TempSlot;
-			SAssignNew(TempSlot, SInventorySlot)
-			.BackgroundBrush(&SlotBackgroundBrush);
-
-			SlotWrapBox->AddSlot() [TempSlot.ToSharedRef()];
-			Slots.Add(TempSlot);
-		}
-	}
-	else
-	{
-	
-		for (int i = 0; i < BeforeCount; i++)
-		{
-			Slots[i]->SetVisibility(EVisibility::Collapsed);
-			Slots[i].Reset();
-		}
-		
-		Slots.Empty();
-		Slots.Reserve(Count);
-
-		for (int i = 0; i < Count; ++i)
-		{
-			TSharedPtr<SInventorySlot> TempSlot;
-			SAssignNew(TempSlot, SInventorySlot);
-
-			SlotWrapBox->AddSlot()[TempSlot.ToSharedRef()];
-			Slots.Add(TempSlot);
-		}
+		Slots[i]->SetVisibility(EVisibility::Collapsed);
+		SlotPanel->RemoveSlot(Slots[i].ToSharedRef());
+		Slots[i].Reset();
 	}
 
+	Slots.Empty();
+	Slots.Reserve(Count);
+
+	for (int i = 0; i < Count; ++i)
+	{
+		TSharedPtr<SInventorySlot> TempSlot;
+		SAssignNew(TempSlot, SInventorySlot)
+			.BackgroundBrush(&SlotBackgroundBrush)
+			.SlotIdx(i);
+
+		SlotPanel->AddSlot(i % CountByRow, i / CountByRow)
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
+			[TempSlot.ToSharedRef()];
+		Slots.Add(TempSlot);
+	}
+
+	SlotNavigationBuild();
 
 	bInitialized = true;
 }
@@ -321,18 +444,67 @@ void SInventoryWindow::UpdateSlotWidget(int idx, TSoftObjectPtr<UMaterialInterfa
 
 
 
-void SInventoryWindow::SetInnerSlotPadding(FVector2D NewPadding)
+void SInventoryWindow::SetSlotPadding(const FMargin& NewPadding)
 {
-	SlotWrapBox->SetInnerSlotPadding(NewPadding);
+	SlotPanel->SetSlotPadding(NewPadding);
 }
 
-void SInventoryWindow::SetWindowPadding(const FMargin& NewPadding)
+void SInventoryWindow::SlotNavigationBuild()
 {
-	WindowBoder->SetPadding(NewPadding);
+	int SlotsNum = Slots.Num();
+
+	for (int i = 0; i < SlotsNum; i++)
+	{
+		//Navigation 제작
+		TSharedPtr<FNavigationMetaData> NaviMetaData = Slots[i]->GetMetaData<FNavigationMetaData>();
+		if (!NaviMetaData.IsValid())
+		{
+			NaviMetaData = MakeShared<FNavigationMetaData>();
+			Slots[i]->AddMetadata(NaviMetaData.ToSharedRef());
+		}
+
+
+		NaviMetaData->SetNavigationStop(EUINavigation::Previous);
+		NaviMetaData->SetNavigationStop(EUINavigation::Next);
+		
+		if (i % CountByRow == 0)	{ NaviMetaData->SetNavigationStop(EUINavigation::Left); }
+		else						{ NaviMetaData->SetNavigationExplicit(EUINavigation::Left, Slots[i - 1]); }
+
+		if (i % CountByRow == CountByRow - 1 || SlotsNum - 1 <= i)	{ NaviMetaData->SetNavigationStop(EUINavigation::Right); }
+		else										{ NaviMetaData->SetNavigationExplicit(EUINavigation::Right, Slots[i + 1]); }
+		
+		if(i - CountByRow < 0)		{ NaviMetaData->SetNavigationStop(EUINavigation::Up); }
+		else						{ NaviMetaData->SetNavigationExplicit(EUINavigation::Up, Slots[i - CountByRow]); }
+
+		if(SlotsNum <= i + CountByRow)	{ NaviMetaData->SetNavigationStop(EUINavigation::Down); }
+		else							{ NaviMetaData->SetNavigationExplicit(EUINavigation::Down, Slots[i + CountByRow]); }
+	}
+}
+
+void SInventoryWindow::SetSlotCountByRow(int NewCount)
+{
+	if(NewCount < 1) NewCount = 1;
+
+	if(CountByRow == NewCount) return;
+
+	CountByRow = NewCount;
+
+	FChildren* PanelChildren = SlotPanel->GetChildren();
+	int SlotNum = Slots.Num();
+
+	for(int i = 0; i < SlotNum; i++)
+	{
+		 SUniformGridPanel::FSlot& PanelSlot = const_cast<SUniformGridPanel::FSlot&>(static_cast<const SUniformGridPanel::FSlot&>(PanelChildren->GetSlotAt(i)));
+		 PanelSlot.SetColumn(i % CountByRow);
+		 PanelSlot.SetRow(i / CountByRow);
+	}
+
+	SlotNavigationBuild();
 }
 
 void SInventoryWindow::SetSlotSize(FVector2D NewSize)
 {
+	SlotSize = NewSize;
 	SlotBackgroundBrush.ImageSize = NewSize;
 }
 
@@ -344,7 +516,23 @@ void SInventoryWindow::SetSlotBackgroundImage(TSoftObjectPtr<UMaterialInterface>
 	{
 		FSlateStyleSet* StyleSet = FActionPortfolioWidgetStyle::Get();
 
-	 	SlotBackgroundBrush.SetResourceObject( StyleSet->GetBrush(InventoryStyle::SlotBackground)->GetResourceObject());
+#if WITH_EDITOR
+		if (StyleSet != nullptr)
+		{
+			SlotBackgroundBrush = *StyleSet->GetBrush(InventoryStyle::SlotBackground);
+			SetSlotSize(SlotSize);
+		}
+		else
+		{
+			FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
+			UTexture2D* DefaultTexture = Streamable.LoadSynchronous<UTexture2D>(FSoftObjectPath(FString("/Game/WidgetStyle/Inventory/InventorySlot.InventorySlot")));
+			SlotBackgroundBrush.SetResourceObject(DefaultTexture);
+		}
+#else
+		SlotBackgroundBrush = *StyleSet->GetBrush(InventoryStyle::SlotBackground);
+		SetSlotSize(SlotSize);
+#endif
+
 	}
 	else if (NewImage.IsValid())
 	{
@@ -352,9 +540,9 @@ void SInventoryWindow::SetSlotBackgroundImage(TSoftObjectPtr<UMaterialInterface>
 	}
 	else
 	{
-		
+
 		FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
-		Streamable.RequestAsyncLoad(NewImage.ToSoftObjectPath(), FStreamableDelegate::CreateLambda([&, NewImage]() {
+		StreamingHandle = Streamable.RequestAsyncLoad(NewImage.ToSoftObjectPath(), FStreamableDelegate::CreateLambda([&, NewImage]() {
 			if (SlotBackgroundMaterial != NewImage) return;
 
 			SlotBackgroundBrush.SetResourceObject(NewImage.Get());
@@ -364,17 +552,31 @@ void SInventoryWindow::SetSlotBackgroundImage(TSoftObjectPtr<UMaterialInterface>
 
 }
 
+void SInventoryWindow::OnSelectedWindow()
+{
+	uint32 Test = FSlateApplication::Get().GetUserIndexForKeyboard();
+
+	if(!Slots.IsEmpty()) FSlateApplication::Get().SetUserFocus(Test, Slots[0], EFocusCause::SetDirectly);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
+SLATE_IMPLEMENT_WIDGET(SInventory)
+void SInventory::PrivateRegisterAttributes(FSlateAttributeInitializer& AttributeInitializer)
+{}
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
+
+SInventory::SInventory()
+{
+	SetCanTick(false);
+}
 
 void SInventory::Construct(const FArguments& InArgs)
 {
 	TSharedPtr<SHorizontalBox> SwitcherBTNBox;
 
-	SetCanTick(false);
-
+	
 	ChildSlot[
 		SNew(SBorder)
 		[
@@ -398,6 +600,7 @@ void SInventory::Construct(const FArguments& InArgs)
 	
 	int SwitchIndex = 0;
 
+
 	for (EItemType ItemType : TEnumRange<EItemType>())
 	{
 		TSharedPtr<SInventoryWindow> TempIW;
@@ -410,15 +613,16 @@ void SInventory::Construct(const FArguments& InArgs)
 		[
 			TempIW.ToSharedRef()
 		];
+		
 
 		SwitcherBTNBox->AddSlot()
 			[
 				SNew(SButton)
 				.Text(FText::FromString("Test"))
-				.OnClicked(FOnClicked::CreateLambda([=]() -> FReply {
-				
-					InventoryWindowSwitcher->SetActiveWidgetIndex(SwitchIndex);
-					return FReply::Unhandled();
+				.OnClicked(FOnClicked::CreateLambda([&, ItemType]() -> FReply {
+					this->SelectInventoryWindow(ItemType);
+
+					return FReply::Handled();
 				}))
 			];
 
@@ -451,21 +655,13 @@ void SInventory::InitializeInventoryWindow(int SlotCount, bool bReset)
 	}
 }
 
-void SInventory::SetInnerSlotPadding(FVector2D NewPadding)
+void SInventory::SetSlotPadding(const FMargin& NewPadding)
 {
 	for (EItemType Type : TEnumRange<EItemType>())
 	{
-		InventoryWindows[Type]->SetInnerSlotPadding(NewPadding);
+		InventoryWindows[Type]->SetSlotPadding(NewPadding);
 	}
 
-}
-
-void SInventory::SetWindowPadding(const FMargin& NewPadding)
-{
-	for (EItemType Type : TEnumRange<EItemType>())
-	{
-		InventoryWindows[Type]->SetWindowPadding(NewPadding);
-	}
 }
 
 void SInventory::SetSlotSize(FVector2D NewSize)
@@ -493,6 +689,34 @@ EItemType SInventory::GetSlectedInventoryType() const
 	}
 
 	return EItemType::None;
+}
+
+void SInventory::SelectInventoryWindow(EItemType InventoryType)
+{
+	if (InventoryType == EItemType::None) {
+		PFLOG(Error, TEXT("Select Window Inventory Type : None"));
+		return;
+	}
+
+	InventoryWindowSwitcher->SetActiveWidget(InventoryWindows[InventoryType].ToSharedRef());
+	InventoryWindows[InventoryType]->OnSelectedWindow();
+}
+
+void SInventory::SetSlotCountByRow(int NewCount)
+{
+	for (const auto& Type : TEnumRange<EItemType>())
+	{
+		InventoryWindows[Type]->SetSlotCountByRow(NewCount);
+	}
+}
+
+void SInventory::ShowInventoryWindow(EItemType InventoryType)
+{
+	if(ensure(InventoryType != EItemType::None)){ return; }
+
+	int InventoryIdx = (int)InventoryType - 1;
+
+	InventoryWindowSwitcher->SetActiveWidgetIndex(InventoryIdx);
 }
 
 

@@ -58,7 +58,7 @@ void SNPCInteractButton::BindNPCInteract(AActionPFPlayerController* Player, UNPC
 {
 	ensureMsgf(Player != nullptr && Interact != nullptr, TEXT("Try Bind NPC Interact BTN By null Interact or Player"));
 
-	InteractButton->SetOnClicked( TBaseDelegate<FReply>::CreateLambda(
+	InteractButton->SetOnClicked( TDelegate<FReply()>::CreateLambda(
 									[TargetInteract = Interact, TargetPlayer = Player]() -> FReply
 								{ TargetInteract->NPCInteract(TargetPlayer); return FReply::Unhandled(); }
 								) );

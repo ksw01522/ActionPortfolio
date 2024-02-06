@@ -24,7 +24,7 @@ enum class ELanguage : uint8
 	English = 1
 };
 
-UCLASS(Config=APSetting)
+UCLASS(Config = Game)
 class ACTIONPORTFOLIO_API UGameSettingSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()

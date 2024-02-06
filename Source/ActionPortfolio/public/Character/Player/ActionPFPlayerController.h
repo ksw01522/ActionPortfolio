@@ -31,6 +31,7 @@ enum class EItemType : uint8;
 enum class EEquipmentPart : uint8;
 
 
+
 UCLASS()
 class ACTIONPORTFOLIO_API AActionPFPlayerController : public APlayerController, public IGenericTeamAgentInterface
 {
@@ -45,10 +46,10 @@ protected:
 ///////////////////ют╥б
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class UInputMappingContext> ControllerMappingContext;
+	TObjectPtr<class UInputAction> OpenMenuAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class UInputAction> OpenMenuAction;
+	TObjectPtr<class UPlayerMappableInputConfig> ControllerInput;
 
 protected:
 	virtual void OnPossess(APawn* aPawn) override;
@@ -77,7 +78,6 @@ public:
 
 
 private:
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UserWidget", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UUserWidget> MenuWidgetClass;
 
@@ -91,6 +91,9 @@ private:
 	void CloseMenu();
 
 	UUserWidget* GetMenuWidget();
+
+
+	TSharedPtr<class SInputKeyLabel> Temp;
 
 protected:
 	UFUNCTION(BlueprintCallable, Category = "PlayerController")
@@ -135,20 +138,46 @@ private:
 	bool bDrawTraceInteractionLine;
 #endif
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> InteractAction;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputMappingContext> InteractMapping;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
+	int interactMappingPriority;
+
+	bool bRegisteredInteractMapping;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "Interaction", BlueprintSetter = SetCanInteract, meta = (AllowPrivateAccess = "true"))
+	bool bCanInteract;
+
+public:
+	UFUNCTION(BlueprintSetter)
+	void SetCanInteract(bool NewState);
+
+private:
+
 	TArray<TWeakObjectPtr<UInteractionSystemComponent>> PrevTracedInteractions;
-	TWeakObjectPtr<UInteractionSystemComponent> FocusInteraction;
+	TWeakObjectPtr<UInteractionSystemComponent> FocusedInteraction;
 
 	void TraceInteractions();
 
-	void CheckValidInteraction();
-	void CheckFocusInteraction();
+	void AddInteraction(UInteractionSystemComponent* NewInteraction);
+	void RemoveInteraction(UInteractionSystemComponent* NewInteraction);
+	void FocusInteraction(UInteractionSystemComponent* NewInteraction);
+
+	void FocusNextInteraction();
+
+	bool CheckFocusedInteraction();
+
 
 	void InteractFocusedInteraction();
 
 	void ClearForInteraction();
+
+	void RegisterInteractMapping();
+	void UnregisterInteractMapping();
 
 /////////////////////// Player Dialogue MC ////////////////
 private:
@@ -192,4 +221,5 @@ public:
 public:
 	bool TryEquipItemInInventory(APlayerCharacter* Target, int idx);
 	bool TryUnequipItem(APlayerCharacter* Target, EEquipmentPart Part);
+	
 };

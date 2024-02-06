@@ -22,6 +22,10 @@
 #include "Items/ItemBase.h"
 #include "Items/ItemManagerSubsystem.h"
 
+#include "CustomInputHelper.h"
+
+#include "Character/Player/ActionPFPlayerController.h"
+
 APlayerCharacter::APlayerCharacter()
 {
 	// Create a camera boom (pulls in towards the player if there is a collision)
@@ -56,13 +60,7 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
-		}
-	}
+	
 
 	InitializeItemUser();
 }
@@ -70,6 +68,21 @@ void APlayerCharacter::BeginPlay()
 void APlayerCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
+
+	if (APlayerController* PlayerController = Cast<APlayerController>(NewController))
+	{
+		PlayerController->GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>()->AddPlayerMappableConfig(CharacterInputConfig);
+	}
+}
+
+void APlayerCharacter::UnPossessed()
+{
+	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	{
+		PlayerController->GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>()->RemovePlayerMappableConfig(CharacterInputConfig);
+	}
+
+	Super::UnPossessed();
 }
 
 TSubclassOf<class UActionPFGameplayAbility> APlayerCharacter::GetPlayerAbilityClass(EPlayerAbilityInputID ID)
@@ -180,8 +193,6 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 {
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
-
-
 		//Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
 

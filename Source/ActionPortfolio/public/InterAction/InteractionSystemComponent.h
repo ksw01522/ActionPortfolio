@@ -30,6 +30,13 @@ protected:
 	UPROPERTY(BlueprintAssignable)
 	FInteractDelegate Del_Interact;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Condition")
+	bool bEnableInteract;
+
+public:
+	void SetEnableInteract(bool NewState) { bEnableInteract = NewState; }
+	bool IsEnableInteract() const {return bEnableInteract;}
+
 private:
 	virtual void Interact_CPP(AActor* InteractActor) {}
 	virtual bool CanInteract_CPP(AActor* InteractActor) const {return true;};

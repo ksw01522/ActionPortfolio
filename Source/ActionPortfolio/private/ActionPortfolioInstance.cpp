@@ -10,8 +10,15 @@
 #include "Settings/GameSettingSubsystem.h"
 #include "Engine/DataTable.h"
 #include "Items/ItemManagerSubsystem.h"
+#include "CustomInputHelper.h"
 
-UActionPortfolioInstance* UActionPortfolioInstance::ActionPFInstance = nullptr;
+
+TObjectPtr<UActionPortfolioInstance> UActionPortfolioInstance::ActionPFInstance = nullptr;
+
+UActionPortfolioInstance* UActionPortfolioInstance::GetActionPFInstance()
+{
+	return ActionPFInstance;
+}
 
 UActionPortfolioInstance::UActionPortfolioInstance()
 {
@@ -19,6 +26,8 @@ UActionPortfolioInstance::UActionPortfolioInstance()
 	NormalDialogueAnimTime = 0.1f;
 	FastDialogueAnimTime = 0.05f;
 }
+
+
 
 void UActionPortfolioInstance::Init()
 {

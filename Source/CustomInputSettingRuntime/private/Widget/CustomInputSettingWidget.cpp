@@ -7,8 +7,9 @@
 #include "CustomInputSettingRuntime.h"
 
 
-UCustomInputSettingWidget::UCustomInputSettingWidget() : NodePadding(5), DistanceBetweenNode(1)
+UCustomInputSettingWidget::UCustomInputSettingWidget() : NodePadding(20), DistanceBetweenNode(10), IconSize(32)
 {
+
 }
 
 
@@ -20,8 +21,15 @@ TSharedRef<SWidget> UCustomInputSettingWidget::RebuildWidget()
 	.TextBorderBrush(&NodeTextBorderBrush)
 	.IconBorderBrush(&NodeIconBorderBrush)
 	.FocusedFrameBrush(&NodeFocusedFrameBrush)
+	.SelectedTabBrush(&SelectedTabBrush)
+	.UnselectedTabBrush(&UnselectedTabBrush)
 	.NodeNameBlockStyle(&NodeNameTextStyle)
-	.DistanceBetweenNode(DistanceBetweenNode);
+	.DistanceBetweenNode(DistanceBetweenNode)
+	.IconSize(IconSize)
+	.TabSize(TabSize)
+	.TabTextStyle(&TabTextStyle)
+	.DescriptionTextStyle(&DescriptionTextStyle)
+	.DescriptionLabelSize(DescriptionLabelSize);
 
 	return MyWidget.ToSharedRef();
 }
@@ -42,9 +50,16 @@ void UCustomInputSettingWidget::SynchronizeProperties()
 	if(!MyWidget.IsValid()) return;
 
 	MyWidget->SetNodePadding(NodePadding);
+	MyWidget->SetSelectedTabBrush(&SelectedTabBrush);
+	MyWidget->SetUnselectedTabBrush(&UnselectedTabBrush);
 	MyWidget->SetNodeNameBlockStyle(&NodeNameTextStyle);
 	MyWidget->SetMappableKeys(TargetMappableKeys.Get());
 	MyWidget->SetDistanceBetweenNode(DistanceBetweenNode);
+	MyWidget->SetIconSize(IconSize);
+	MyWidget->SetTabSize(TabSize);
+	MyWidget->SetTabTextStyle(&TabTextStyle);
+	MyWidget->SetDescriptionTextStyle(&DescriptionTextStyle);
+	MyWidget->SetDescriptionLabelSize(DescriptionLabelSize);
 }
 
 #if WITH_EDITOR

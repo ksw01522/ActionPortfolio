@@ -20,13 +20,14 @@ public:
 	SInputKeyLabel();
 	virtual ~SInputKeyLabel();
 
-	SLATE_BEGIN_ARGS(SInputKeyLabel)
+	SLATE_BEGIN_ARGS(SInputKeyLabel) : _IconSize(32)
 	{
 		_Visibility = EVisibility::HitTestInvisible;
 	}
 
 	SLATE_ARGUMENT(FKey, KeyboardKey)
 	SLATE_ARGUMENT(FKey, GamepadKey)
+	SLATE_ARGUMENT(FVector2D, IconSize)
 
 	SLATE_END_ARGS()
 
@@ -46,4 +47,6 @@ public:
 
 	void SetKeyboardKey(const FKey& InKey);
 	void SetGamepadKey(const FKey& InKey);
+
+	void SetIconSize(FVector2D InSize);
 };

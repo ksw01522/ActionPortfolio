@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class CustomInputSettingRuntime : ModuleRules
+public class CustomInputSettingEditor : ModuleRules
 {
-	public CustomInputSettingRuntime(ReadOnlyTargetRules Target) : base(Target)
+	public CustomInputSettingEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         bLegacyPublicIncludePaths = true;
@@ -12,16 +12,15 @@ public class CustomInputSettingRuntime : ModuleRules
 
         PublicIncludePaths.AddRange(new string[]
         {
-            "CustomInputSettingRuntime/public"
+            "CustomInputSettingEditor/public"
         });
 
         PrivateIncludePaths.AddRange(new string[]
 		{
-			"CustomInputSettingRuntime/public",
-			"CustomInputSettingRuntime/private",
+			"CustomInputSettingRuntime/public"
         });
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "CustomInputSettingRuntime"});
 
 	
 		PrivateDependencyModuleNames.AddRange(

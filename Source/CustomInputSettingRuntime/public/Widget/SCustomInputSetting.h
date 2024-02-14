@@ -31,7 +31,8 @@ public:
 		_IconBorderBrush(nullptr),
 		_FocusedFrameBrush(nullptr),
 		_NameBlockStyle(nullptr),
-		_NameText(FText::GetEmpty())
+		_NameText(FText::GetEmpty()),
+		_IconSize(32)
 		{
 			_Clipping = EWidgetClipping::Inherit;
 		}
@@ -49,6 +50,7 @@ public:
 		SLATE_ARGUMENT(FName, Code)
 		SLATE_ARGUMENT(bool, bIsGamepad)
 		SLATE_ARGUMENT(FKey, Key)
+		SLATE_ARGUMENT(FVector2D, IconSize)
 
 	SLATE_END_ARGS()
 
@@ -112,6 +114,8 @@ public:
 	void SetNavigation(EUINavigation Direction, TSharedPtr<SWidget> InWidget);
 
 	FName GetCode() const {return Code;}
+
+	void SetIconSize(FVector2D InSize);
 };
 
 class SCustomInputSettingWindow : public SCompoundWidget
@@ -129,7 +133,13 @@ public:
 		_IconBorderBrush(nullptr),
 		_FocusedFrameBrush(nullptr),
 		_NodeNameBlockStyle(nullptr),
-		_DistanceBetweenNode(5)
+		_SelectedTabBrush(nullptr),
+		_UnselectedTabBrush(nullptr),
+		_DistanceBetweenNode(5),
+		_IconSize(32),
+		_TabTextStyle(nullptr),
+		_DescriptionTextStyle(nullptr),
+		_DescriptionLabelSize(12)
 		{
 			_Clipping = EWidgetClipping::Inherit;
 		}
@@ -138,23 +148,42 @@ public:
 		SLATE_ARGUMENT(const FSlateBrush*, TextBorderBrush)
 		SLATE_ARGUMENT(const FSlateBrush*, IconBorderBrush)
 		SLATE_ARGUMENT(const FSlateBrush*, FocusedFrameBrush)
-
-		//텍스트 블록
 		SLATE_ARGUMENT(const FTextBlockStyle*, NodeNameBlockStyle)
 
+		SLATE_ARGUMENT(const FSlateBrush*, SelectedTabBrush)
+		SLATE_ARGUMENT(const FSlateBrush*, UnselectedTabBrush)
+
 		SLATE_ARGUMENT(float, DistanceBetweenNode)
+
+		SLATE_ARGUMENT(FVector2D, IconSize)
+
+
+		SLATE_ARGUMENT(FVector2D, TabSize)
+		SLATE_ARGUMENT(const FTextBlockStyle*, TabTextStyle)
+
+		SLATE_ARGUMENT(const FTextBlockStyle*, DescriptionTextStyle)
+		SLATE_ARGUMENT(FVector2D, DescriptionLabelSize)
 
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
 
 private:
+	TSharedPtr<SBox> TabSizeBox;
+
+	TSharedPtr<SBorder> KeyboardTab;
+	TSharedPtr<SBorder> GamepadTab;
+
 	TSharedPtr<SWidgetSwitcher> InputDeviceSwitcher;
 	TSharedPtr<SScrollBox> KeyboardScrollBox;
 	class SScrollPanel* KeyboardScrollPanel;
 	
 	TSharedPtr<SScrollBox> GamepadScrollBox;
 	SScrollPanel* GamepadScrollPanel;
+
+	TSharedPtr<SHorizontalBox> DescriptionBox;
+	TArray<TSharedPtr<class STextBlock>> DescriptionTexts;
+	TArray<TSharedPtr<class SInputKeyLabel>> DescriptionLabels;
 
 private:
 	FMargin NodePadding;
@@ -164,14 +193,25 @@ private:
 	const FSlateBrush* NodeIconBorderBrush;
 	const FSlateBrush* NodeFocusedFrameBrush;
 
+	const FSlateBrush* SelectedTabBrush;
+	const FSlateBrush* UnselectedTabBrush;
+
 	const FTextBlockStyle* NodeNameBlockStyle;
 
 	TObjectPtr<class UPlayerMappableInputConfig> TargetInputConfig;
 
-	
+	FVector2D IconSize;
 
 
 public:
+//Tab
+	void SetTabSize(FVector2D InSize);
+	void SetTabTextStyle(const FTextBlockStyle* InStyle);
+
+	void SetSelectedTabBrush(const FSlateBrush* InBrush);
+	void SetUnselectedTabBrush(const FSlateBrush* InBrush);
+
+//Node
 	void SetNodePadding(const FMargin& InNodePadding);
 	void SetNodeTextBorderBrush(const FSlateBrush* InBrush);
 	void SetNodeIconBorderBrush(const FSlateBrush* InBrush);
@@ -181,14 +221,27 @@ public:
 
 	void SetNodeNameBlockStyle(const FTextBlockStyle* InStyle);
 
+	void SetIconSize(FVector2D InSize);
+
+//Description
+private:
+	void CreateDescriptionBox();
+
+public:
+	void SetDescriptionTextStyle(const FTextBlockStyle* InStyle);
+	void SetDescriptionLabelSize(FVector2D InSize);
+
 protected:
+	virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override {return FReply::Handled(); }
+
 	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual FReply OnFocusReceived(const FGeometry& MyGeometry, const FFocusEvent& InFocusEvent) override;
 	virtual bool SupportsKeyboardFocus() const { return true; }
 
 private:
 	void EnterCustomInputSetting(uint32 UserIndex);
-	
+	void ExitCustomInputSetting();
+
 	FDelegateHandle OnChangedMappingHandle;
 	void OnChangedMapping(const FName& InCode, const FKey& NewKey);
 

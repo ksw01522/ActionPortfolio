@@ -16,7 +16,7 @@
 #include "Widgets/Layout/SBackgroundBlur.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SScrollBox.h"
-
+#include "Widget/SInputKeyLabel.h"
 
 #define LOCTEXT_NAMESPACE "CustomInputSetting"
 
@@ -38,6 +38,8 @@ SCustomInputSettingNode::SCustomInputSettingNode()
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SCustomInputSettingNode::Construct(const FArguments& InArgs)
 {
+	ButtonBrush.SetImageSize(InArgs._IconSize);
+
 	ChildSlot
 	[
 		SNew(SOverlay)
@@ -55,6 +57,8 @@ void SCustomInputSettingNode::Construct(const FArguments& InArgs)
 				SAssignNew(NameBorder, SBorder)
 				.BorderImage(InArgs._TextBorderBrush)
 				.Padding(InArgs._Padding)
+				.VAlign(VAlign_Center)
+				.HAlign(HAlign_Left)
 				[
 					SAssignNew(NameTextBlock, STextBlock)
 					.TextStyle(InArgs._NameBlockStyle)
@@ -179,26 +183,23 @@ void SCustomInputSettingNode::OnFocusLost(const FFocusEvent& InFocusEvent)
 
 FReply SCustomInputSettingNode::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
 {
-	if (bCanSupportFocus && SupportsKeyboardFocus())
+	if (!IsEnabled() || !bCanSupportFocus || !SupportsKeyboardFocus()) return FReply::Unhandled();
+
+	FSlateApplication& SlateApp = FSlateApplication::Get();
+
+	if (SlateApp.GetNavigationActionFromKey(InKeyEvent) == EUINavigationAction::Accept)
 	{
-		FSlateApplication& SlateApp = FSlateApplication::Get();
-
-		if (SlateApp.GetNavigationActionFromKey(InKeyEvent) == EUINavigationAction::Accept)
+		RequestCustomKeySettingByNode();
+	}
+	else
+	{
+		EUINavigation Direction = FSlateApplicationBase::Get().GetNavigationDirectionFromKey(InKeyEvent);
+		if (Direction != EUINavigation::Invalid && Direction != EUINavigation::Previous && Direction != EUINavigation::Next)
 		{
-			RequestCustomKeySettingByNode();
-		}
-		else
-		{
-			EUINavigation Direction = FSlateApplicationBase::Get().GetNavigationDirectionFromKey(InKeyEvent);
-
-			if (Direction != EUINavigation::Invalid && Direction != EUINavigation::Previous && Direction != EUINavigation::Next)
-			{
-				const ENavigationGenesis Genesis = InKeyEvent.GetKey().IsGamepadKey() ? ENavigationGenesis::Controller : ENavigationGenesis::Keyboard;
-				return FReply::Handled().SetNavigation(Direction, Genesis);
-			}
+			const ENavigationGenesis Genesis = InKeyEvent.GetKey().IsGamepadKey() ? ENavigationGenesis::Controller : ENavigationGenesis::Keyboard;
+			return FReply::Handled().SetNavigation(Direction, Genesis);
 		}
 	}
-
 	return FReply::Unhandled();
 }
 
@@ -213,6 +214,8 @@ FReply SCustomInputSettingNode::OnMouseButtonDown(const FGeometry& MyGeometry, c
 
 void SCustomInputSettingNode::OnMouseEnter(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
+	if(!IsEnabled()) return;
+
 	FSlateApplication& SlateApp = FSlateApplication::Get();
 
 	TOptional<EFocusCause> FocusData = HasUserFocus(MouseEvent.GetUserIndex());
@@ -248,13 +251,18 @@ void SCustomInputSettingNode::SetNavigation(EUINavigation Direction, TSharedPtr<
 	else						{ NaviMetaData->SetNavigationStop(Direction); }
 }
 
+void SCustomInputSettingNode::SetIconSize(FVector2D InSize)
+{
+	ButtonBrush.SetImageSize(InSize);
+}
+
 
 
 /////////////////////////////// Window
 SLATE_IMPLEMENT_WIDGET(SCustomInputSettingWindow)
 void SCustomInputSettingWindow::PrivateRegisterAttributes(FSlateAttributeInitializer& AttributeInitializer)
 {
-
+	
 }
 
 
@@ -277,9 +285,11 @@ SCustomInputSettingWindow::~SCustomInputSettingWindow()
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SCustomInputSettingWindow::Construct(const FArguments& InArgs)
-{
+{	
+	TWeakPtr<SWidget> WeakWindow(AsShared());
+	
 	UCustomInputSettingSubsystem* SettingInstance = UCustomInputSettingSubsystem::GetInstance();
-
+	
 #if WITH_EDITOR
 	if (SettingInstance != nullptr)
 	{
@@ -298,25 +308,114 @@ void SCustomInputSettingWindow::Construct(const FArguments& InArgs)
 	NodeIconBorderBrush = InArgs._IconBorderBrush;
 	NodeFocusedFrameBrush = InArgs._FocusedFrameBrush;
 
+	SelectedTabBrush = InArgs._SelectedTabBrush;
+	UnselectedTabBrush = InArgs._UnselectedTabBrush;
+
 	NodeNameBlockStyle = InArgs._NodeNameBlockStyle;
 
+	
 	ChildSlot
 	[
-		SAssignNew(InputDeviceSwitcher, SWidgetSwitcher)
-		.Visibility(EVisibility::SelfHitTestInvisible)
-		+SWidgetSwitcher::Slot()
-		.HAlign(HAlign_Fill)
+		SNew(SVerticalBox)
+		.Visibility(EVisibility::Visible)
+		+SVerticalBox::Slot()
+		.HAlign(HAlign_Right)
 		.VAlign(VAlign_Fill)
+		.AutoHeight()
+		.Padding(0,0,0,10)
 		[
-			SAssignNew(KeyboardScrollBox, SScrollBox)
-			.NavigationDestination(EDescendantScrollDestination::Center)
+			SAssignNew(TabSizeBox, SBox)
+			.HAlign(HAlign_Fill)
+			.VAlign(VAlign_Fill)
+			.WidthOverride(InArgs._TabSize.X < 0 ? 0 : 2 * InArgs._TabSize.X)
+			.HeightOverride(InArgs._TabSize.Y < 0 ? 0 : InArgs._TabSize.Y)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot()
+				.VAlign(VAlign_Fill)
+				.HAlign(HAlign_Fill)
+				.FillWidth(1)
+				[
+					SAssignNew(KeyboardTab, SBorder)
+					.BorderImage(SelectedTabBrush)
+					.Padding(0)
+					.HAlign(HAlign_Center)
+					.VAlign(VAlign_Center)
+						.OnMouseButtonDown_Lambda([WeakWindow](const FGeometry&, const FPointerEvent&) -> FReply{
+									if(!WeakWindow.IsValid() || !WeakWindow.Pin()->IsEnabled()) return FReply::Unhandled();
+									SCustomInputSettingWindow* Window = static_cast<SCustomInputSettingWindow*>(WeakWindow.Pin().Get());
+									Window->ShowCustomInputDevice(false);
+
+									return FReply::Handled();
+								})
+					[
+						SNew(STextBlock)
+						.Visibility(EVisibility::SelfHitTestInvisible)
+						.Text(LOCTEXT("Keyboard Name", "키보드/마우스"))
+						.TextStyle(InArgs._TabTextStyle)
+						.AutoWrapText(false)
+					]
+				]
+				+ SHorizontalBox::Slot()
+				.VAlign(VAlign_Fill)
+				.HAlign(HAlign_Fill)
+				.Padding(10, 0, 0, 0)
+				.FillWidth(1)
+				[
+					SAssignNew(GamepadTab, SBorder)
+					.BorderImage(UnselectedTabBrush)
+					.Padding(0)
+					.HAlign(HAlign_Center)
+					.VAlign(VAlign_Center)
+					.OnMouseButtonDown_Lambda([WeakWindow](const FGeometry&, const FPointerEvent&) -> FReply {
+							if (!WeakWindow.IsValid() || !WeakWindow.Pin()->IsEnabled()) return FReply::Unhandled();
+							SCustomInputSettingWindow* Window = static_cast<SCustomInputSettingWindow*>(WeakWindow.Pin().Get());
+							Window->ShowCustomInputDevice(true);
+
+							return FReply::Handled();
+						})
+					[
+						SNew(STextBlock)
+						.Visibility(EVisibility::SelfHitTestInvisible)
+						.Text(LOCTEXT("Gamepad Name", "게임패드"))
+						.TextStyle(InArgs._TabTextStyle)
+						.AutoWrapText(false)
+					]
+				]
+			]
+
+			
 		]
-		+ SWidgetSwitcher::Slot()
+		+SVerticalBox::Slot()
 		.HAlign(HAlign_Fill)
 		.VAlign(VAlign_Fill)
+		.FillHeight(1)
 		[
-			SAssignNew(GamepadScrollBox, SScrollBox)
-			.NavigationDestination(EDescendantScrollDestination::Center)
+			SAssignNew(InputDeviceSwitcher, SWidgetSwitcher)
+			.Visibility(EVisibility::SelfHitTestInvisible)
+			+ SWidgetSwitcher::Slot()
+			.HAlign(HAlign_Fill)
+			.VAlign(VAlign_Fill)
+			[
+				SAssignNew(KeyboardScrollBox, SScrollBox)
+				.NavigationDestination(EDescendantScrollDestination::Center)
+			]
+			+ SWidgetSwitcher::Slot()
+			.HAlign(HAlign_Fill)
+			.VAlign(VAlign_Fill)
+			[
+				SAssignNew(GamepadScrollBox, SScrollBox)
+				.NavigationDestination(EDescendantScrollDestination::Center)
+			]
+		]
+		+ SVerticalBox::Slot()
+		.HAlign(HAlign_Right)
+		.VAlign(VAlign_Fill)
+		.AutoHeight()
+		.Padding(5,0,0,0)
+		[
+			SAssignNew(DescriptionBox, SHorizontalBox)
+			.Visibility(EVisibility::HitTestInvisible)
 		]
 	];
 
@@ -324,6 +423,10 @@ void SCustomInputSettingWindow::Construct(const FArguments& InArgs)
 	GamepadScrollPanel = (static_cast<SScrollPanel*>(&GamepadScrollBox->GetChildren()->GetChildAt(0)->GetChildren()->GetChildAt(0)->GetChildren()->GetChildAt(0).Get()));
 
 	ShowCustomInputDevice(false);
+
+	CreateDescriptionBox();
+	SetDescriptionTextStyle(InArgs._DescriptionTextStyle);
+	SetDescriptionLabelSize(InArgs._DescriptionLabelSize);
 }
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
@@ -384,7 +487,8 @@ void SCustomInputSettingWindow::SetMappableKeys(class UPlayerMappableInputConfig
 			.NameText(TargetKeyMappings[i].PlayerMappableOptions.DisplayName)
 			.Code(TempCode)
 			.bIsGamepad(false)
-			.Key(TempKey);
+			.Key(TempKey)
+			.IconSize(IconSize);
 
 		if(bIsGamepad)	
 		{ 
@@ -583,11 +687,53 @@ void SCustomInputSettingWindow::SetNodeFocusedFrameBrush(const FSlateBrush* InBr
 		});
 }
 
+void SCustomInputSettingWindow::SetTabSize(FVector2D InSize)
+{
+	TabSizeBox->SetWidthOverride(InSize.X < 0 ? 0 : 2 * InSize.X);
+	TabSizeBox->SetHeightOverride(InSize.Y < 0 ? 0 : InSize.Y);
+}
+
+void SCustomInputSettingWindow::SetTabTextStyle(const FTextBlockStyle* InStyle)
+{
+	static_cast<STextBlock&>(KeyboardTab->GetContent().Get()).SetTextStyle(InStyle);
+	static_cast<STextBlock&>(GamepadTab->GetContent().Get()).SetTextStyle(InStyle);
+}
+
+void SCustomInputSettingWindow::SetSelectedTabBrush(const FSlateBrush* InBrush)
+{
+	if(SelectedTabBrush == InBrush) return;
+
+	SelectedTabBrush = InBrush;
+
+	if (InputDeviceSwitcher->GetActiveWidget().Get() == KeyboardScrollBox.Get()) 
+	{
+		KeyboardTab->SetBorderImage(SelectedTabBrush);
+	}
+	else
+	{
+		GamepadTab->SetBorderImage(SelectedTabBrush);
+	}
+}
+
+void SCustomInputSettingWindow::SetUnselectedTabBrush(const FSlateBrush* InBrush)
+{
+	if (UnselectedTabBrush == InBrush) return;
+
+	UnselectedTabBrush = InBrush;
+
+	if (InputDeviceSwitcher->GetActiveWidget().Get() == KeyboardScrollBox.Get())
+	{
+		GamepadTab->SetBorderImage(UnselectedTabBrush);
+	}
+	else
+	{
+		KeyboardTab->SetBorderImage(UnselectedTabBrush);
+	}
+}
+
 
 void SCustomInputSettingWindow::SetNodeNameBlockStyle(const FTextBlockStyle* InStyle)
 {
-	if(NodeNameBlockStyle == InStyle)
-
 	NodeNameBlockStyle = InStyle;
 
 	KeyboardScrollPanel->GetChildren()->ForEachWidget([InStyle](SWidget& ChildWidget)
@@ -599,6 +745,177 @@ void SCustomInputSettingWindow::SetNodeNameBlockStyle(const FTextBlockStyle* InS
 		{
 			static_cast<SCustomInputSettingNode&>(ChildWidget).SetNameBlockStyle(InStyle);
 		});
+
+	static_cast<STextBlock&>(KeyboardTab->GetContent().Get()).SetTextStyle(InStyle);
+	static_cast<STextBlock&>(GamepadTab->GetContent().Get()).SetTextStyle(InStyle);
+}
+
+void SCustomInputSettingWindow::SetIconSize(FVector2D InSize)
+{
+	if(IconSize == InSize) return;
+
+	IconSize = InSize;
+
+	KeyboardScrollPanel->GetChildren()->ForEachWidget([InSize](SWidget& ChildWidget)
+		{
+			static_cast<SCustomInputSettingNode&>(ChildWidget).SetIconSize(InSize);
+		});
+
+	GamepadScrollPanel->GetChildren()->ForEachWidget([InSize](SWidget& ChildWidget)
+		{
+			static_cast<SCustomInputSettingNode&>(ChildWidget).SetIconSize(InSize);
+		});
+}
+
+void SCustomInputSettingWindow::CreateDescriptionBox()
+{
+	UCustomInputSettingSubsystem* CSS = UCustomInputSettingSubsystem::GetInstance();
+
+	TSharedPtr<STextBlock> TempTextBlock;
+	TSharedPtr<SInputKeyLabel> TempLabel;
+
+
+	DescriptionBox->AddSlot()
+	.AutoWidth()
+	.VAlign(VAlign_Center)
+	.HAlign(HAlign_Center)
+	[
+		SAssignNew(TempTextBlock, STextBlock)
+		.Text(LOCTEXT("Up/Down", "위/아래 : "))
+	];
+
+	DescriptionTexts.Add(TempTextBlock);
+
+	if (CSS != nullptr)
+	{
+		{
+			FKey KeyboardUpKey;
+			FKey GamepadUpKey;
+			CSS->GetNavigationDirectionKey(EUINavigation::Up, KeyboardUpKey, GamepadUpKey);
+
+			DescriptionBox->AddSlot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.HAlign(HAlign_Center)
+			[
+				SAssignNew(TempLabel, SInputKeyLabel)
+				.KeyboardKey(KeyboardUpKey)
+				.GamepadKey(GamepadUpKey)
+			];
+
+			DescriptionLabels.Add(TempLabel);
+		}
+		
+		{
+			FKey KeyboardDownKey;
+			FKey GamepadDownKey;
+			CSS->GetNavigationDirectionKey(EUINavigation::Down, KeyboardDownKey, GamepadDownKey);
+
+			DescriptionBox->AddSlot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.HAlign(HAlign_Center)
+			[
+				SAssignNew(TempLabel, SInputKeyLabel)
+				.KeyboardKey(KeyboardDownKey)
+				.GamepadKey(GamepadDownKey)
+			];
+			DescriptionLabels.Add(TempLabel);
+		}
+	}
+
+	DescriptionBox->AddSlot()
+	.AutoWidth()
+	.VAlign(VAlign_Center)
+	.HAlign(HAlign_Center)
+	[
+		SAssignNew(TempTextBlock, STextBlock)
+		.Text(LOCTEXT("Input Device Switch", ", 장치전환 : "))
+	];
+
+	DescriptionTexts.Add(TempTextBlock);
+
+	if (CSS != nullptr)
+	{
+		{
+			FKey KeyboardPrevKey;
+			FKey GamepadPrevKey;
+			CSS->GetNavigationDirectionKey(EUINavigation::Previous, KeyboardPrevKey, GamepadPrevKey);
+
+			DescriptionBox->AddSlot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.HAlign(HAlign_Center)
+				[
+					SAssignNew(TempLabel, SInputKeyLabel)
+						.KeyboardKey(KeyboardPrevKey)
+						.GamepadKey(GamepadPrevKey)
+				];
+			DescriptionLabels.Add(TempLabel);
+		}
+
+		{
+			FKey KeyboardNextKey;
+			FKey GamepadNextKey;
+			CSS->GetNavigationDirectionKey(EUINavigation::Next, KeyboardNextKey, GamepadNextKey);
+
+			DescriptionBox->AddSlot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.HAlign(HAlign_Center)
+				[
+					SAssignNew(TempLabel, SInputKeyLabel)
+						.KeyboardKey(KeyboardNextKey)
+						.GamepadKey(GamepadNextKey)
+				];
+			DescriptionLabels.Add(TempLabel);
+		}
+	}
+
+	DescriptionBox->AddSlot()
+	.AutoWidth()
+	.VAlign(VAlign_Center)
+	.HAlign(HAlign_Center)
+	[
+		SAssignNew(TempTextBlock, STextBlock)
+		.Text(LOCTEXT("Accept", ", 설정 : "))
+	];
+
+	DescriptionTexts.Add(TempTextBlock);
+
+	if (CSS != nullptr)
+	{
+		FKey KeyboardAcceptKey;
+		FKey GamepadAcceptKey;
+		CSS->GetNavigationActionKey(EUINavigationAction::Accept, KeyboardAcceptKey, GamepadAcceptKey);
+
+		DescriptionBox->AddSlot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		.HAlign(HAlign_Center)
+		[
+			SAssignNew(TempLabel, SInputKeyLabel)
+			.KeyboardKey(KeyboardAcceptKey)
+			.GamepadKey(GamepadAcceptKey)
+		];
+		DescriptionLabels.Add(TempLabel);
+	}
+}
+
+void SCustomInputSettingWindow::SetDescriptionTextStyle(const FTextBlockStyle* InStyle)
+{
+	for (auto& DescriptionText : DescriptionTexts)
+	{
+		DescriptionText->SetTextStyle(InStyle);
+	}
+}
+
+void SCustomInputSettingWindow::SetDescriptionLabelSize(FVector2D InSize)
+{
+	for (auto& Label : DescriptionLabels)
+	{
+		Label->SetIconSize(InSize);
+	}
 }
 
 void SCustomInputSettingWindow::SetDistanceBetweenNode(float InDistance)
@@ -659,6 +976,16 @@ FReply SCustomInputSettingWindow::OnFocusReceived(const FGeometry& MyGeometry, c
 {
 	EnterCustomInputSetting(InFocusEvent.GetUser());
 
+	KeyboardScrollPanel->GetChildren()->ForEachWidget([](SWidget& ChildWidget)
+		{
+			static_cast<SCustomInputSettingNode&>(ChildWidget).SetEnabled(true);
+		});
+
+	GamepadScrollPanel->GetChildren()->ForEachWidget([](SWidget& ChildWidget)
+		{
+			static_cast<SCustomInputSettingNode&>(ChildWidget).SetEnabled(true);
+		});
+
 	return FReply::Handled();
 }
 
@@ -667,16 +994,39 @@ void SCustomInputSettingWindow::ShowCustomInputDevice(bool bIsGamepad)
 	if (bIsGamepad)
 	{
 		InputDeviceSwitcher->SetActiveWidget(GamepadScrollBox.ToSharedRef());
+		GamepadTab->SetBorderImage(SelectedTabBrush);
+		KeyboardTab->SetBorderImage(UnselectedTabBrush);
 	}
 	else
 	{
 		InputDeviceSwitcher->SetActiveWidget(KeyboardScrollBox.ToSharedRef());
+		GamepadTab->SetBorderImage(UnselectedTabBrush);
+		KeyboardTab->SetBorderImage(SelectedTabBrush);
 	}
+}
+
+void SCustomInputSettingWindow::ExitCustomInputSetting()
+{
+	KeyboardTab->SetEnabled(false);
+	GamepadTab->SetEnabled(false);
+
+	KeyboardScrollPanel->GetChildren()->ForEachWidget([](SWidget& ChildWidget)
+		{
+			static_cast<SCustomInputSettingNode&>(ChildWidget).SetEnabled(false);
+		});
+
+	GamepadScrollPanel->GetChildren()->ForEachWidget([](SWidget& ChildWidget)
+		{
+			static_cast<SCustomInputSettingNode&>(ChildWidget).SetEnabled(false);
+		});
 }
 
 
 void SCustomInputSettingWindow::EnterCustomInputSetting(uint32 UserIndex)
 {
+	KeyboardTab->SetEnabled(true);
+	GamepadTab->SetEnabled(true);
+
 	FSlateApplication& SlateApp = FSlateApplication::Get();
 
 	if (InputDeviceSwitcher->GetActiveWidget() == KeyboardScrollBox)

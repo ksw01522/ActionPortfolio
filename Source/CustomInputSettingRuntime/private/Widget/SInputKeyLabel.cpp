@@ -33,6 +33,7 @@ void SInputKeyLabel::Construct(const FArguments& InArgs)
 	SetVisibility(InArgs._Visibility);
 	SetKeyboardKey(InArgs._KeyboardKey);
 	SetGamepadKey(InArgs._GamepadKey);
+	SetIconSize(InArgs._IconSize);
 
 	ChildSlot
 	[
@@ -89,6 +90,12 @@ void SInputKeyLabel::SetGamepadKey(const FKey& InKey)
 #endif
 
 	LabelBrush_Gamepad.SetResourceObject(SystemInst->GetKeyIcon(InKey));
+}
+
+void SInputKeyLabel::SetIconSize(FVector2D InSize)
+{
+	LabelBrush_Keyboard.SetImageSize(InSize);
+	LabelBrush_Gamepad.SetImageSize(InSize);
 }
 
 #undef LOCTEXT_NAMESPACE

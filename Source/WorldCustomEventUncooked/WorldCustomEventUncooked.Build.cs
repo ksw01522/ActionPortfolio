@@ -12,7 +12,7 @@ public class WorldCustomEventUncooked : ModuleRules
 
 		PrivateIncludePaths.AddRange(new string[]
 		{
-            "WorldCustomEventUncooked/public",
+            "WorldCustomEventUncooked/public"
 		});
 
 		PrivateIncludePaths.AddRange(new string[]

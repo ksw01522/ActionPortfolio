@@ -9,6 +9,7 @@
 #include "Brushes/SlateBoxBrush.h"
 #include "ActionPortfolio.h"
 #include "Widgets/Layout/Anchors.h"
+#include "Items/ItemDeveloperSetting.h"
 
 TSharedPtr<FSlateStyleSet> FActionPortfolioWidgetStyle::StyleSet = nullptr;
 
@@ -77,12 +78,23 @@ void FActionPortfolioWidgetStyle::Initialize()
 	}
 
 	//Initialize Interaction Widget
-	{
+	{	
+		//Text Style
+		const float TextSize = 24;
+
+		FSlateFontInfo DefaultFont(TTF_FONT("NPCInteract/Font/Default", 28));
+		FLinearColor DefaultColor(1, 0.6f, 0, 1);
+
+		FTextBlockStyle DefaultTextStyle;
+		DefaultTextStyle.SetFont(DefaultFont);
+		DefaultTextStyle.SetColorAndOpacity(FSlateColor(DefaultColor));
+		DefaultTextStyle.SetFontSize(TextSize);
+
+		StyleSet->Set(InteractionStyle::TextStyle::Default, DefaultTextStyle);
+
 		//Button Style
 		FSlateBoxBrush DefaultBTNStyle_Normal = BOX_BRUSH("NPCInteract/Normal", FVector2D(32, 32), 8.0f / 32.0f);
-
 		FSlateBoxBrush DefaultBTNStyle_Hovered = BOX_BRUSH("NPCInteract/Hovered", FVector2D(32, 32), 8.0f / 32.0f);
-
 		FSlateBoxBrush DefaultBTNStyle_Pressed = BOX_BRUSH("NPCInteract/Pressed", FVector2D(32, 32), 8.0f / 32.0f);
 
 		//기본 버튼 스타일
@@ -93,7 +105,13 @@ void FActionPortfolioWidgetStyle::Initialize()
 			.SetNormalPadding(FMargin(2, 2, 2, 2))
 			.SetPressedPadding(FMargin(2, 3, 2, 1));
 
-		StyleSet->Set(ActionPFStyle::ButtonStyle::Default, DefaultBTNStyle);
+		StyleSet->Set(InteractionStyle::ButtonStyle::Default, DefaultBTNStyle);
+
+		FVector2D ButtonSize(250, 80);
+		StyleSet->Set(InteractionStyle::ButtonStyle::DefaultSize, ButtonSize);
+
+		FMargin ButtonPadding(0,10);
+		StyleSet->Set(InteractionStyle::ButtonStyle::Padding, ButtonPadding);
 	}
 
 	//Initialize Inventory Widget
@@ -136,6 +154,26 @@ void FActionPortfolioWidgetStyle::Initialize()
 			CountTextBlockStyle.SetShadowOffset(FVector2D(0.1f, 0.1f));
 
 			StyleSet->Set(InventoryStyle::CountTextStyle, CountTextBlockStyle);
+
+			
+			UMaterialInterface* MeshCaptureMaterial = GetDefault<UItemDeveloperSetting>()->GetMeshCaptureMaterial().LoadSynchronous();
+			FSlateImageBrush* MeshCaptureBrush = new FSlateImageBrush(MeshCaptureMaterial, FVector2D(64,64));
+
+			StyleSet->Set(InventoryStyle::InformationSlate::MeshCaptureStyle, MeshCaptureBrush);
+
+			FSlateFontInfo NameTextBlockFont(TTF_FONT("NPCInteract/Font/Default", 12));
+			FTextBlockStyle NameTextBlockStyle;
+			NameTextBlockStyle.SetFont(NameTextBlockFont);
+			NameTextBlockStyle.SetShadowOffset(FVector2D(0.1f, 0.1f));
+
+			StyleSet->Set(InventoryStyle::InformationSlate::NameTextStyle, NameTextBlockStyle);
+
+			FSlateFontInfo DescriptionTextBlockFont(TTF_FONT("NPCInteract/Font/Default", 12));
+			FTextBlockStyle DescriptionTextBlockStyle;
+			DescriptionTextBlockStyle.SetFont(DescriptionTextBlockFont);
+			DescriptionTextBlockStyle.SetShadowOffset(FVector2D(0.1f, 0.1f));
+
+			StyleSet->Set(InventoryStyle::InformationSlate::DescriptionTextStyle, DescriptionTextBlockStyle);
 		}
 	}
 

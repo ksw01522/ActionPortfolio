@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "AttributeSet.h"
 #include "ActionPFAbilitySystemComponent.h"
+#include "GameplayEffectTypes.h"
 #include "ActionPFAttributeSet.generated.h"
 
 /**
@@ -17,15 +18,39 @@
 	GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnChangedCharacterLevel, int, NewLevel);
+
 UCLASS()
 class ACTIONPORTFOLIO_API UActionPFAttributeSet : public UAttributeSet
 {
 	GENERATED_BODY()
+public:
+	UActionPFAttributeSet();
+
+private:
+	UPROPERTY()
+	int CharacterLevel;
+
+	void OnChangedCharacterLevelCallBack();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UGameplayEffect> StatusEffect;
+
+	FActiveGameplayEffectHandle StatusEffectHandle;
 
 public:
-	UPROPERTY(BlueprintReadOnly, Category = "Status")
-	FGameplayAttributeData CharacterLevel;
-	ATTRIBUTE_ACCESSORS(UActionPFAttributeSet, CharacterLevel)
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Status")
+	int GetCharacterLevel() const { return CharacterLevel; }
+
+	UFUNCTION(BlueprintCallable, Category = "Status")
+	void SetCharacterLevel(int NewLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Status")
+	void SetStatusEffect(UGameplayEffect* NewStatusEffect);
+
+	void InitializeStatus(int NewLevel, UGameplayEffect* NewStatusEffect);
+
+	FOnChangedCharacterLevel OnChangedCharacterLevel;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Status")
 	FGameplayAttributeData Health;
@@ -66,6 +91,19 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Status")
 	FGameplayAttributeData DefenseP;
 	ATTRIBUTE_ACCESSORS(UActionPFAttributeSet, DefenseP)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
+	FGameplayAttributeData FireResistance;
+	ATTRIBUTE_ACCESSORS(UActionPFAttributeSet, FireResistance)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
+	FGameplayAttributeData IceResistance;
+	ATTRIBUTE_ACCESSORS(UActionPFAttributeSet, IceResistance)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Status")
+	FGameplayAttributeData ElectricResistance;
+	ATTRIBUTE_ACCESSORS(UActionPFAttributeSet, ElectricResistance)
+
 
 protected:
 	void AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float OldMaxValue, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);

@@ -21,6 +21,6 @@ void UAN_ActivateAbilityByClass::Notify(USkeletalMeshComponent* MeshComp, UAnimS
 	AActionPortfolioCharacter* Char = Cast<AActionPortfolioCharacter>(MeshComp->GetOwner());
 	if (IsValid(Char))
 	{
-		Char->ActivateActionPFAbility(AbilityClassToActivate);
+		Char->GetAbilitySystemComponent()->TryActivateAbilityByClass(AbilityClassToActivate);
 	}
 }

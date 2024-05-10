@@ -4,8 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "Manager/DialogueMCManagerInterface.h"
-#include "Manager/DialoguerManagerInterface.h"
 #include "Manager/DialogueHandle.h"
 #include "DialogueManager.generated.h"
 
@@ -25,6 +23,8 @@
  struct FNextDialogueNodeOptionalStruct;
 
  enum class EDialogueNodeType : uint8;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDialogueEndDelegate, bool, bCancelled);
 
 UENUM(BlueprintType)
 enum class EDialogueLanguage : uint8
@@ -56,15 +56,17 @@ private:
 	TArray<UDialogueEvent*> DialogueEvents;
 
 private:
+	FOnDialogueEndDelegate OnDialogueEnd;
 
 public:
 	bool IsValidDialogue() const;
+	FOnDialogueEndDelegate& GetEndDelegate() {return OnDialogueEnd;}
 };
  
  struct UDialogueElelement;
  
 UCLASS(BlueprintType, Config = CustomDialogue)
-class DIALOGUERUNTIME_API UDialogueManager : public UGameInstanceSubsystem, public IDialogueMCManagerInterface, public IDialoguerManagerInterface
+class DIALOGUERUNTIME_API UDialogueManager : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 	
@@ -76,45 +78,48 @@ private:
 
 public:
 	static UDialogueManager* GetManagerInstance() {return ManagerInstance;}
-	static IDialoguerManagerInterface* GetDialoguerManager();
-	static IDialogueMCManagerInterface* GetDialogueMCManager();
 
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-
 private:
-	uint32 GDialogueHandleID = 0;
-
-	TMap<FDialogueHandle, FActingDialogueData> ActingDialogueMap;
-
 	UPROPERTY(Config)
 	EDialogueLanguage CurrentLanguage;
-
-	TMap<FString, TWeakObjectPtr<UDialoguerComponent>> DialoguerMap;
-
-	const FActingDialogueData* GetActingDialogueData(const FDialogueHandle& Handle) const;
-	FActingDialogueData* GetActingDialogueData(const FDialogueHandle& Handle);
-
-
-
-
-/////////////////////////////////// Dialogue MC Manager ///////////////////////////////
-private:
-	virtual void EnterDialogue(FDialogueHandle& Handle, const UDialogueSession* Session) override;
-	virtual bool ExitDialogue(FDialogueHandle& Handle) override;
-
-	virtual bool EnterNextNode(FDialogueElementContainer& OutElements, FDialogueHandle& Handle, FNextDialogueNodeOptionalStruct* OptionalStruct = nullptr) override;
-
-	virtual bool CanEnterNextNode(FDialogueHandle& Handle) const override;
-
-	virtual bool IsActingDialogue(FDialogueHandle& Handle) const override;
-
 
 public:
 	inline EDialogueLanguage GetCurrentLanguage() const { return CurrentLanguage; }
 	void SetCurrentLanguage(EDialogueLanguage Lan);
+
+private:
+	uint32 GDialogueHandleID = 0;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> DialogueTextStyleSet;
+
+public:
+	UDataTable* GetDialogueTextStyleSet() const { return DialogueTextStyleSet; }
+
+private:
+	TMap<FDialogueHandle, FActingDialogueData> ActingDialogueMap;
+
+public:
+	const FActingDialogueData* GetActingDialogueData(const FDialogueHandle& Handle) const;
+	FActingDialogueData* GetActingDialogueData(const FDialogueHandle& Handle);
+
+public:
+	void EnterDialogue(FDialogueHandle& Handle, const UDialogueSession* Session);
+	bool ExitDialogue(FDialogueHandle& Handle, bool bCancelled = false);
+
+	bool IsActingDialogue(FDialogueHandle& Handle) const;
+
+	bool TryEnterNextNode(FDialogueHandle& Handle, const UDialogueNode* NextNode);
+
+
+
+
+
 
 
 	/////////////////Events
@@ -127,13 +132,14 @@ private:
 public:
 
 
-
-///////////////// Dialoguer Manager ///////////////////////////
+///////////////////// Dialoguer /////////////////////////////
 private:
-	virtual void RegisterDialoguer(UDialoguerComponent* NewDialoguer) override;
-	virtual void UnregisterDialoguer(UDialoguerComponent* TargetDialoguer) override;
+	TMap<FString, TWeakObjectPtr<UDialoguerComponent>> DialoguerMap;
 
 public:
+	virtual void RegisterDialoguer(UDialoguerComponent* NewDialoguer);
+	virtual void UnregisterDialoguer(UDialoguerComponent* TargetDialoguer);
+
 	UDialoguerComponent* GetDialoguer(const FString& DialoguerID) const;
 
 ///////////////// Animation

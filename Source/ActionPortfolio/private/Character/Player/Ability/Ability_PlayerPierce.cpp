@@ -10,10 +10,8 @@
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Ability/Effects/KnockbackExecutionCalculation.h"
 #include "AbilitySystemInterface.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Ability/Effects/GameplayEffect_Damage.h"
 #include "Character/Player/PlayerCharacter.h"
 #include "GameplayTagContainer.h"
 #include "Character/Player/ActionPFPlayerController.h"
@@ -28,7 +26,6 @@ UAbility_PlayerPierce::UAbility_PlayerPierce()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	MaxActivePierceTime = 2;
 	PierceDistance = 500;
-	bBlockMoveInActing = true;
 
 	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag("Ability.Player.Pierce"));
 	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag("Ability.Player.Pierce"));
@@ -50,9 +47,7 @@ AActionPortfolioCharacter* UAbility_PlayerPierce::SearchTargetCharacter()
 	AActionPortfolioCharacter* Avatar =  Cast<AActionPortfolioCharacter>(GetAvatarActorFromActorInfo());
 	if (Avatar)
 	{
-		TargetCharacter = Avatar->GetLastAttackedTarget();
-		if(!TargetCharacter.IsValid()) TargetCharacter.Reset();
-		return TargetCharacter.Get();
+		
 	}
 
 	return nullptr;
@@ -66,6 +61,7 @@ void UAbility_PlayerPierce::ActivateAbility_CPP(const FGameplayAbilitySpecHandle
 		return;
 	}
 
+	/*
 	APlayerCharacter* Player = Cast<APlayerCharacter>(GetAvatarActorFromActorInfo());
 
 	FRotator ControllerForwardRotator(0, Player->GetController()->GetControlRotation().Yaw, 0);
@@ -120,6 +116,7 @@ void UAbility_PlayerPierce::ActivateAbility_CPP(const FGameplayAbilitySpecHandle
 	UAbilityTask_MoveToLocation* MoveToPrePiercePos = UAbilityTask_MoveToLocation::MoveToLocation(this, "PrePierceMove", PrePiercePos, 0.1, nullptr, nullptr);
 	MoveToPrePiercePos->OnTargetLocationReached.AddDynamic(this, &UAbility_PlayerPierce::OnPrePiercePosReached);
 	MoveToPrePiercePos->ReadyForActivation();
+	*/
 }
 
 bool UAbility_PlayerPierce::CommitCheck(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, OUT FGameplayTagContainer* OptionalRelevantTags)

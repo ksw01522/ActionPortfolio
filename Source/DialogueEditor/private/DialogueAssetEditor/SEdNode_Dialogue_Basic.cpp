@@ -21,6 +21,8 @@
 #include "Components/RichTextBlock.h"
 #include "RenderingThread.h"
 #include "SRichTextBlockDecorator.h"
+#include "DialogueDeveloperSettings.h"
+#include "DialogueDeveloperSettings.h"
 
 template< class ObjectType >
 struct FDialogueDeferredDeletor : public FDeferredCleanupInterface
@@ -133,11 +135,12 @@ FORCEINLINE TSharedPtr< ObjectType > MakeDialogueShareableDeferredCleanup(Object
 
 void SEdNode_Dialogue_Basic::MakeStyleInstance()
 {
+	const UDialogueDeveloperSettings* DeveloperSetting = GetDefault<UDialogueDeveloperSettings>();
+
 	StyleInstance.Reset();
 	StyleInstance = MakeDialogueShareableDeferredCleanup(new FSlateStyleSet(TEXT("RichTextStyle")));
 	
-	UDataTable* DialogueTextStyleSet = EdNode_Basic->GetDialogueTextStyleSet();
-
+	UDataTable* DialogueTextStyleSet = DeveloperSetting->GetDialogueTextStyleSet();
 
 	if (DialogueTextStyleSet && DialogueTextStyleSet->GetRowStruct()->IsChildOf(FRichTextStyleRow::StaticStruct()))
 	{
@@ -158,19 +161,17 @@ void SEdNode_Dialogue_Basic::MakeStyleInstance()
 
 void SEdNode_Dialogue_Basic::MakeDecoInstance(TArray<TSharedRef<ITextDecorator>>& OutDecorators)
 {
-	ERichTextBlockType TextBlockType = EdNode_Basic->GetTextBlockType();
+	bool bSlateDeco = EdNode_Basic->IsSlateRichTextStyle();
 	InstanceSlateDecorators.Empty();
 	InstanceUMGDecorators.Empty();
 
-	switch (TextBlockType)
+	if (bSlateDeco)
 	{
-		case ERichTextBlockType::SLATE:
-			MakeSlateDecoInstance(OutDecorators);
-		break;
-
-		case ERichTextBlockType::UMG:
-			MakeUMGDecoInstance(OutDecorators);
-		break;
+		MakeSlateDecoInstance(OutDecorators);
+	}
+	else
+	{
+		MakeUMGDecoInstance(OutDecorators);
 	}
 }
 

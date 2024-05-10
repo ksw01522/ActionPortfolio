@@ -7,6 +7,7 @@
 #include "Framework/Application/NavigationConfig.h"
 #include "Engine/DataTable.h"
 #include "CustomInputDeveloperSettings.h"
+#include "Events/ChangeInputDevice.h"
 #include "CustomInputSettingSubsystem.generated.h"
 
 /**

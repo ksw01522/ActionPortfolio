@@ -6,13 +6,10 @@
 #include "DialogueMCComponent.h"
 #include "PlayerDialogueMCComponent.generated.h"
 
-class SDialogueBox;
+class SDialogueMainSlate;
 class UActionPFPlayerController;
 class SConstraintCanvas;
-class SVerticalBox;
-class SButton;
-class FReply;
-class SAnswerButton;
+
 /**
  * 
  */
@@ -26,47 +23,20 @@ class ACTIONPORTFOLIO_API UPlayerDialogueMCComponent : public UDialogueMCCompone
 protected:
 	virtual void BeginPlay() override;
 
-	virtual void OnSuccedEnterNextNode(FDialogueElementContainer& Container) override;
-
-	virtual void OnEnterDialogue() override;
-
+private:
 	virtual void OnExitDialogue(bool bIsCancelled) override;
+	virtual void OnEnterDialogue() override;
+	virtual void OnSuccedEnterNextNode(const class UDialogueNode* InNode) override;
+
+private:
+	FReply ClickAnswerButton(const UDialogueNode* InAnswerNode);
 
 //////////////// Dialouge Slate
 private:
-	TWeakPtr<SDialogueBox> DefaultDialogueBox;
-	
-	TWeakPtr<SVerticalBox> AnswersBox;
-	
-	TArray<TWeakPtr<SAnswerButton>> AnswerButtons;
+	TSharedPtr<SDialogueMainSlate> DefaultDialogueSlate;
 
 private:
-	void CheckAnswerButtonCount(int Target);
-	void HideAndShowAnswerButtons(int Target);
+	void OnActNextDialogue();
+	void OnDialogueBoxAnimComplete(bool bForced);
 
-	void OnMouseButtonDownDialogueBox();
-
-	FReply AnswerForQuestion(int Index);
-
-	void SetAnswerButtonText(const FDialogueElementContainer& Container);
-
-public:
-	void BindDialogueBox(const TSharedPtr<SDialogueBox>& NewDialogueBox);
-	void BindAnswerBox(const TSharedPtr<SVerticalBox>& NewAnswersBox);
-
-	void SetMainDialogueBoxVisible(bool NewState);
-
-////////////// Text Animation
-private:
-	FTimerHandle TextAnimHandle;
-
-	bool bNeedShowAnswerBox;
-
-private:
-	void AnimText();
-	void ForceTextAnimComplete();
-	void OnTextAnimCompleted();
-
-public:
-	bool IsTextAnimating() const;
 };

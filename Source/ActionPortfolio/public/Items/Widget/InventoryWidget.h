@@ -9,9 +9,12 @@
 /**
  * 
  */
- class SInventory;
+ class SInventoryWindow;
+ class UItemSlot;
  enum class EItemType : uint8;
  enum class EItemGrade : uint8;
+
+ DECLARE_MULTICAST_DELEGATE_OneParam(FOnFocusedItemSlot, UItemSlot*);
 
 UCLASS(BlueprintType)
 class ACTIONPORTFOLIO_API UInventoryWidget : public UWidget
@@ -21,32 +24,26 @@ class ACTIONPORTFOLIO_API UInventoryWidget : public UWidget
 	UInventoryWidget();
 
 private:
-	TSharedPtr<SInventory> InventorySlate;
+	TSharedPtr<SInventoryWindow> InventorySlate;
 
 #if WITH_EDITORONLY_DATA
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Preview", meta = (AllowPrivateAccess = "true"))
 	int Preview_InventorySize;
-	
 #endif
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot|Background", meta = (AllowPrivateAccess = "true"))
-	TSoftObjectPtr<UMaterialInterface> SlotBackgroundMaterial_Equip;
+	mutable FOnFocusedItemSlot OnFocusedItemSlot;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot|Background", meta = (AllowPrivateAccess = "true"))
-	TSoftObjectPtr<UMaterialInterface> SlotBackgroundMaterial_Consum;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot|Background", meta = (AllowPrivateAccess = "true"))
-	TSoftObjectPtr<UMaterialInterface> SlotBackgroundMaterial_Mat;
+	FSlateBrush SlotBackgroundBrush;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot", meta = (AllowPrivateAccess = "true", ClampMin = 1))
 	int SlotCountByRow;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot", meta = (AllowPrivateAccess = "true"))
-	FVector2D SlotSize;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Slot", meta = (AllowPrivateAccess = "true"))
 	FMargin SlotPadding;
+
+	TArray<class UInventorySlot*> InSlots;
 
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
@@ -55,8 +52,6 @@ protected:
 	virtual void SynchronizeProperties() override;
 
 #if WITH_EDITOR
-	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
-
 	virtual const FText GetPaletteCategory() override;
 #endif
 
@@ -64,7 +59,14 @@ protected:
 	virtual TSharedPtr<SWidget> GetAccessibleWidget() const override;
 #endif
 
+private:
+	UFUNCTION()
+	void OnNativeFocusedItemSlot(UItemSlot* InSlot); 
+
 public:
-	void UpdateSlotWidget(EItemType InventoryType, int idx, TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount);
 	void SetSlotCountByRow(int NewCount);
+
+	FOnFocusedItemSlot& GetOnFocusedItemSlot() const { return OnFocusedItemSlot; }
+
+	void BindInventorySlots(TArray<class UInventorySlot*> InventorySlots);
 };

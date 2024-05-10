@@ -14,6 +14,9 @@
 #include "DialogueSession.h"
 #include "Events/DialogueEvent.h"
 #include "DialoguerComponent.h"
+#include "DialogueNode.h"
+#include "DialogueDeveloperSettings.h"
+#include "DialogueEdge.h"
 
 ////////////////////////////////////////// FActingDialogueData /////////////////////////////////////////////
 FActingDialogueData::FActingDialogueData(const UDialogueSession* Session)
@@ -60,6 +63,10 @@ void UDialogueManager::Initialize(FSubsystemCollectionBase& Collection)
 	DialoguerMap.Empty();
 
 	ManagerInstance = this;
+
+	const UDialogueDeveloperSettings* DeveloperSetting = GetDefault<UDialogueDeveloperSettings>();
+
+	DialogueTextStyleSet = DeveloperSetting->GetDialogueTextStyleSet();
 }
 
 void UDialogueManager::Deinitialize()
@@ -70,35 +77,27 @@ void UDialogueManager::Deinitialize()
 	DialoguerMap.Empty();
 }
 
-IDialoguerManagerInterface* UDialogueManager::GetDialoguerManager()
-{
-	if(!IsValid(ManagerInstance)) return nullptr;
-	return Cast<IDialoguerManagerInterface>(ManagerInstance);
-}
 
-IDialogueMCManagerInterface* UDialogueManager::GetDialogueMCManager()
-{
-	if (!IsValid(ManagerInstance)) return nullptr;
-	return Cast<IDialogueMCManagerInterface>(ManagerInstance);
-}
 
 ///////////////////////////////////////// Dialogue MC Manager ///////////////////////////////////////////
 void UDialogueManager::EnterDialogue(FDialogueHandle& Handle, const UDialogueSession* Session)
 {
-	ensureMsgf(Session != nullptr, TEXT("Try Enter Dialogue nullptr Dialogue Session"));
+	check(Session);
+
+	ExitDialogue(Handle, true);
 	
 	Handle.SetHandleID(++GDialogueHandleID);
 	FActingDialogueData Data(Session);
 
 	ActingDialogueMap.Add(Handle, Data);
-
 }
 
-bool UDialogueManager::ExitDialogue(FDialogueHandle& Handle)
+bool UDialogueManager::ExitDialogue(FDialogueHandle& Handle, bool bCancelled)
 {
 	bool bIsActing = IsActingDialogue(Handle);
 	if (bIsActing)
 	{
+		ActingDialogueMap.Find(Handle)->GetEndDelegate().Broadcast(bCancelled);
 		ActingDialogueMap.Remove(Handle);
 	}
 	Handle.Invalidate();
@@ -107,62 +106,32 @@ bool UDialogueManager::ExitDialogue(FDialogueHandle& Handle)
 }
 
 
-bool UDialogueManager::EnterNextNode(FDialogueElementContainer& OutElements, FDialogueHandle& Handle, FNextDialogueNodeOptionalStruct* OptionalStruct)
+bool UDialogueManager::TryEnterNextNode(FDialogueHandle& Handle, const UDialogueNode* NextNode)
 {
-	OutElements.Clear();
+	check(IsActingDialogue(Handle) && NextNode);
 
 	FActingDialogueData* Data = GetActingDialogueData(Handle);
-	if (Data == nullptr) {
-		LOG_ERROR(TEXT("Can't find ActingDialogueData."));
-		Handle.Invalidate();
-		return false;
-	}
-	if (!CanEnterNextNode(Handle))
+
+	const UDialogueNode* PrevNode = Data->CurrentNode.Get();
+	const UDialogueEdge* NextEdge = PrevNode->GetEdge(NextNode);
+
+	if(NextEdge == nullptr || !NextEdge->CanEnterNextNode()) return false;
+	
+	TArray<UDialogueEvent*>& Events = Data->DialogueEvents;
+
+	for (auto& Event : Events)
 	{
-		LOG_ERROR(TEXT("Can't next Dialogue node."));
-		return false;
+		if(!Event->CanEnterNextNode()) return false;
 	}
 
 	CallDialogueEventsEnd(Data, true);
 
-	Data->CurrentNode = Data->CurrentNode->GetNextDialogueNode();
-	ensureMsgf(Data->CurrentNode.IsValid(), TEXT("Can't get Next Node. Do Check Session : %s"), *Data->DialogueSession->GetName());
-
-	Data->CurrentNode->GetDialogueElementContainer(OutElements);
-
-#if WITH_EDITOR
-	EDialogueNodeType NodeType = OutElements.ContainerType;
-
-
-	ensureMsgf(NodeType != EDialogueNodeType::None &&
-		NodeType != EDialogueNodeType::Start &&
-		NodeType != EDialogueNodeType::Answer
-		, TEXT("Can't get Next Node. Do Check Session : %s"), *Data->DialogueSession->GetName());
-
-#endif
+	Data->CurrentNode = NextNode;
 
 	RegisterAndCallEvents(Data);
-
+	
 	return true;
 }
-
-bool UDialogueManager::CanEnterNextNode(FDialogueHandle& Handle) const
-{
-	if (!IsActingDialogue(Handle)) return false;
-
-	const FActingDialogueData* ActingDialogueData = GetActingDialogueData(Handle);
-	if (ActingDialogueData == nullptr) return false;
-
-	for (const auto Event : ActingDialogueData->DialogueEvents) {
-		if (!IsValid(Event)) continue;
-
-		if (!Event->CanEnterNextNode()) return false;
-	}
-
-	return true;
-}
-
-
 
 bool UDialogueManager::IsActingDialogue(FDialogueHandle& Handle) const
 {
@@ -200,8 +169,8 @@ FActingDialogueData* UDialogueManager::GetActingDialogueData(const FDialogueHand
 
 void UDialogueManager::RegisterAndCallEvents(FActingDialogueData* DialogueData)
 {
-	ensure(DialogueData);
-	ensure(DialogueData->CurrentNode.IsValid());
+	check(DialogueData);
+	check(DialogueData->CurrentNode.IsValid());
 
 	const TArray<UDialogueEvent*>& Events = DialogueData->CurrentNode->GetDialogueEvents();
 	for (auto Event : Events)

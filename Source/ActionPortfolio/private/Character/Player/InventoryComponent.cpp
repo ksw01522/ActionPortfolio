@@ -5,145 +5,8 @@
 #include "Items/ItemBase.h"
 #include "Items/ItemManagerSubsystem.h"
 #include "ActionPortfolio.h"
-
-
-
-
-//////////////// For Inventory Slot /////////////////////////////
-FName FInventorySlot::GetItemCode() const
-{
-	return Item == nullptr ? NAME_None : Item->GetItemCode();
-}
-
-void FInventorySlot::SetSlot(UItemBase* NewItem, int NewCount)
-{
-#if WITH_EDITOR
-	FString ItemCode = IsValid(NewItem) ? NewItem->GetItemCode().ToString() : "nullptr";
-	PFLOG(Warning, TEXT("Try Set Slot By Code : %s, Count : %d"), *ItemCode, NewCount);
-#endif
-
-	if (!IsValid(NewItem) || NewCount <= 0)
-	{
-		ClearSlot();
-		return;
-	}
-
-	Item = NewItem;
-	SetCount(NewCount);
-}
-
-void FInventorySlot::SetCount(int NewCount)
-{
-	Count = NewCount;
-	CheckCount();
-}
-
-void FInventorySlot::AddCount(int AddCount)
-{
-	if (IsEmpty())
-	{
-		PFLOG(Error, TEXT("Try Add Count To EmptySlot."));
-		return;
-	}
-
-	if (!Item->IsStackableItem())
-	{
-		PFLOG(Error, TEXT("Try Add Count To Not Stackable Item"));
-		return;
-	}
-
-	Count += AddCount;
-
-	CheckCount();
-}
-
-void FInventorySlot::RemoveCount(int RemoveCount)
-{
-	if (IsEmpty())
-	{
-		PFLOG(Error, TEXT("Try Remove Count To EmptySlot."));
-		return;
-	}
-
-	Count -= RemoveCount;
-
-	CheckCount();
-}
-
-void FInventorySlot::CheckCount()
-{
-	if (IsEmpty())
-	{
-		ClearSlot();
-		return;
-	}
-	
-	if (Item->IsStackableItem())
-	{
-		Count = FMath::Clamp(Count, 1, Item->GetStackSize());
-	}
-	else
-	{
-		Count = 1;
-	}
-}
-
-bool FInventorySlot::IsEmpty() const
-{
-	return !IsValid(Item) || Count <= 0;
-}
-
-
-
-
-
-////////////////////// For InventorySlotContainer ///////////////////////////////////////
-
-void FInventorySlotContainer::InitializeSlots(int NewSize)
-{
-	Slots.Reset();
-	Slots.Init(FInventorySlot(), NewSize);
-
-	for (int i = 0; i < Slots.Num(); i++)
-	{
-		Slots[i].Index = i;
-	}
-}
-
-FInventorySlot* FInventorySlotContainer::GetEmptySlot(int StartIndex)
-{
-	FInventorySlot* ReturnSlot = nullptr;
-
-	int Length = Slots.Num();
-	for (int i = StartIndex; i < Length; i++)
-	{
-		if (Slots[i].IsEmpty())
-		{
-			ReturnSlot = &Slots[i];
-			break;
-		}
-	}
-
-	return ReturnSlot;
-}
-
-FInventorySlot* FInventorySlotContainer::FindSlotByCode(const FName& ItemCode, int StartIndex)
-{
-	FInventorySlot* ReturnSlot = nullptr;
-
-	int Length = Slots.Num();
-	for (int i = StartIndex; i < Length; i++)
-	{
-		if (Slots[i].GetItemCode() == ItemCode)
-		{
-			ReturnSlot = &Slots[i];
-			break;
-		}
-	}
-
-	return ReturnSlot;
-}
-
+#include "Items/Widget/SInventorySlate.h"
+#include "Items/ItemWorldSubsystem.h"
 
 
 ////////////////////// For InventoryComponent ///////////////////////////////////////
@@ -153,7 +16,7 @@ UInventoryComponent::UInventoryComponent()
 {
 	//당장은 쓸 거 같진 않다.
 	PrimaryComponentTick.bCanEverTick = false;
-	bWantsInitializeComponent = false;
+	bWantsInitializeComponent = true;
 	// ...
 }
 
@@ -163,35 +26,28 @@ void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UEnum* EnumClass = StaticEnum<EItemType>();
-	Inventory.Reserve(EnumClass->NumEnums() - 2);
-
-	
 	UItemManagerSubsystem* ManagerSubsystem = UItemManagerSubsystem::GetManagerInstance();
 	const int InventorySize = ManagerSubsystem->GetInventorySize();
 
-	//Inventory칸 초기화
-	for (EItemType ItemType : TEnumRange<EItemType>())
+	Slots.Reserve(InventorySize);
+	for (int i = 0; i < InventorySize; i++)
 	{
-		Inventory.Add(ItemType, FInventorySlotContainer()).InitializeSlots(InventorySize);
+		Slots.Add(NewObject<UInventorySlot>(this));
 	}
-	
 }
 
 void UInventoryComponent::AddItemByDropItem(ADroppedItem& DropItem)
 {
-	const UItemBase* DroppedItem = DropItem.GetDroppedItem();
+	UItemBase* DroppedItem = const_cast<UItemBase*>(DropItem.GetDroppedItem());
 	if (DroppedItem == nullptr)
 	{
 		PFLOG(Error, TEXT("Try Add Empty Drop Item."));
 		return;
 	}
 
-	int TempCount = DropItem.GetItemCount();
+	int TempCount = AddItemByObject(DroppedItem);
 
-	TempCount = AddItemByCode(DroppedItem->GetItemCode(), TempCount);
-
-	DropItem.SetItemCount(TempCount);
+	if(TempCount == 0) { DropItem.ClearDroppedItemData(); }
 }
 
 int UInventoryComponent::AddItemByCode(const FName& ItemCode, int Count)
@@ -201,86 +57,70 @@ int UInventoryComponent::AddItemByCode(const FName& ItemCode, int Count)
 	UItemManagerSubsystem* ManagerInstance = UItemManagerSubsystem::GetManagerInstance();
 	if (!ManagerInstance) return Count;
 	
-	UItemBase* ItemData = ManagerInstance->MakeItemInstance(ItemCode);
+	UItemBase* ItemData = ManagerInstance->MakeItemInstance(ItemCode, Count);
 	if (ItemData == nullptr)
 	{
 		return Count;
 	}
 
-	return AddItemByObject(ItemData, Count);
+	return AddItemByObject(ItemData);
 }
 
-int UInventoryComponent::AddItemByObject(UItemBase* TargetItem, int Count)
+int UInventoryComponent::AddItemByObject(UItemBase* TargetItem)
 {
-	if(TargetItem == nullptr || Count <= 0) return Count;
-
-	FInventorySlotContainer& TargetContainer = Inventory[TargetItem->GetItemType()];
-	FInventorySlot* TargetSlot = TargetContainer.FindSlotByCode(TargetItem->GetItemCode());
-
-	int RemainCount = Count;
-	int BeforeTargetSlotCount, AfterTargetSlotCount;
+	check(TargetItem);
 
 	//Item이 Stackable이면서 인벤토리에 같은 아이템이 있을 시 Count 증가
 	if (TargetItem->IsStackableItem())
 	{
-		while (TargetSlot != nullptr && 0 < Count)
+		int BeforeTargetSlotCount = 0;
+		int AfterTargetSlotCount = 0;
+
+		int SlotCount = Slots.Num();
+		for(int i = 0; i < SlotCount && 0 < TargetItem->GetCount(); i++)
 		{
-			if (TargetSlot->GetItemInSlot()->CanStackableWithOther(TargetItem))
+			if(Slots[i]->GetItem() == nullptr) continue;
+
+			if (Slots[i]->GetItem()->CanStackableWithOther(TargetItem))
 			{
-				BeforeTargetSlotCount = TargetSlot->GetCount();
+				BeforeTargetSlotCount = Slots[i]->GetItemCount();
 
-				TargetSlot->AddCount(Count);
+				Slots[i]->AddCount(TargetItem->GetCount());
 
-				AfterTargetSlotCount = TargetSlot->GetCount();
+				AfterTargetSlotCount = Slots[i]->GetItemCount();
 
-				if (OnChangedInventory.IsBound() && BeforeTargetSlotCount != AfterTargetSlotCount) {
-					OnChangedInventory.Broadcast(TargetItem->GetItemType(), TargetSlot->GetIndex());
-				}
+				TargetItem->RemoveCount( AfterTargetSlotCount - BeforeTargetSlotCount);
 
-				RemainCount -= AfterTargetSlotCount - BeforeTargetSlotCount;
-
-				if (RemainCount <= 0) { return RemainCount; }
+				if (TargetItem->GetCount() <= 0) { return 0; }
 			}
-			TargetSlot = TargetContainer.FindSlotByCode(TargetItem->GetItemCode(), TargetSlot->GetIndex() + 1);
 		}
 	}
 
-	//빈 인벤토리 공간에 넣어야 한다면 
-	TargetSlot = TargetContainer.GetEmptySlot();
 
-	while (TargetSlot != nullptr && 0 < Count)
+	int SlotCount = Slots.Num();
+	for (int i = 0; i < SlotCount; i++)
 	{
-		BeforeTargetSlotCount = 0;
+		if(Slots[i]->GetItem() != nullptr) continue;
 
-		TargetSlot->SetSlot(TargetItem, Count);
-
-		AfterTargetSlotCount = TargetSlot->GetCount();
-
-		if (OnChangedInventory.IsBound() && BeforeTargetSlotCount != AfterTargetSlotCount) {
-			OnChangedInventory.Broadcast(TargetItem->GetItemType(), TargetSlot->GetIndex());
-		}
-
-		RemainCount -= AfterTargetSlotCount - BeforeTargetSlotCount;
-		if (RemainCount <= 0) { return RemainCount; }
-
-		TargetSlot = TargetContainer.GetEmptySlot(TargetSlot->GetIndex() + 1);
+		Slots[i]->SetItem(TargetItem);
+		
+		return 0;
 	}
 
-	//Count가 0을 초과한다면 결국 인벤토리 안에 다 못넣었다는 뜻이기에 이에 따라 코드짜야한다.
-	return RemainCount;
+	return TargetItem->GetCount();
 }
 
-int UInventoryComponent::AddItemByIndex(EItemType InventoryType, int Idx, int Count)
+int UInventoryComponent::AddItemByIndex(int Idx, int Count)
 {
-	if (!Inventory[InventoryType].IsValidIndex(Idx) || Inventory[InventoryType].IsEmptyIndex(Idx)) return Count;
+	check(Slots.IsValidIndex(Idx));
 
 	int RemainCount = Count;
 
-	int BeforeCount = Inventory[InventoryType][Idx].GetCount();
+	int BeforeCount = Slots[Idx]->GetItemCount();
 
-	Inventory[InventoryType][Idx].AddCount(RemainCount);
+	Slots[Idx]->AddCount(RemainCount);
 
-	int AfterCount = Inventory[InventoryType][Idx].GetCount();
+	int AfterCount = Slots[Idx]->GetItemCount();
 
 	RemainCount -= AfterCount - BeforeCount;
 
@@ -293,110 +133,103 @@ int UInventoryComponent::RemoveItemByCode(const FName& ItemCode, int Count)
 	if (!ManagerInstance) return Count;
 
 	UItemBase* TargetItem = ManagerInstance->MakeItemInstance(ItemCode);
+	TargetItem->SetCount(Count);
 	if (TargetItem == nullptr)
 	{
 		PFLOG(Error, TEXT("Can't Item Data By : %s"), *ItemCode.ToString());
 		return Count;
 	}
 
-	return RemoveItemByObject(TargetItem, Count);
+	return RemoveItemByObject(TargetItem);
 }
 
-int UInventoryComponent::RemoveItemByObject(UItemBase* TargetItem, int Count)
+int UInventoryComponent::RemoveItemByObject(UItemBase* TargetItem)
 {
-	FInventorySlotContainer& TargetContainer = Inventory[TargetItem->GetItemType()];
-	FInventorySlot* TargetSlot = TargetContainer.FindSlotByCode(TargetItem->GetItemCode());
-
-	int RemainCount = Count;
+	int RemainCount = TargetItem->GetCount();
 	int BeforeTargetSlotCount, AfterTargetSlotCount;
 
-	while (TargetSlot != nullptr && 0 < Count)
+	int SlotCount = Slots.Num();
+	for (int i = 0; i < SlotCount && 0 < RemainCount; i++)
 	{
-		BeforeTargetSlotCount = TargetSlot->GetCount();
+		if(Slots[i]->IsEmptySlot() || !Slots[i]->GetItem()->IsSame(TargetItem)) continue;
 
-		TargetSlot->RemoveCount(Count);
+		BeforeTargetSlotCount = Slots[i]->GetItemCount();
 
-		AfterTargetSlotCount = TargetSlot->GetCount();
+		Slots[i]->RemoveCount(RemainCount);
 
-		if (OnChangedInventory.IsBound() && BeforeTargetSlotCount != AfterTargetSlotCount) {
-			OnChangedInventory.Broadcast(TargetItem->GetItemType(), TargetSlot->GetIndex());
-		}
+		AfterTargetSlotCount = Slots[i]->GetItemCount();
 
 		RemainCount += AfterTargetSlotCount - BeforeTargetSlotCount;
 
-		if (RemainCount <= 0) { return RemainCount; }
-
-		TargetSlot = TargetContainer.FindSlotByCode(TargetItem->GetItemCode(), TargetSlot->GetIndex() + 1);
+		if (RemainCount <= 0) { return 0; }
 	}
 
 	return RemainCount;
 }
 
-int UInventoryComponent::RemoveItemByIndex(EItemType InventoryType, int Idx, int Count)
+int UInventoryComponent::RemoveItemByIndex(int Idx, int Count)
 {
-	if(!Inventory[InventoryType].IsValidIndex(Idx) || Inventory[InventoryType].IsEmptyIndex(Idx)) return Count;
+	check(0 < Count)
+	check(Slots.IsValidIndex(Idx));
 
 	int RemainCount = Count;
 
-	int BeforeCount = Inventory[InventoryType][Idx].GetCount();
+	int BeforeCount = Slots[Idx]->GetItemCount();
 
-	Inventory[InventoryType][Idx].RemoveCount(RemainCount);
+	Slots[Idx]->RemoveCount(RemainCount);
 
-	int AfterCount = Inventory[InventoryType][Idx].GetCount();
+	int AfterCount = Slots[Idx]->GetItemCount();
 
 	RemainCount += AfterCount - BeforeCount;
 
 	return RemainCount;
 }
 
-bool UInventoryComponent::TryDropItem(const EItemType& ItemType, int Idx, int Count, const FVector& DropLocation)
+bool UInventoryComponent::TryDropItem(int Idx, int Count, const FVector& DropLocation)
 {
-	if (ItemType == EItemType::None)
-	{
-		PFLOG(Error, TEXT("Try Drop {None} Type Item"));
-		return false;
-	}
-	if (!Inventory[ItemType].IsValidIndex(Idx))
-	{
-		PFLOG(Error, TEXT("Try Drop Invalidate Index : %d"), Idx);
-		return false;
-	}
+	check(0 < Count)
+	check(Slots.IsValidIndex(Idx));
+	checkf(Count <= Slots[Idx]->GetItemCount(), TEXT("Call Try Drop Item Over Count %d Over Item Count %d"), Count, Slots[Idx]->GetItemCount());
+	
+	UItemBase* ItemForDrop = Slots[Idx]->GetItem();
+	check(ItemForDrop);
 
-	FInventorySlot& TargetSlot = Inventory[ItemType][Idx];
+	UItemWorldSubsystem* IWS = GetWorld()->GetSubsystem<UItemWorldSubsystem>();
+	check(IWS);
 
-	if (TargetSlot.IsEmpty())
+	Slots[Idx]->RemoveCount(Count);
+	if (Slots[Idx]->GetItem() != nullptr)
 	{
-		PFLOG(Error, TEXT("Try Drop Empty Slot"));
-		return false;
+		IWS->ItemDrop(ItemForDrop->GetItemCode(), DropLocation, Count);
 	}
-
-	UItemManagerSubsystem* ManagerInstance = UItemManagerSubsystem::GetManagerInstance();
-	if (!IsValid(ManagerInstance))
+	else
 	{
-		PFLOG(Error, TEXT("Item Manager Invalidate"));
-		return false;
+		IWS->ItemDrop(ItemForDrop, DropLocation);
 	}
-
-	ManagerInstance->ItemDrop(TargetSlot.GetItemInSlot(), TargetSlot.GetCount(), DropLocation);
-	TargetSlot.ClearSlot();
 
 	return true;
 }
 
 
 
-FInventorySlot* UInventoryComponent::GetInventorySlot(EItemType InventoryType, int Idx)
+UInventorySlot* UInventoryComponent::GetInventorySlot(int Idx) const
 {
-	if(InventoryType == EItemType::None) return nullptr;
-	if(!Inventory[InventoryType].IsValidIndex(Idx)) return nullptr;
-	return &Inventory[InventoryType][Idx];
+	if(!Slots.IsValidIndex(Idx)) return nullptr;
+	return Slots[Idx];
 }
 
-FInventorySlot* UInventoryComponent::GetEmptySlot(EItemType InventoryType, int StartIdx)
+UInventorySlot* UInventoryComponent::GetEmptySlot(int StartIdx) const
 {
-	return Inventory[InventoryType].GetEmptySlot(StartIdx);
-}
+	if (!Slots.IsValidIndex(StartIdx)) return nullptr;
 
+	int SlotCount = Slots.Num();
+	for (int i = StartIdx; i < SlotCount; i++)
+	{
+		if(Slots[i]->IsEmptySlot()) return Slots[i];
+	}
+
+	return nullptr;
+}
 
 int UInventoryComponent::GetCountItemInInventory(const FName& ItemCode)
 {
@@ -404,20 +237,30 @@ int UInventoryComponent::GetCountItemInInventory(const FName& ItemCode)
 
 	int SumCount = 0;
 
-	for (EItemType InventoryType : TEnumRange<EItemType>())
+	int SlotCount = Slots.Num();
+	for (int i = 0; i < SlotCount; i++)
 	{
-		FInventorySlotContainer& TargetContainer = Inventory[InventoryType];
+		if(Slots[i]->IsEmptySlot()) continue;
 
-		FInventorySlot* TargetSlot = TargetContainer.FindSlotByCode(ItemCode);
-
-		while (TargetSlot != nullptr)
+		if (Slots[i]->GetItem()->GetItemCode() == ItemCode)
 		{
-			SumCount += TargetSlot->GetCount();
-			TargetSlot = TargetContainer.FindSlotByCode(ItemCode, TargetSlot->GetIndex() + 1);
+			SumCount += Slots[i]->GetItemCount();
 		}
 	}
 
 	return SumCount;
 }
 
-
+void UInventorySlot::SlotDropTo(UItemSlot* To)
+{
+	if(To == nullptr) {return;}
+	else if (To->GetSlotType() == "Inventory" || To->GetSlotType() == "Equipment")
+	{
+		if (CanItemInSlot(To->GetItem()) && To->CanItemInSlot(GetItem()))
+		{
+			UItemBase* ToItem = To->GetItem();
+			To->SetItem(GetItem());
+			SetItem(ToItem);
+		}
+	}
+}

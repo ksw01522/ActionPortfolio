@@ -12,225 +12,156 @@
 
 #include "ActionPortfolio.h"
 
-// Sets default values for this component's properties
-UCharacterStatusComponent::UCharacterStatusComponent()
-{
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = false;
 
-	// ...
+bool UEquipmentSlot::CanDropFrom(const UItemSlot * From) const
+{
+	return CanItemInSlot(From->GetItem());
 }
 
-/*
-// Called when the game starts
+bool UEquipmentSlot::CanDropTo(const UItemSlot* To) const
+{
+	return CanItemInSlot(To->GetItem());
+}
+
+bool UEquipmentSlot::CanItemInSlot(UItemBase* InItem) const
+{
+	PFLOG(Warning, TEXT(""));
+
+	if(InItem == nullptr) return true;
+
+	if(InItem->GetItemType() != EItemType::Equipment) return false;
+
+	UItemBase_Equipment* EquipItem = Cast<UItemBase_Equipment>(InItem);
+
+#if WITH_EDITOR
+	if (EquipItem->GetEquipmentPart() != Part)
+	{
+		UEnum* PartEnum = StaticEnum<EEquipmentPart>();
+		PFLOG(Warning, TEXT("Slot Part : %s, Item Part : %s"), *PartEnum->GetNameStringByValue((int64)Part), *PartEnum->GetNameStringByValue((int64)EquipItem->GetEquipmentPart()));
+	}
+#endif
+
+	return EquipItem->GetEquipmentPart() == Part;
+}
+
+void UEquipmentSlot::ApplyItemEffects()
+{
+	if(GetItem() == nullptr || !BindedASC.IsValid()) return;
+
+	UItemBase_Equipment* EquipItem = Cast<UItemBase_Equipment>(GetItem());
+	check(EquipItem);
+	
+	FGameplayAbilitySpec AbilitySpec(EquipItem->GetEquipmentAbility());
+	AbilitySpecHandle = BindedASC->GiveAbility(AbilitySpec);
+
+	UGameplayEffect* BasicStatusUpEffect = EquipItem->MakeAddStatusEffect();
+	StatusUpEffectHandle = BindedASC->ApplyGameplayEffectSpecToSelf(FGameplayEffectSpec(BasicStatusUpEffect, BindedASC->MakeEffectContext()));
+	
+}
+
+void UEquipmentSlot::RemoveItemEffects()
+{
+	if (!BindedASC.IsValid()) return;
+	
+	BindedASC->ClearAbility(AbilitySpecHandle);
+	BindedASC->RemoveActiveGameplayEffect(StatusUpEffectHandle);
+	ClearHandles();
+}
+
+void UEquipmentSlot::SlotDropTo(UItemSlot* To)
+{
+	if (To == nullptr) { return; }
+	else if (To->GetSlotType() == "Inventory" || To->GetSlotType() == "Equipment")
+	{
+		if (CanItemInSlot(To->GetItem()) && To->CanItemInSlot(GetItem()))
+		{
+			UItemBase* ToItem = To->GetItem();
+			To->SetItem(GetItem());
+			SetItem(ToItem);
+		}
+	}
+}
+
+void UEquipmentSlot::NativeOnChangedItemInSlot(UItemBase* PrevItem)
+{
+	RemoveItemEffects();
+
+	ApplyItemEffects();
+
+	Super::NativeOnChangedItemInSlot(PrevItem);
+}
+
+UAbilitySystemComponent* UEquipmentSlot::GetAbilitySystemComponent() const
+{
+	return BindedASC.Get();
+}
+
+void UEquipmentSlot::BindAbilitySystemComponent(UAbilitySystemComponent* InASC)
+{
+	if(BindedASC == InASC) return;
+
+	RemoveItemEffects();
+
+	BindedASC = InASC;
+
+	ApplyItemEffects();
+}
+
+UCharacterStatusComponent::UCharacterStatusComponent()
+{
+	PrimaryComponentTick.bCanEverTick = false;
+}
+
 void UCharacterStatusComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	AActionPortfolioCharacter* OwnerChar = GetOwner<AActionPortfolioCharacter>();
-	if (OwnerChar)
+	for(EEquipmentPart EquipmentPart : TEnumRange<EEquipmentPart>())
 	{
-		AbilitySystemComponent = Cast<UActionPFAbilitySystemComponent>(OwnerChar->GetComponentByClass(UActionPFAbilitySystemComponent::StaticClass()));
-		if (!AbilitySystemComponent.IsValid())
+		UEquipmentSlot* NewSlot = NewObject<UEquipmentSlot>(this);
+		NewSlot->SetEquipmentPart(EquipmentPart);
+		NewSlot->BindAbilitySystemComponent(GetAbilitySystemComponent());
+
+		EquipmentSlots.Add(NewSlot);
+	}
+}
+
+
+
+UEquipmentSlot* UCharacterStatusComponent::GetEquipmentSlot(EEquipmentPart Part) const
+{
+	for (auto& Slot : EquipmentSlots)
+	{
+		if (Slot->GetEquipmentPart() == Part)
 		{
-			PFLOG(Error, TEXT("Can't find Ability System Component : %s"), *OwnerChar->GetName());
+			return Slot;
 		}
 	}
-	else
-	{
-		PFLOG(Error, TEXT("Can't find Owner Character"));
-	}
+
+	return nullptr;
 }
 
-void UCharacterStatusComponent::EquipItem(FName ItemCode, int Idx)
+UAbilitySystemComponent* UCharacterStatusComponent::GetAbilitySystemComponent() const
 {
-	UItemManagerSubsystem* ItemManager = UItemManagerSubsystem::GetManagerInstance();
-	const FItemData_Equipment* ItemData = ItemManager->FindItemData_Equipment(ItemCode);
-
-	UnequipItem(Idx);
-
-	UGameplayEffect* BasicStatusEffect = MakeAddStatusEffect(ItemData);
-	AbilitySystemComponent->ApplyGameplayEffectToSelf(BasicStatusEffect, 1, AbilitySystemComponent->MakeEffectContext());
-
-	if (ItemData->EquipmentAbilities.GetDefaultObject() != nullptr)
+	if (AActor* Owner = GetOwner())
 	{
-		FGameplayAbilitySpec AbilitySpec(ItemData->EquipmentAbilities, 1, -1, AbilitySystemComponent->GetOwner());
-		EquipmentSlots[Idx].EquipAbilitySpecHandle = AbilitySystemComponent->GiveAbilityAndActivateOnce(AbilitySpec);
+		IAbilitySystemInterface* OwnerASI = Cast<IAbilitySystemInterface>(Owner);
+		if (OwnerASI)
+		{
+			return OwnerASI->GetAbilitySystemComponent();
+		}
 	}
-}
-
-UGameplayEffect* UCharacterStatusComponent::MakeAddStatusEffect(const FItemData_Equipment* ItemData)
-{
-	//기본 스테이터스 증가 Effect 만들기
-		//기본 설정
-	UGameplayEffect* AddStatusEffect = NewObject<UGameplayEffect>(GetTransientPackage(), FName(TEXT("AddStatusEffect")));
-	AddStatusEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
-	AddStatusEffect->Modifiers.SetNum(4);
-
-	//MaxHP설정
-	FGameplayModifierInfo& MaxHPInfo = AddStatusEffect->Modifiers[0];
-	MaxHPInfo.Attribute = UActionPFAttributeSet::GetMaxHealthAttribute();
-	MaxHPInfo.ModifierOp = EGameplayModOp::Additive;
-	MaxHPInfo.ModifierMagnitude = FScalableFloat(ItemData->MaxHP);
-
-	//MaxStamina
-	FGameplayModifierInfo& MaxStaminaInfo = AddStatusEffect->Modifiers[1];
-	MaxStaminaInfo.Attribute = UActionPFAttributeSet::GetMaxStaminaAttribute();
-	MaxStaminaInfo.ModifierOp = EGameplayModOp::Additive;
-	MaxStaminaInfo.ModifierMagnitude = FScalableFloat(ItemData->MaxStamina);
-
-	//AttackP
-	FGameplayModifierInfo& AttackPInfo = AddStatusEffect->Modifiers[2];
-	AttackPInfo.Attribute = UActionPFAttributeSet::GetAttackPAttribute();
-	AttackPInfo.ModifierOp = EGameplayModOp::Additive;
-	AttackPInfo.ModifierMagnitude = FScalableFloat(ItemData->AttackP);
-
-	//DefenseP
-	FGameplayModifierInfo& DefensePInfo = AddStatusEffect->Modifiers[3];
-	DefensePInfo.Attribute = UActionPFAttributeSet::GetDefensePAttribute();
-	DefensePInfo.ModifierOp = EGameplayModOp::Additive;
-	DefensePInfo.ModifierMagnitude = FScalableFloat(ItemData->DefenseP);
-
-	return AddStatusEffect;
-}
-
-bool UCharacterStatusComponent::CanEquipItem(FName ItemCode)
-{
-	if(!AbilitySystemComponent.IsValid()) return false;
-
-	bool bCanEquip = true;
-
-	UItemManagerSubsystem* ItemManager = UItemManagerSubsystem::GetManagerInstance();
-	const FItemData_Equipment* ItemData = ItemManager->FindItemData_Equipment(ItemCode);
-
-	if (ItemData->EquipmentAbilities.GetDefaultObject() != nullptr)
-	{
-		bCanEquip = bCanEquip && AbilitySystemComponent->CanActivateAbility(ItemData->EquipmentAbilities);
-	}
-
-	return false;
-}
-
-bool UCharacterStatusComponent::TryEquipItem(FName ItemCode)
-{
-#if WITH_EDITOR
-	if (EquipmentSlots.IsEmpty())
-	{
-		PFLOG(Error, TEXT("EquipmentSlots Is Empty."));
-		return false;
-	}
-#endif
-
-	for (int i = 0; i < EquipmentSlots.Num(); i++)
-	{
-		if(EquipmentSlots[i].ItemCode != NAME_None) continue;
-
-		return TryEquipItem(ItemCode, i);
-	}
-
-	return TryEquipItem(ItemCode, 0);
-}
-
-bool UCharacterStatusComponent::TryEquipItem(FName ItemCode, int Idx)
-{
-	if (!EquipmentSlots.IsValidIndex(Idx))
-	{
-		PFLOG(Error, TEXT("Try Equip Item Invalidate Index : %d"), Idx);
-		return false;
-	}
-
-	if(!CanEquipItem(ItemCode)) return false;
-
-	EquipItem(ItemCode, Idx);
 	
-	return true;
+	return nullptr;
 }
 
-bool UCharacterStatusComponent::TryEquipItem(FInventorySlot* InventorySlot)
+void UCharacterStatusComponent::GetEquipmentSlots(TArray<UEquipmentSlot*>& Out)
 {
-	if(InventorySlot == nullptr || EquipmentSlots.IsEmpty()) return false;
+	Out.Empty();
+	int Count = EquipmentSlots.Num();
 
-	if (!CanEquipItem(InventorySlot->GetItemCode())) return false;
-
-	bool bResult = false;
-	FName CodeInSlot = NAME_None;
-
-	for (int i = 0; i < EquipmentSlots.Num(); i++)
+	for (int i = 0; i < Count; i++)
 	{
-		if (EquipmentSlots[i].ItemCode != NAME_None) continue;
-
-		bResult = TryEquipItem(InventorySlot->GetItemCode(), i);
-		break;
+		Out.Add(EquipmentSlots[i]);
 	}
-
-	if (!bResult)
-	{
-		CodeInSlot = EquipmentSlots[0].ItemCode;
-		bResult = TryEquipItem(InventorySlot->GetItemCode(), 0);
-	}
-
-	if (bResult)
-	{
-		InventorySlot->SetSlot(CodeInSlot, 1);
-	}
-
-	return bResult;
 }
-
-bool UCharacterStatusComponent::TryEquipItem(FInventorySlot* InventorySlot, int Idx)
-{
-	if (!EquipmentSlots.IsValidIndex(Idx))
-	{
-		PFLOG(Error, TEXT("Try Equip Item Invalidate Index : %d"), Idx);
-		return false;
-	}
-	if (InventorySlot == nullptr) return false;
-
-	if (!CanEquipItem(InventorySlot->GetItemCode())) return false;
-
-
-	bool bResult = false;
-	FName CodeInSlot = NAME_None;
-
-	CodeInSlot = EquipmentSlots[Idx].ItemCode;
-	bResult = TryEquipItem(InventorySlot->GetItemCode(), Idx);
-
-	if (bResult)
-	{
-		InventorySlot->SetSlot(CodeInSlot, 1);
-	}
-
-	return bResult;
-}
-
-void UCharacterStatusComponent::UnequipItem(int Idx)
-{
-	if(EquipmentSlots[Idx].ItemCode == NAME_None) return;
-
-	AbilitySystemComponent->CancelAbilityHandle(EquipmentSlots[Idx].EquipAbilitySpecHandle);
-	AbilitySystemComponent->RemoveActiveGameplayEffect(EquipmentSlots[Idx].EquipEffectHandle);
-	EquipmentSlots[Idx].ItemCode = NAME_None;
-}
-
-FName UCharacterStatusComponent::GetEquippedItemCode(int Idx)
-{
-	return EquipmentSlots[Idx].ItemCode;
-}
-
-int UCharacterStatusComponent::GetEmptySlot() const
-{
-	for(int i = 0; i < EquipmentSlots.Num() ; i++)
-	{
-		if (EquipmentSlots[i].ItemCode == NAME_None)
-		{
-			return i;
-		}
-	}
-
-	return -1;
-}
-
-
-
-*/

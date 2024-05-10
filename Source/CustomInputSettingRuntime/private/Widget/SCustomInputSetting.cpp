@@ -101,14 +101,11 @@ void SCustomInputSettingNode::Construct(const FArguments& InArgs)
 		AddMetadata(NaviMetaData.ToSharedRef());
 	}
 
-	//임시
-	NaviMetaData->SetNavigationStop(EUINavigation::Previous);
-	NaviMetaData->SetNavigationStop(EUINavigation::Next);
-
-	NaviMetaData->SetNavigationStop(EUINavigation::Left);
-	NaviMetaData->SetNavigationStop(EUINavigation::Right);
-	NaviMetaData->SetNavigationStop(EUINavigation::Up);
-	NaviMetaData->SetNavigationStop(EUINavigation::Down);
+	//임시 Navigation 지정
+	for (EUINavigation UINavi : TEnumRange<EUINavigation>())
+	{
+		NaviMetaData->SetNavigationStop(UINavi);
+	}
 
 	SetKeyIcon(InArgs._Key);
 	bIsGamepad = InArgs._bIsGamepad;

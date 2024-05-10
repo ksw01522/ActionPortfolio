@@ -1,7 +1,8 @@
 #include "AutoLayout/TreeLayoutStrategy_DE.h"
 #include "DialogueEditor.h"
-#include "DialogueHeaders.h"
 #include "DialogueAssetEditor/SEdNode_DialogueNode.h"
+#include "DialogueNode.h"
+#include "Nodes/DialogueNode_Start.h"
 
 UTreeLayoutStrategy_DE::UTreeLayoutStrategy_DE()
 {

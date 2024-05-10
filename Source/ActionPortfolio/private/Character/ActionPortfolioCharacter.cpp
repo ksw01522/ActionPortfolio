@@ -21,6 +21,11 @@
 
 #include "Character/Player/ActionPFPlayerController.h"
 
+#include "Ability/Ability/Ability_Rigidity.h"
+
+#include "Character/LockOnStateWidget.h"
+#include "LockOn/LockOnTargetComponent.h"
+
 //////////////////////////////////////////////////////////////////////////
 // AActionPortfolioCharacter
 
@@ -54,9 +59,29 @@ AActionPortfolioCharacter::AActionPortfolioCharacter()
 	AbilitySystem = CreateDefaultSubobject<UActionPFAbilitySystemComponent>(TEXT("AbilitySystem"));
 	AttributeSet = CreateDefaultSubobject<UActionPFAttributeSet>(TEXT("AttributeSet"));
 
+
+
 	PrimaryActorTick.bCanEverTick = true;
 
 	bDestroyOnDie = true;
+}
+
+EDataValidationResult AActionPortfolioCharacter::IsDataValid(TArray<FText>& ValidationErrors)
+{
+	EDataValidationResult SuperResult = Super::IsDataValid(ValidationErrors);
+	EDataValidationResult Result = EDataValidationResult::Valid;
+
+	for (int Idx = 0; Idx < CharacterAbilities.Num(); Idx++)
+	{
+		if (!CharacterAbilities[Idx].Class)
+		{
+			ValidationErrors.Add(FText::FromString(FString::Printf(TEXT("Idx {%d} Ability Class Is Null"), Idx)));
+			Result = EDataValidationResult::Invalid;
+		}
+		
+	}
+	
+	return SuperResult == EDataValidationResult::Valid ? Result : SuperResult;
 }
 
 UAbilitySystemComponent* AActionPortfolioCharacter::GetAbilitySystemComponent() const
@@ -67,55 +92,28 @@ UAbilitySystemComponent* AActionPortfolioCharacter::GetAbilitySystemComponent() 
 
 void AActionPortfolioCharacter::CheckInAir()
 {
-	bool NewState = GetCharacterMovement()->IsFalling();
-	if (!(NewState ^ IsInAirHandle.IsValid())) return;
+	bool bIsInAirNew = GetCharacterMovement()->IsFalling() || GetCharacterMovement()->IsFlying();
 
-	if (NewState)
+	if (!(bIsInAirNew ^ IsInAir())) return;
+
+	if (bIsInAirNew)
 	{
-		UGameplayEffect* InAirEffect = NewObject<UGameplayEffect>(GetTransientPackage(), "IsInAir");
-		InAirEffect->InheritableOwnedTagsContainer.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.IsInAir"));
-		InAirEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
-
-		FGameplayEffectContextHandle Context = AbilitySystem->MakeEffectContext();
-		FGameplayEffectSpec Spec(InAirEffect, Context);
-		IsInAirHandle = AbilitySystem->ApplyGameplayEffectSpecToSelf(Spec);
+		AbilitySystem->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.IsInAir"));
 	}
 	else
 	{
-		AbilitySystem->RemoveActiveGameplayEffect(IsInAirHandle);
-		IsInAirHandle.Invalidate();
+		AbilitySystem->SetLooseGameplayTagCount(FGameplayTag::RequestGameplayTag("State.Etc.IsInAir"), 0);
 	}
 }
 
 bool AActionPortfolioCharacter::IsInAir() const
 {
-	return IsInAirHandle.IsValid();
+	return AbilitySystem->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.IsInAir"));
 }
 
 bool AActionPortfolioCharacter::IsDown() const
 {
-	return DownHandle.IsValid();
-}
-
-void AActionPortfolioCharacter::SetDown(bool NewState)
-{
-	if (!(NewState ^ DownHandle.IsValid())) return;
-
-	if (NewState)
-	{
-		UGameplayEffect* DownEffect = NewObject<UGameplayEffect>(GetTransientPackage(), "Down");
-		DownEffect->InheritableOwnedTagsContainer.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Down"));
-		DownEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
-
-		FGameplayEffectContextHandle Context = AbilitySystem->MakeEffectContext();
-		FGameplayEffectSpec Spec(DownEffect, Context);
-		DownHandle = AbilitySystem->ApplyGameplayEffectSpecToSelf(Spec);
-	}
-	else
-	{
-		AbilitySystem->RemoveActiveGameplayEffect(DownHandle);
-		DownHandle.Invalidate();
-	}
+	return AbilitySystem->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.Down"));
 }
 
 void AActionPortfolioCharacter::InitializeAttributes()
@@ -128,23 +126,18 @@ void AActionPortfolioCharacter::InitializeAttributes()
 		return;
 	}
 
-	FGameplayEffectContextHandle EffectContext = AbilitySystem->MakeEffectContext();
-	EffectContext.AddSourceObject(this);
-	
+	UGameplayEffect* NewAttributeEffect = NewObject<UGameplayEffect>(this, DefaultAttributes);
 
-	FGameplayEffectSpecHandle NewHandle = AbilitySystem->MakeOutgoingSpec(DefaultAttributes, GetCharacterLevel(), EffectContext);
-	if (NewHandle.IsValid())
-	{
-		FActiveGameplayEffectHandle ActiveGEHandle = AbilitySystem->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), AbilitySystem);
-	}
+	AttributeSet->InitializeStatus(1, NewAttributeEffect);
 }
 
 void AActionPortfolioCharacter::AddCharacterAbilities()
 {
 	if(AbilitySystem->bCharacterAbilitiesGiven) return;
 
-	for (auto Ability : CharacterAbilities) {
-		AbilitySystem->GiveAbility(FGameplayAbilitySpec(Ability, 1, -1, this) ) ;
+	for (auto& AbilityStruct : CharacterAbilities) {
+		FGameplayAbilitySpecHandle TempHandle = AbilitySystem->GiveAbility(FGameplayAbilitySpec(AbilityStruct.Class, AbilityStruct.Level, -1, this));
+		if(TempHandle.IsValid()) OnAddedAbility(TempHandle);
 	}
 
 	AbilitySystem->bCharacterAbilitiesGiven = true;
@@ -168,6 +161,18 @@ void AActionPortfolioCharacter::AddStartupEffects()
 	}
 
 	AbilitySystem->bStartupEffectsApplied = true;
+}
+
+void AActionPortfolioCharacter::ClearCharacterAbilities()
+{
+	if(GetLocalRole() != ROLE_Authority || !AbilitySystem->bCharacterAbilitiesGiven) return;
+
+	for (auto& CharAbilityClass : CharacterAbilities)
+	{
+		AbilitySystem->ClearAbilityWithClass(CharAbilityClass.Class);
+	}
+
+	AbilitySystem->bCharacterAbilitiesGiven = false;
 }
 
 void AActionPortfolioCharacter::OnActiveGameplayEffectAddedCallback(UAbilitySystemComponent* Target, const FGameplayEffectSpec& SpecApplied, FActiveGameplayEffectHandle ActiveHandle)
@@ -198,34 +203,6 @@ void AActionPortfolioCharacter::OnMaxHealthChanged(const FOnAttributeChangeData&
 
 }
 
-void AActionPortfolioCharacter::RigidityTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
-{
-	if (0 < NewCount)
-	{
-		
-	}
-	else
-	{
-		if (GetMesh()->GetAnimInstance()->Montage_IsPlaying( LastHitReactAnim.Get() ) )
-		{
-			GetMesh()->GetAnimInstance()->Montage_Stop(0.3, LastHitReactAnim.Get());
-		}
-		else if (GetMesh()->GetAnimInstance()->Montage_IsPlaying(HitReactionAnimations.Down))
-		{
-			GetMesh()->GetAnimInstance()->Montage_Play(HitReactionAnimations.DownedRecovery);
-
-			DownRecoveryMontageEndedDelegate.BindUObject(this, &AActionPortfolioCharacter::OnDownRecoveryMontageEnded);
-			GetMesh()->GetAnimInstance()->Montage_SetEndDelegate(DownRecoveryMontageEndedDelegate, HitReactionAnimations.DownedRecovery);
-		}
-	}
-}
-
-
-void AActionPortfolioCharacter::OnDownRecoveryMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	SetDown(false);
-}
-
 void AActionPortfolioCharacter::InitializeAbilitySystem()
 {
 	AbilitySystem->InitAbilityActorInfo(this, this);
@@ -233,18 +210,16 @@ void AActionPortfolioCharacter::InitializeAbilitySystem()
 	AbilitySystem->OnActiveGameplayEffectAddedDelegateToSelf.AddUObject(this, &AActionPortfolioCharacter::OnActiveGameplayEffectAddedCallback);
 	AbilitySystem->OnAnyGameplayEffectRemovedDelegate().AddUObject(this, &AActionPortfolioCharacter::OnRemoveGameplayEffectCallback);
 
-	AbilitySystem->RegisterGameplayTagEvent(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity")).AddUObject(this, &AActionPortfolioCharacter::RigidityTagChanged);
-
 	InitializeAttributeChangedDelegate();
+
 	InitializeAttributes();
 	AddStartupEffects();
 	AddCharacterAbilities();
-
 }
 
 int32 AActionPortfolioCharacter::GetCharacterLevel() const
 {
-	return static_cast<int32>(AttributeSet->GetCharacterLevel());
+	return AttributeSet->GetCharacterLevel();
 }
 
 float AActionPortfolioCharacter::GetHealth() const
@@ -257,6 +232,11 @@ float AActionPortfolioCharacter::GetMaxHealth() const
 	return AttributeSet->GetMaxHealth();
 }
 
+float AActionPortfolioCharacter::GetHealthPercent() const
+{
+	return AttributeSet->GetHealth() / AttributeSet->GetMaxHealth();
+}
+
 bool AActionPortfolioCharacter::CanCharacterMove() const
 {
 	bool CanMove = true;
@@ -264,64 +244,9 @@ bool AActionPortfolioCharacter::CanCharacterMove() const
 	TagCon.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Death"));
 	TagCon.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Down"));
 	TagCon.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity"));
-	TagCon.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.BlockMove"));
+	TagCon.AddTag(FGameplayTag::RequestGameplayTag("State.Block.Move"));
 	CanMove = !AbilitySystem->HasAnyMatchingGameplayTags(TagCon);
 	return CanMove;
-}
-
-void AActionPortfolioCharacter::RemoveRigidityHandle()
-{
-	if (!RigidityHandle.IsValid()) {
-		return;
-	}
-
-	AbilitySystem->RemoveActiveGameplayEffect(RigidityHandle);
-	RigidityHandle.Invalidate();
-	RigidityTime = 0;
-	FGameplayEventData Payload;
-	Payload.Instigator = this;
-	Payload.EventTag = FGameplayTag::RequestGameplayTag("State.Etc.Rigidity.Recovery");
-	AbilitySystem->HandleGameplayEvent(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity.Recovery"), &Payload);
-}
-
-void AActionPortfolioCharacter::CharacterRigidity(float NewRigidityTime)
-{
-	if (NewRigidityTime <= 0 || IsCharacterDie()) return;
-
-
-	if (!RigidityHandle.IsValid()) {
-		UGameplayEffect* RigidityEffect = NewObject<UGameplayEffect>(GetTransientPackage(), "Rigidity");
-		RigidityEffect->InheritableOwnedTagsContainer.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity"));
-		RigidityEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
-
-		FGameplayEffectContextHandle Context = AbilitySystem->MakeEffectContext();
-		FGameplayEffectSpec Spec(RigidityEffect, Context);
-		RigidityHandle = AbilitySystem->ApplyGameplayEffectSpecToSelf(Spec);
-
-		FGameplayEventData Payload;
-		Payload.Instigator = this;
-		Payload.Target = this;
-		Payload.EventTag = FGameplayTag::RequestGameplayTag("State.Etc.Rigidity");
-		AbilitySystem->HandleGameplayEvent(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity"), &Payload);
-		RigidityTime = NewRigidityTime;
-
-	}
-	else {
-		RigidityTime = NewRigidityTime;
-	}
-}
-
-bool AActionPortfolioCharacter::IsRigidity() const
-{
-	return AbilitySystem->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity"));
-}
-
-void AActionPortfolioCharacter::RecoveryHitReaction()
-{
-	if (!GetMesh()->GetAnimInstance()->Montage_IsPlaying(LastHitReactAnim.Get())) { return; }
-
-	GetMesh()->GetAnimInstance()->Montage_Stop(0, LastHitReactAnim.Get());
-
 }
 
 
@@ -331,8 +256,12 @@ void AActionPortfolioCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	InitializeAbilitySystem();
-	InitForAttackShape();
 	InitializeMovement();
+
+	if (LockOnStateWidgetClass)
+	{
+		LockOnStateWidget = CreateWidget<ULockOnStateWidget>(GetWorld(), LockOnStateWidgetClass, "LockOnStateWidget");
+	}
 }
 
 void AActionPortfolioCharacter::Tick(float DeltaSeconds)
@@ -340,19 +269,6 @@ void AActionPortfolioCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	CheckInAir();
-
-	if (RigidityHandle.IsValid()) {
-		RigidityTime -= DeltaSeconds;
-
-		if (IsInAir())
-		{
-			RigidityTime = FMath::Max<float>(RigidityTime, 1);
-		}
-
-		if (RigidityTime <= 0.0f) {
-			RemoveRigidityHandle();
-		}
-	}
 }
 
 void AActionPortfolioCharacter::PostInitializeComponents()
@@ -361,55 +277,16 @@ void AActionPortfolioCharacter::PostInitializeComponents()
 
 }
 
-void AActionPortfolioCharacter::InitForAttackShape()
-{
-	for (auto TagName : AttackShapeTags)
-	{
-		TArray<UActorComponent*> AttackShapes = GetComponentsByTag(UShapeComponent::StaticClass(), TagName);
 
-		if (AttackShapes.IsEmpty()) {
-			PFLOG(Warning, TEXT("Can't find AttackShape by tag from %s"), *UKismetSystemLibrary::GetDisplayName(this));
-		}
-		else {
-			if (2 <= AttackShapes.Num()) {
-				PFLOG(Warning, TEXT("Find Multi AttackShapes by tag from %s"), *UKismetSystemLibrary::GetDisplayName(this));
-			}
-
-			AttackShapeMap.Add(TagName, Cast<UShapeComponent>(AttackShapes[0]));
-		}
-	}
-}
-
-UShapeComponent* AActionPortfolioCharacter::GetAttackShape(FName AttackShapeTag)
-{
-	if (!AttackShapeMap.Contains(AttackShapeTag)) {
-		PFLOG(Warning, TEXT("Can't find Attackshpae by Tag"));
-		return nullptr;
-	}
-
-	UShapeComponent* AttackShape = *AttackShapeMap.Find(AttackShapeTag);
-	return AttackShape;
-}
-
-void AActionPortfolioCharacter::ActivateActionPFAbility(TSubclassOf<class UActionPFGameplayAbility> AbilityClass)
-{
-	AbilitySystem->TryActivatePFAbilityByClass(AbilityClass);
-
-	
-}
 
 
 
 void AActionPortfolioCharacter::Landed(const FHitResult& Hit)
 {
-	if (AbilitySystem->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity")))
-	{
-		SetDown(true);
-		GetMesh()->GetAnimInstance()->Montage_Play(HitReactionAnimations.Down);
-	}
-
 	FGameplayEventData Payload;
-	AbilitySystem->HandleGameplayEvent(FGameplayTag::RequestGameplayTag("Ability.PublicEvent.OnLand"), &Payload);
+	Payload.Instigator = this;
+	
+	AbilitySystem->HandleGameplayEvent(FGameplayTag::RequestGameplayTag("CommonEvent.OnLanded"), &Payload);
 
 	Super::Landed(Hit);
 }
@@ -437,6 +314,8 @@ void AActionPortfolioCharacter::PossessedBy(AController* NewController)
 	{
 		SetGenericTeamId(2);
 	}
+
+	AbilitySystem->InitAbilityActorInfo(this, this);
 }
 
 void AActionPortfolioCharacter::InitializeMovement()
@@ -466,26 +345,35 @@ bool AActionPortfolioCharacter::CanBasicAct() const
 	return !GetAbilitySystemComponent()->HasAnyMatchingGameplayTags(CheckTags);
 }
 
+void AActionPortfolioCharacter::AttachComponentToCharacter(USceneComponent* InComponent, const FAttachmentTransformRules& AttachmentRules, const FName& SocketName)
+{
+	InComponent->AttachToComponent(GetMesh(), AttachmentRules, SocketName);
+}
+
+UAnimMontage* AActionPortfolioCharacter::GetRigidityAnim(float RigidityTime, const FHitResult* HitResult) const
+{
+	if (HitResult != nullptr)
+	{
+	}
+
+	return HitReactionAnimations.Front;
+}
 
 
 
 void AActionPortfolioCharacter::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	if (bDestroyOnDie) {
+	if (bDestroyOnDie && !bInterrupted) {
 		Destroy();
 	}
 }
 
 void AActionPortfolioCharacter::CharacterDie()
 {
-	FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag("State.Etc.Death");
+	if(IsCharacterDie()) return;
 
-	UGameplayEffect* DeathEffect = NewObject<UGameplayEffect>();
-	DeathEffect->InheritableOwnedTagsContainer.AddTag(DeathTag);
-	DeathEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
-	FGameplayEffectContextHandle Context = AbilitySystem->MakeEffectContext();
-	FGameplayEffectSpec Spec(DeathEffect, Context);
-	AbilitySystem->ApplyGameplayEffectSpecToSelf(Spec);
+	const FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag("State.Etc.Death");
+	AbilitySystem->AddLooseGameplayTag(DeathTag);
 
 	FGameplayEventData EventData;
 	EventData.Instigator = this;
@@ -498,6 +386,7 @@ void AActionPortfolioCharacter::CharacterDie()
 		OnCharacterDie.Broadcast(this);
 		OnCharacterDie.Clear();
 	}
+	
 	if (HitReactionAnimations.Death != nullptr)
 	{
 		FOnMontageEnded DeathMontageEnded;
@@ -510,7 +399,7 @@ void AActionPortfolioCharacter::CharacterDie()
 	{
 		Destroy();
 	}
-
+	
 }
 
 void AActionPortfolioCharacter::OnDamageEvent(float DamageAmount, AActor* DamageInstigator)
@@ -523,46 +412,9 @@ void AActionPortfolioCharacter::OnDamageEvent(float DamageAmount, AActor* Damage
 
 void AActionPortfolioCharacter::OnAttackEvent(float DamageAmount, AActor* Target)
 {
-	AActionPortfolioCharacter* Char = Cast<AActionPortfolioCharacter>(Target);
-
-	if (IsValid(Char)) {
-		LastAttackedTarget = Char;
-	}
+	
 }
 
-void AActionPortfolioCharacter::HitReact(EHitReactionDirection Direction, bool bForceDown, UAnimMontage* ForceHitReactionAnim)
-{
-	if(!IsRigidity() || IsCharacterDie()) return;
-
-	LastHitReactAnim = ForceHitReactionAnim;
-
-	if (ForceHitReactionAnim != nullptr) {
-		GetMesh()->GetAnimInstance()->Montage_Play(ForceHitReactionAnim);
-		return;
-	}
-
-	bool bIsInAir = bForceDown || GetCharacterMovement()->IsFalling();
-	switch (Direction)
-	{
-		case EHitReactionDirection::Front:
-			LastHitReactAnim = bIsInAir ? HitReactionAnimations.InAir_Front : HitReactionAnimations.Ground_Front;
-			break;
-
-		case EHitReactionDirection::Back:
-			LastHitReactAnim = bIsInAir ? HitReactionAnimations.InAir_Back : HitReactionAnimations.Ground_Back;
-			break;
-
-		case EHitReactionDirection::Right:
-			LastHitReactAnim = bIsInAir ? HitReactionAnimations.InAir_Right : HitReactionAnimations.Ground_Right;
-			break;
-
-		case EHitReactionDirection::Left:
-			LastHitReactAnim = bIsInAir ? HitReactionAnimations.InAir_Left : HitReactionAnimations.Ground_Left;
-			break;
-	}
-
-	GetMesh()->GetAnimInstance()->Montage_Play(LastHitReactAnim.Get());
-}
 
 bool AActionPortfolioCharacter::IsCharacterDie() const
 {

@@ -49,6 +49,7 @@ namespace ActionPFStyle
 	namespace ButtonStyle
 	{
 		static const FName Default = "ActionPFStyle.ButtonStyle.Default";
+		static const FName DefaultSize = "ActionPFStyle.ButtonStyle.DefaultSize";
 	}
 
 	namespace DefaultTextSize
@@ -76,4 +77,26 @@ namespace InventoryStyle
 	}
 
 	static const FName CountTextStyle = "InventorySlot.CountTextStyle";
+
+	namespace InformationSlate
+	{
+		static const FName MeshCaptureStyle = "Inventory.MeshCaptureStyle";
+		static const FName NameTextStyle = "Inventory.NameTextStyle";
+		static const FName DescriptionTextStyle = "Inventory.DescriptionTextStyle";
+	}
+}
+
+namespace InteractionStyle
+{
+	namespace ButtonStyle
+	{
+		static const FName Default = "InteractionStyle.ButtonStyle.Default";
+		static const FName DefaultSize = "InteractionStyle.ButtonStyle.DefaultSize";
+		static const FName Padding = "InteractionStyle.ButtonStyle.Padding";
+	}
+
+	namespace TextStyle
+	{
+		static const FName Default = "InteractionStyle.TextStyle.Default";
+	}
 }

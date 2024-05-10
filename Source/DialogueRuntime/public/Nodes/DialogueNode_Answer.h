@@ -20,7 +20,7 @@ public:
 	//virtual bool CanCreateConnection(UDialogueNode* Other, FText& ErrorMessage) override;
 
 #if WITH_EDITOR
-	virtual bool CanCreateConnectionFrom(UDialogueNode* Other, int32 NumberOfParentNodes, FText& ErrorMessage) override;
+	virtual bool CanCreateConnectionFrom(UDialogueNode* Other, int32 NumberOfParentNodes, FText& ErrorMessage) const override;
 
 	virtual FText GetNodeTitle() override;
 #endif

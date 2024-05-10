@@ -13,8 +13,6 @@
 class UNPCInteract;
 class AActionPFPlayerController;
 
-
-
 class ACTIONPORTFOLIO_API SNPCInteractButton : public SCompoundWidget
 {
 public:

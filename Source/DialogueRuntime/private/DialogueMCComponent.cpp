@@ -4,6 +4,9 @@
 #include "DialogueMCComponent.h"
 #include "DialogueManager.h"
 #include "DialogueNode.h"
+#include "DialogueNode_Start.h"
+#include "DialogueSession.h"
+#include "DialogueRuntime.h"
 
 // Sets default values for this component's properties
 UDialogueMCComponent::UDialogueMCComponent()
@@ -27,80 +30,65 @@ void UDialogueMCComponent::BeginPlay()
 
 bool UDialogueMCComponent::IsActingDialogue() const
 {
-	IDialogueMCManagerInterface* MCManager = UDialogueManager::GetDialogueMCManager();
+	if(!Handle.IsValid()) return false;
 	
-	return MCManager->IsActingDialogue(GetDialogueHandle());
+	UDialogueManager* Manager = UDialogueManager::GetManagerInstance();
+
+	return Manager->IsActingDialogue(const_cast<FDialogueHandle&>(Handle));
 }
 
-bool UDialogueMCComponent::TryEnterNextNode(FNextDialogueNodeOptionalStruct* OptionalStruct)
+bool UDialogueMCComponent::TryEnterNextNode(const UDialogueNode* NextNode)
 {
-	if(!bCanEnterNextNodeInMC) { return false; }
+	UDialogueManager* Manager = UDialogueManager::GetManagerInstance();
 
-	IDialogueMCManagerInterface* MCManager = UDialogueManager::GetDialogueMCManager();
+	bool bResult = Manager->TryEnterNextNode(Handle, NextNode);
 
-	FDialogueElementContainer ElementContatiner;
-	bool Result = MCManager->EnterNextNode(ElementContatiner, Handle, OptionalStruct);
-	if (Result)
+	#if WITH_EDITOR
+	FString MSG = bResult ? "Succeed Enter Next Dialogue" : "Fail Enter Next Dialogue";
+	LOG_WARNING(TEXT("%s"), *MSG);
+	#endif
+
+	if (bResult)
 	{
-		OnSuccedEnterNextNode(ElementContatiner);
+		CurrentNode = NextNode;
+
+		OnSuccedEnterNextNode(NextNode);
 	}
 	else {
-		OnFailedEnterNextNode();
+		OnFailedEnterNextNode(NextNode);
 	}
 
-	return Result;
+	return bResult;
 }
 
 void UDialogueMCComponent::EnterDialogue(const UDialogueSession* Session)
 {
-	IDialogueMCManagerInterface* MCManager = UDialogueManager::GetDialogueMCManager();
+	check(Session);
+	UDialogueManager* Manager = UDialogueManager::GetManagerInstance();
+	Manager->EnterDialogue(Handle, Session);
 
-	if (IsActingDialogue()) {
-		TryExitDialogue();
-	}
-
-	MCManager->EnterDialogue(Handle, Session);
-	ensureMsgf(IsActingDialogue(), TEXT("Try Enter invalid Dialogue."));
+	CurrentSession = Session;
+	CurrentNode = Session->GetStartNode();
 
 	OnEnterDialogue();
 }
 
-void UDialogueMCComponent::TryExitDialogue()
+void UDialogueMCComponent::TryExitDialogue(bool bCancelled)
 {
-	IDialogueMCManagerInterface* MCManager = UDialogueManager::GetDialogueMCManager();
+	check(CurrentSession);
 
-	if (MCManager->ExitDialogue(Handle)) {
-		OnExitDialogue(true);
+	UDialogueManager* Manager = UDialogueManager::GetManagerInstance();
+	if (Manager->ExitDialogue(Handle, bCancelled))
+	{
+		OnExitDialogue(bCancelled);
+
+		CurrentSession = nullptr;
+		CurrentNode = nullptr;
 	}
 }
 
-void UDialogueMCComponent::OnExitDialogue(bool bIsCancelled)
-{
-	if(OnExitDel.IsBound()){
-		OnExitDel.Broadcast(bIsCancelled);
-	}
 
-	if (OnExitOnceDel.IsBound())
-	{
-		OnExitOnceDel.Broadcast(bIsCancelled);
-		OnExitOnceDel.Clear();
-	}
 
-}
-
-void UDialogueMCComponent::OnEnterDialogue()
-{
-	if(OnEnterDel.IsBound())
-	{
-		OnEnterDel.Broadcast();
-	}
-
-	if (OnEnterOnceDel.IsBound())
-	{
-		OnEnterOnceDel.Broadcast();
-		OnEnterOnceDel.Clear();
-	}
-}
 
 
 

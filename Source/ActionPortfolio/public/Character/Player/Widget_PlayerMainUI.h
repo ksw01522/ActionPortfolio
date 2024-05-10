@@ -17,27 +17,16 @@ class ACTIONPORTFOLIO_API UWidget_PlayerMainUI : public UUserWidget
 {
 	GENERATED_BODY()
 private:
-	UPROPERTY(meta = (BindWidget))
-	class UWidget_AbilityNode* AbilityRMBNode;
-
-	UPROPERTY(meta = (BindWidget))
-	class UWidget_AbilityNode* AbilityQNode;
-
-	UPROPERTY(meta = (BindWidget))
-	class UWidget_AbilityNode* AbilityENode;
-
-	UPROPERTY(meta = (BindWidget))
-	class UWidget_AbilityNode* AbilityRNode;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget, AllowPrivateAccess = "true"))
+	TObjectPtr<class UCanvasPanel> Canvas;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget, AllowPrivateAccess = "true"))
-	class UInventoryWidget* InventoryWidget;
+	TObjectPtr<class USkillHotKeyWindow> SkillWindow;
 
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 public:
-	virtual void LinkASC();
-
-	void UpdateInventorySlot(EItemType InventoryType, int idx, TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount);
+	USkillHotKeyWindow* GetSkillHotkeyWindow() const { return SkillWindow; }
 };

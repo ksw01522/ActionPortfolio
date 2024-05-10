@@ -7,7 +7,7 @@ public class WorldCustomEventRuntime : ModuleRules
 	public WorldCustomEventRuntime(ReadOnlyTargetRules Target) : base(Target)
 	{
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-        bLegacyPublicIncludePaths = false;
+        bLegacyPublicIncludePaths = true;
 		ShadowVariableWarningLevel = WarningLevel.Error;
 
         PublicIncludePaths.AddRange(new string[]

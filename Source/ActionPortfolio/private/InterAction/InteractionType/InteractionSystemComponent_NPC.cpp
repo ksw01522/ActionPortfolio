@@ -8,12 +8,46 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "DialoguerComponent.h"
 #include "DialogueBFL.h"
+#include "InterAction/Slate/SNPCInteractionSlate.h"
+#include "WidgetStyle/ActionPortfolioWidgetStyle.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Text/STextBlock.h"
+#include "Character/Player/PlayerDialogueMCComponent.h"
+
 
 #define LOCTEXT_NAMESPACE "NPCIneract"
 
 ////////////////////////////// NPCInteract ////////////////////////////
 UNPCInteract::UNPCInteract()
 {
+
+}
+
+TSharedRef<class SButton> UNPCInteract::CreateInteractionButton(AActionPFPlayerController* InteractPlayer)
+{
+	FSlateStyleSet* StyleSet = FActionPortfolioWidgetStyle::Get();
+	const FButtonStyle& BTNStyle = StyleSet->GetWidgetStyle<FButtonStyle>(InteractionStyle::ButtonStyle::Default);
+	FVector2D ButtonSize = StyleSet->GetVector(InteractionStyle::ButtonStyle::DefaultSize);
+	const FTextBlockStyle& TextStyle = StyleSet->GetWidgetStyle<FTextBlockStyle>(InteractionStyle::TextStyle::Default);
+
+	return SNew(SButton)
+			.ButtonStyle(&BTNStyle)
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
+			.OnClicked_UObject(this, &UNPCInteract::NPCInteract, InteractPlayer)
+			[
+				SNew(SBox)
+				.Visibility(EVisibility::HitTestInvisible)
+				.WidthOverride(ButtonSize.X)
+				.HeightOverride(ButtonSize.Y)
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(NPCInteractionName)
+					.TextStyle(&TextStyle)
+				]
+			];
 
 }
 
@@ -24,15 +58,17 @@ UNPCInteract_Dialogue::UNPCInteract_Dialogue()
 
 }
 
-bool UNPCInteract_Dialogue::IsCanNPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const
+bool UNPCInteract_Dialogue::IsCanNPCInteract(AActionPFPlayerController* InteractPlayer) const
 {
 	return IsValid(InteractPlayer) && DialogueSession != nullptr;
 }
 
-void UNPCInteract_Dialogue::NPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const
+FReply UNPCInteract_Dialogue::NPCInteract(AActionPFPlayerController* InteractPlayer)
 {
-	InteractPlayer->EnterDialogueInNPCInteract(DialogueSession);
+	check(DialogueSession);
+	InteractPlayer->GetPlayerDialogueMCComponent()->EnterDialogue(DialogueSession);
 
+	return FReply::Handled();
 }
 
 
@@ -60,6 +96,8 @@ void UInteractionSystemComponent_NPC::BeginPlay()
 	
 }
 
+
+
 bool UInteractionSystemComponent_NPC::CanInteract_CPP(AActor* InteractActor) const
 {
 	if(!IsValid(InteractActor)) return false;
@@ -70,6 +108,8 @@ bool UInteractionSystemComponent_NPC::CanInteract_CPP(AActor* InteractActor) con
 	return true;
 }
 
+
+
 void UInteractionSystemComponent_NPC::Interact_CPP(AActor* InteractActor)
 {
 	ensure(IsValid(InteractActor));
@@ -77,7 +117,7 @@ void UInteractionSystemComponent_NPC::Interact_CPP(AActor* InteractActor)
 	AActionPFPlayerController* InteractPlayerController = InteractActor->GetInstigatorController<AActionPFPlayerController>();
 	if(!IsValid(InteractPlayerController)) return;
 
-	InteractPlayerController->InteractWithNPC(this);
+	CreateInteractionSlate(InteractPlayerController);
 }
 
 const UDialogueSession* UInteractionSystemComponent_NPC::GetGreetingDialogue(const AActionPFPlayerController* PlayerController) const
@@ -101,6 +141,56 @@ const TArray<UNPCInteract*> UInteractionSystemComponent_NPC::GetAbleNPCInteracti
 	}
 
 	return ReturnInteractions;
+}
+
+void UInteractionSystemComponent_NPC::CreateInteractionSlate_Implementation(AActionPFPlayerController* Player)
+{
+	FSlateStyleSet* StyleSet = FActionPortfolioWidgetStyle::Get();
+	const FButtonStyle& ButtonStyle = StyleSet->GetWidgetStyle<FButtonStyle>(InteractionStyle::ButtonStyle::Default);
+	FVector2D ButtonSize = StyleSet->GetVector(InteractionStyle::ButtonStyle::DefaultSize);
+	const FTextBlockStyle& TextStyle = StyleSet->GetWidgetStyle<FTextBlockStyle>(InteractionStyle::TextStyle::Default);
+
+	TSharedPtr<SNPCInteractionSlate> InteractionSlate;
+	SAssignNew(InteractionSlate, SNPCInteractionSlate);
+
+	for (auto& Interaction : NPCInteractions)
+	{
+		InteractionSlate->AddButton(Interaction->CreateInteractionButton(Player));
+	}
+
+	TWeakPtr<SNPCInteractionSlate> WeakSlate = InteractionSlate;
+	
+	InteractionSlate->AddButton(
+		SNew(SButton)
+		.ButtonStyle(&ButtonStyle)
+		.HAlign(HAlign_Center)
+		.VAlign(VAlign_Center)
+		.OnClicked_Lambda([Player, WeakSlate]()->FReply {
+			if (WeakSlate.IsValid())
+			{
+				GEngine->GameViewport->RemoveViewportWidgetContent(WeakSlate.Pin().ToSharedRef());
+				Player->RemoveCustomFocuseWidgetStack();
+			}
+			return FReply::Handled();
+			})
+			[
+				SNew(SBox)
+				.Visibility(EVisibility::HitTestInvisible)
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				.HeightOverride(ButtonSize.Y)
+				.WidthOverride(ButtonSize.X)
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("그만두기", "그만두기"))
+					.TextStyle(&TextStyle)
+				]
+			]
+	);
+
+	GEngine->GameViewport->AddViewportWidgetContent(InteractionSlate.ToSharedRef(), 100);
+
+	Player->AddCustomFocuseWidget(InteractionSlate.ToSharedRef());
 }
 
 #undef LOCTEXT_NAMESPACE

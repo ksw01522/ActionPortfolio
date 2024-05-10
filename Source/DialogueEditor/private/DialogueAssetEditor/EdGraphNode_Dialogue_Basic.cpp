@@ -14,21 +14,15 @@ UDialogueNode_Basic* UEdGraphNode_Dialogue_Basic::GetDialogueBasicNode() const
 	return BasicNode;
 }
 
-UDataTable* UEdGraphNode_Dialogue_Basic::GetDialogueTextStyleSet() const
-{
-	UDialogueNode_Basic* BasicNode = GetDialogueBasicNode();
-
-	return BasicNode->GetDialogueTextStyleSet();
-}
-
-ERichTextBlockType UEdGraphNode_Dialogue_Basic::GetTextBlockType() const
-{
-	return GetDialogueBasicNode()->GetRichTextBlockType();
-}
 
 TArray<TSubclassOf<USRichTextBlockDecorator>> UEdGraphNode_Dialogue_Basic::GetSlateDecoClasses() const
 {
 	return GetDialogueBasicNode()->GetSlateDecoClasses();
+}
+
+bool UEdGraphNode_Dialogue_Basic::IsSlateRichTextStyle() const
+{
+	return GetDialogueBasicNode()->IsSlateRichTextStyle();
 }
 
 TArray<TSubclassOf<URichTextBlockDecorator>> UEdGraphNode_Dialogue_Basic::GetUMGDecoClasses() const
@@ -89,17 +83,9 @@ void UEdGraphNode_Dialogue_Basic::TryImportDialogueString() const
 	}
 }
 
-void UEdGraphNode_Dialogue_Basic::OnChangedDialogueStyleFunction()
-{
-	ensure(SEdNode_Basic != nullptr);
-
-	SEdNode_Basic->UpdateRichTextStyle();
-}
-
 void UEdGraphNode_Dialogue_Basic::SetDialogueNode(UDialogueNode* NewNode)
 {
 	DialogueNode = NewNode;
-	Cast<UDialogueNode_Basic>(DialogueNode)->OnChangedDialogueStyle.BindDynamic(this, &UEdGraphNode_Dialogue_Basic::OnChangedDialogueStyleFunction);
 }
 
 

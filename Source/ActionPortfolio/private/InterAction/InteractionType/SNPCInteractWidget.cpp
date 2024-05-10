@@ -18,7 +18,7 @@
 #include "WidgetStyle/ActionPortfolioWidgetStyle.h"
 #include "Styling/SlateStyle.h"
 #include "Widgets/Layout/SSpacer.h"
-#include "UI/DialogueSlate.h"
+#include "Dialogue/Slate/DialogueSlate.h"
 #include "Widgets/Layout/SScaleBox.h"
 
 #define LOCTEXT_NAMESPACE "NPCInteactWidget"
@@ -58,10 +58,7 @@ void SNPCInteractButton::BindNPCInteract(AActionPFPlayerController* Player, UNPC
 {
 	ensureMsgf(Player != nullptr && Interact != nullptr, TEXT("Try Bind NPC Interact BTN By null Interact or Player"));
 
-	InteractButton->SetOnClicked( TDelegate<FReply()>::CreateLambda(
-									[TargetInteract = Interact, TargetPlayer = Player]() -> FReply
-								{ TargetInteract->NPCInteract(TargetPlayer); return FReply::Unhandled(); }
-								) );
+	
 
 	InteractNameBlock->SetText(Interact->GetNPCInteractionName());
 }

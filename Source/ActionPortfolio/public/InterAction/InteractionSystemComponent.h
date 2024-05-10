@@ -60,8 +60,8 @@ public:
 	const FText& GetInteractionName() const {return InteractionName;}
 
 	//¼öÁ¤ÇÊ
-	virtual void OnFocusedOn(){}
-	virtual void OnFocusedOff(){}
+	virtual void OnFocusedOnByPlayer(){}
+	virtual void OnFocusedOffByPlayer(){}
 };
 
 UCLASS(ClassGroup = (InteractSystem), Abstract, Blueprintable, BlueprintType, EditInlineNew, DefaultToInstanced)

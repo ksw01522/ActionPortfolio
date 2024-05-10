@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Character/ActionPortfolioCharacter.h"
-#include "Items/ItemUserInterface.h"
 #include "PlayerCharacter.generated.h"
 
 /**
@@ -12,35 +11,22 @@
  */
  enum class EEquipmentPart : uint8;
 
-
-UENUM(BlueprintType)
-enum class EPlayerAbilityInputID : uint8
+struct FAddedPlayerAbilityStruct
 {
-	Ability_LMB = 0,
-	Ability_RMB = 1,
-	Ability_Q = 2,
-	Ability_E = 3,
-	Ability_R = 4
-};
+	FAddedPlayerAbilityStruct(const FGameplayAbilitySpecHandle& InHandle, const TSubclassOf<UActionPFGameplayAbility>& InClass, TSharedPtr<class SAbilityIcon> InIcon) :
+						Handle(InHandle), AbilityClass(InClass), Icon(InIcon)
+	{}
+	virtual ~FAddedPlayerAbilityStruct() {}
 
+	FGameplayAbilitySpecHandle Handle;
 
-USTRUCT(BlueprintType)
-struct FPlayerInputAbilityStruct 
-{
-	GENERATED_BODY()
-	FPlayerInputAbilityStruct(){}
+	TSubclassOf<UActionPFGameplayAbility> AbilityClass;
 
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UInputAction> InputAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TSubclassOf<class UActionPFGameplayAbility> AbilityClass;
-
+	TSharedPtr<SAbilityIcon> Icon;
 };
 
 UCLASS()
-class ACTIONPORTFOLIO_API APlayerCharacter : public AActionPortfolioCharacter, public IItemUserInterface
+class ACTIONPORTFOLIO_API APlayerCharacter : public AActionPortfolioCharacter
 {
 	GENERATED_BODY()
 public:
@@ -69,26 +55,68 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> LookAction;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	FPlayerInputAbilityStruct Ability_LMB_Action;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	FPlayerInputAbilityStruct Ability_RMB_Action;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	FPlayerInputAbilityStruct Ability_Q_Action;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	FPlayerInputAbilityStruct Ability_E_Action;
+//Player Main UI
+private:
+	/* UIClass For Create UI On Possessed By Player Controller */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = UI, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class UWidget_PlayerMainUI> MainUIClass;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	FPlayerInputAbilityStruct Ability_R_Action;
+	UPROPERTY(Transient)
+	TObjectPtr<UWidget_PlayerMainUI> MainUI;
 
+	/* Create UI On Possessed By Player Controller */
+	void TryCreateMainUI();
+	
+	virtual void PreCreateMainUI() {}
+
+	/* Call Function On Complete Create Main UI */
+	virtual void PostCreateMainUI(){}
+
+	/* Remove UI On Unpossessed By Player Controller */
+	void TryRemoveMainUI();
+
+	virtual void PreRemoveMainUI() {}
+
+	/* Call Function On Remove UI */
+	virtual void PostRemoveMainUI() {}
 
 private:
-	virtual void AddCharacterAbilities() override;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status", meta = (AllowPrivateAccess ="true"))
+	TObjectPtr<class UCharacterStatusComponent> CSC;
+
+public:
+	UCharacterStatusComponent* GetCharacterStatusComponent() const { return CSC; }
+
+
+public:
+	UWidget_PlayerMainUI* GetPlayerMainUI() const { return MainUI; }
+
+//Character Ability
+private:
+	//Key = InputID, Value = Act Ability By Receive Input
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Ability, Instanced, meta = (AllowPrivateAccess = "true"))
+	TArray<TObjectPtr<class UAbilitySlotWithInput>> AbilitiesWithInput;
+
+	//On Added Active Ability Container
+	TArray<FAddedPlayerAbilityStruct> AddedActiveAbilities;
+
+	//On Added Passive AbilityContainer
+	TArray<FAddedPlayerAbilityStruct> AddedPassiveAbilities;
+
+private:
+	//Event for Give CharacterAbility
+	virtual void OnAddedAbility(FGameplayAbilitySpecHandle Handle) override;
+
 	//virtual void OnHealthChanged(const FOnAttributeChangeData& Data) override;
 	//virtual void OnMaxHealthChanged(const FOnAttributeChangeData& Data) override;
 
+public:
+	const TSharedPtr<SAbilityIcon>& GetGivenAbilityIcon(TSubclassOf<UActionPFGameplayAbility> InAbilityClass) const;
+
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void Tick(float DeltaSeconds) override;
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -96,14 +124,18 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
-	void ActivateInputAbility(const FInputActionValue& Value, EPlayerAbilityInputID ID);
-
+	void PressInputAbility(const FInputActionValue& Value, int ID);
+	void ReleaseInputAbility(const FInputActionValue& Value, int ID);
+	
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	//virtual void PostInitializeComponents() override;
+	virtual void PostInitializeComponents() override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void UnPossessed() override;
+
+public:
+	virtual void LinkSkillHotKeyWindow(class USkillHotKeyWindow* SkillWindow);
 
 public:
 	/** Returns CameraBoom subobject **/
@@ -112,35 +144,16 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "Player|Ability")
-	TSubclassOf<class UActionPFGameplayAbility> GetPlayerAbilityClass(EPlayerAbilityInputID ID);
-
-////////////////////////////////////////// ItemUserInterface /////////////////////////////////
-private:
-	UPROPERTY(Transient)
-	TMap<EEquipmentPart, TObjectPtr<UItemBase_Equipment>> EquipmentSlots;
-
-	bool bInitializedItemUser;
-
-	virtual void InitializeItemUser() override;
-
-	
-
-	virtual void OnEquipItem(UItemBase_Equipment* NewItem) override;
-	virtual void OnUnequipItem(UItemBase_Equipment* NewItem) override;
-
-public:
-	virtual class UActionPFAbilitySystemComponent* GetASCForItemUser() const override;
-
-	virtual bool CanEquipItem(UItemBase_Equipment* NewItem) const;
-
-	virtual bool EquipItem(UItemBase_Equipment* NewItem) override;
-
-	virtual bool UnequipItem(UItemBase_Equipment* NewItem) override;
-
-	UItemBase_Equipment* GetEquipment(EEquipmentPart Part) const;
+	//UFUNCTION(BlueprintCallable, Category = "Player|Ability")
+	//TSubclassOf<class UActionPFGameplayAbility> GetPlayerAbilityClass(int ID);
 
 #if WITH_EDITOR
-	virtual FName GetUserName() const override;
-#endif
+protected:
+	virtual EDataValidationResult IsDataValid(TArray<FText>& ValidationErrors) override;
+
+	virtual void PostCDOCompiled(const FPostCDOCompiledContext& Context) override;
+
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif // WITH_EDITOR
+
 };

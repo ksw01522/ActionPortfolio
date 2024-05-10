@@ -10,10 +10,10 @@ UEquipmentAbility::UEquipmentAbility()
 	AbilityType = EAbilityType::Passive;
 }
 
-void UEquipmentAbility::MustActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void UEquipmentAbility::ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 #if WITH_EDITOR
-//디버깅용 로그
+	//디버깅용 로그
 	FString DebugString = FString::Printf(TEXT("%s Has Equipment Events :"), *GetName());
 
 	if (EquipmentEventFlag & (uint8)EEquipmentEventFlag::OnAttackStart)
@@ -36,7 +36,7 @@ void UEquipmentAbility::MustActivateAbility(const FGameplayAbilitySpecHandle Han
 #endif
 
 
-	if(EquipmentEventFlag & (uint8)EEquipmentEventFlag::OnAttackStart)
+	if (EquipmentEventFlag & (uint8)EEquipmentEventFlag::OnAttackStart)
 	{
 		UAbilityTask_WaitGameplayEvent* OnAttackStartEvent = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, OnAttackStartTag);
 		OnAttackStartEvent->EventReceived.AddDynamic(this, &UEquipmentAbility::OnAttackStart);

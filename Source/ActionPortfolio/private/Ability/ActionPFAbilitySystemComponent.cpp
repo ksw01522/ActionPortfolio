@@ -14,6 +14,39 @@ UActionPFAbilitySystemComponent::UActionPFAbilitySystemComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
+bool UActionPFAbilitySystemComponent::IsGenericEventInputBound(int32 InputID) const
+{
+	return GenericEventInputDelegate.Contains(InputID) && GenericEventInputDelegate[InputID].IsBound();
+}
+
+void UActionPFAbilitySystemComponent::ClearAbilityWithClass(TSubclassOf<class UGameplayAbility> InAbilityClass)
+{
+	if (!IsOwnerActorAuthoritative())
+	{
+		PFLOG(Error, TEXT("Attempted to call ClearAbilityWithClass() on the client. This is not allowed!"));
+
+		return;
+	}
+	
+	for (int Idx = 0; Idx < AbilityPendingAdds.Num(); ++Idx)
+	{
+		if (AbilityPendingAdds[Idx].Ability.GetClass() == InAbilityClass)
+		{
+			ClearAbility(AbilityPendingAdds[Idx].Handle);
+			return;
+		}
+	}
+
+	for (int Idx = 0; Idx < ActivatableAbilities.Items.Num(); ++Idx)
+	{
+		if (ActivatableAbilities.Items[Idx].Ability.GetClass() == InAbilityClass)
+		{
+			ClearAbility(ActivatableAbilities.Items[Idx].Handle);
+			return;
+		}
+	}
+}
+
 void UActionPFAbilitySystemComponent::GetActiveAbilitiesWithTags(const FGameplayTagContainer& GameplayTagContainer, TArray<UActionPFGameplayAbility*>& ActiveAbilities)
 {
 	TArray<FGameplayAbilitySpec*> AbilitiesToActivate;
@@ -32,11 +65,9 @@ void UActionPFAbilitySystemComponent::GetActiveAbilitiesWithTags(const FGameplay
 
 bool UActionPFAbilitySystemComponent::IsActingAbilityByClass(TSubclassOf<UGameplayAbility> CheckAbility)
 {
-	const UGameplayAbility* AbilityCDO = CheckAbility.GetDefaultObject();
-
 	for (FGameplayAbilitySpec Spec : ActivatableAbilities.Items)
 	{
-		if (AbilityCDO == Spec.Ability)
+		if (CheckAbility == Spec.Ability->GetClass())
 		{
 			return Spec.IsActive();
 		}
@@ -45,47 +76,19 @@ bool UActionPFAbilitySystemComponent::IsActingAbilityByClass(TSubclassOf<UGamepl
 	return false;
 }
 
-bool UActionPFAbilitySystemComponent::TryActivatePFAbilityByClass(TSubclassOf<class UActionPFGameplayAbility> AbilityClass)
-{
-	if (IsActingAbilityByClass(AbilityClass))
-	{
-		FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromClass(AbilityClass);
-		if (AbilitySpec == nullptr || AbilitySpec->GetAbilityInstances().IsEmpty()) {
-			return false;
-		}
-
-		UActionPFGameplayAbility* ActionPFAbilityInstance = Cast<UActionPFGameplayAbility>(AbilitySpec->GetAbilityInstances()[0]);
-		if (ActionPFAbilityInstance == nullptr || !ActionPFAbilityInstance->CanReactivateAbility()) {
-			return false;
-		}
-
-		ActionPFAbilityInstance->ReactivateAbility();
-		return true;
-	}
-	else
-	{
-		return TryActivateAbilityByClass(AbilityClass);
-	}
-}
-
-
 
 UActionPFAbilitySystemComponent* UActionPFAbilitySystemComponent::GetAbilitySystemComponentFromActor(const AActor* Actor, bool LookForComponent)
 {
 	return Cast<UActionPFAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor, LookForComponent));
 }
 
-bool UActionPFAbilitySystemComponent::GetCooldownRemainingAndDurationByTag(FGameplayTagContainer CooldownTags, float& TimeRemaining, float& CooldownDuration)
+bool UActionPFAbilitySystemComponent::GetCooldownRemainingAndDurationByTag(FGameplayTagContainer CooldownTags, float& TimeRemaining, float& CooldownDuration) const
 {
 	if (CooldownTags.Num() <= 0) {
-		#if WITH_EDITOR
-		PFLOG(Warning, TEXT("Called By Empty Tag"));
-		#endif
+		TimeRemaining = 0;
+		CooldownDuration = 0;
 		return false;
 	}
-
-	TimeRemaining = -1;
-	CooldownDuration = -1;
 
 	FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(CooldownTags);
 	TArray< TPair<float, float> > DurationAndTimeRemaining = GetActiveEffectsTimeRemainingAndDuration(Query);
@@ -111,14 +114,76 @@ bool UActionPFAbilitySystemComponent::GetCooldownRemainingAndDurationByTag(FGame
 
 bool UActionPFAbilitySystemComponent::CanActivateAbility(TSubclassOf<UActionPFGameplayAbility> AbilityClass)
 {
-	const UGameplayAbility* AbilityCDO = AbilityClass.GetDefaultObject();
+	const FGameplayAbilitySpec* Spec = FindAbilitySpecFromClass(AbilityClass);
 
-	if(AbilityCDO == nullptr) return false;
+	if(Spec == nullptr) return false;
 
-	FGameplayAbilitySpec Spec(AbilityClass, 1, -1, GetOwner());
-
-	return AbilityCDO->CanActivateAbility(Spec.Handle, AbilityActorInfo.Get());
+	return Spec->Ability->CanActivateAbility(Spec->Handle, AbilityActorInfo.Get());
 }
+
+void UActionPFAbilitySystemComponent::AbilityLocalInputPressed(int32 InputID)
+{
+	if (IsGenericConfirmInputBound(InputID))
+	{
+		LocalInputConfirm();
+		return;
+	}
+
+	if (IsGenericCancelInputBound(InputID))
+	{
+		LocalInputCancel();
+		return;
+	}
+
+	if (IsGenericEventInputBound(InputID))
+	{
+		GenericEventInputDelegate[InputID].Broadcast(InputID);
+		return;
+	}
+
+	// ---------------------------------------------------------
+
+	ABILITYLIST_SCOPE_LOCK();
+	for (FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
+	{
+		if (Spec.InputID == InputID)
+		{
+			if (Spec.Ability)
+			{
+				Spec.InputPressed = true;
+				if (Spec.IsActive())
+				{
+					if (Spec.Ability->bReplicateInputDirectly && IsOwnerActorAuthoritative() == false)
+					{
+						ServerSetInputPressed(Spec.Handle);
+					}
+
+					AbilitySpecInputPressed(Spec);
+
+					// Invoke the InputPressed event. This is not replicated here. If someone is listening, they may replicate the InputPressed event to the server.
+					InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec.Handle, Spec.ActivationInfo.GetActivationPredictionKey());
+				}
+				else
+				{
+					// Ability is not active, so try to activate it
+					TryActivateAbility(Spec.Handle);
+				}
+			}
+		}
+	}
+}
+
+void UActionPFAbilitySystemComponent::AbilityLocalInputReleased(int32 InputID)
+{
+
+	Super::AbilityLocalInputReleased(InputID);
+}
+
+FGenericEventInputDelegate& UActionPFAbilitySystemComponent::GetGenericEventInputDelegate(int32 InputID)
+{
+	return GenericEventInputDelegate.FindOrAdd(InputID);
+}
+
 
 
 

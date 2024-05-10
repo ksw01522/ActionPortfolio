@@ -66,17 +66,23 @@ bool UDialoguerComponent::PlayAnimationMontage(UAnimMontage* ToPlayMontage, floa
 void UDialoguerComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	IDialoguerManagerInterface* DialoguerManager = UDialogueManager::GetDialoguerManager();
 	
-	DialoguerManager->RegisterDialoguer(this);
+	if (UDialogueManager* Manager = UDialogueManager::GetManagerInstance())
+	{
+		Manager->RegisterDialoguer(this);
+	}
+	
+
 	AllocateAnimInstance();
 }
 
 void UDialoguerComponent::BeginDestroy()
 {
-	IDialoguerManagerInterface* DialoguerManager = UDialogueManager::GetDialoguerManager();
+	if (UDialogueManager* Manager = UDialogueManager::GetManagerInstance())
+	{
+		Manager->UnregisterDialoguer(this);
+	}
 
-	if(DialoguerManager != nullptr) DialoguerManager->UnregisterDialoguer(this);
 
 	Super::BeginDestroy();
 }

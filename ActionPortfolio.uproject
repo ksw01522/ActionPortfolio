@@ -38,12 +38,23 @@
 			]
 		},
 		{
+			"Name": "CustomInputSettingEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"CoreUObject",
+				"Engine",
+				"CustomInputSettingRuntime"
+			]
+		},
+		{
 			"Name": "DialogueRuntime",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"CoreUObject",
-				"Engine"
+				"Engine",
+				"DeveloperSettings"
 			]
 		},
 		{

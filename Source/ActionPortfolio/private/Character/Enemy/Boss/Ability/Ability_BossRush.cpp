@@ -44,7 +44,7 @@ void UAbility_BossRush::OnEventReceived(FGameplayEventData EventData)
 	}
 	else
 	{
-		Super::OnEventReceived(EventData);
+		
 	}
 	
 	BossChar->GetMesh()->GetAnimInstance()->Montage_JumpToSection("End", MeeleeMontage);

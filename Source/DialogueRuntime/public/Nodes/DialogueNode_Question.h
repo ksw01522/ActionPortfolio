@@ -35,13 +35,8 @@ protected:
 #if WITH_EDITOR
 	//virtual bool CanCreateConnection(UDialogueNode* Other, FText& ErrorMessage) override;
 
-	virtual bool CanCreateConnectionTo(UDialogueNode* Other, int32 NumberOfChildrenNodes, FText& ErrorMessage) override;
+	virtual bool CanCreateConnectionTo(UDialogueNode* Other, int32 NumberOfChildrenNodes, FText& ErrorMessage) const override;
 
 	virtual FText GetNodeTitle() override;
 	#endif
-
-
-	virtual void GetDialogueElementContainer(FDialogueElementContainer& OutElement) const override;
-
-	virtual const UDialogueNode* GetNextDialogueNode(FNextDialogueNodeOptionalStruct* OptionalStruct = nullptr) const override;
 };

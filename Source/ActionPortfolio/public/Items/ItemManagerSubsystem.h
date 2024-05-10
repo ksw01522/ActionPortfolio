@@ -12,7 +12,7 @@
  class UDataTable;
  class ADroppedItem;
  class UItemBase;
- class UDropItemPoolWorldSubsystem;
+ class UItemWorldSubsystem;
 
  struct FItemData_Base;
  struct FItemData_Equipment;
@@ -37,6 +37,9 @@ private:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UDataTable>> ItemDataTables;
 
+	UPROPERTY(Transient)
+	TObjectPtr<class UMaterialInterface> MeshCaptureMaterial;
+
 ///////////////////////////////////////// 초기화 관련 //////////////////////////////////////////////
 private:
 	bool bInitialized = false;
@@ -50,47 +53,12 @@ protected:
 	virtual void Deinitialize() override;
 
 ///////////////////////////////////////// 기본 //////////////////////////////////////////////
-private:
+public:
 	const FItemData_Base* FindItemData(const FName& Code) const;
 
-public:
-	UItemBase* MakeItemInstance(const FName& Code);
+	UItemBase* MakeItemInstance(const FName& Code, int Count = 1);
 
-
-///////////////////////////////////////// 드랍 아이템 인스턴스 풀 //////////////////////////////////////////////
-private:
-	TWeakObjectPtr<UDropItemPoolWorldSubsystem> DropItemPool;
-	int DropItemPoolSize;
-
-	UPROPERTY()
-	TObjectPtr<UCurveFloat> DefaultDIBounceCurve;
-	
-	float BouncePower;
-
-	float BounceHeight;
-
-	UPROPERTY()
-	TObjectPtr<UCurveFloat> DefaultDIMagnetizedCurve;
-
-public: 
-	void SetDropItemPool(UDropItemPoolWorldSubsystem* NewPool);
-
-	void SetDropItemPoolSize(int NewSize);
-	int GetDropItemPoolSize() const {return DropItemPoolSize;};
-
-	UFUNCTION(BlueprintCallable)
-	void ItemDrop(const FName& ItemCode, int Count, const FVector& Position);
-
-	void ItemDrop(UItemBase* Item, int Count, const FVector& Position);
-
-
-	void BackToDropItemPool(ADroppedItem* Target);
-
-	UCurveFloat* GetDIBounceCurve() const {return DefaultDIBounceCurve;}
-	UCurveFloat* GetDIMagnetizedCurve() const { return DefaultDIMagnetizedCurve; }
-
-	float GetBouncePower() const {return BouncePower;}
-	float GetBounceHeight() const {return BounceHeight;}
+	UMaterialInterface* GetMeshCaptureMaterial() const { return MeshCaptureMaterial; }
 
 ///////////////////////////////////////// 인벤토리 //////////////////////////////////////////////
 private:
@@ -106,5 +74,12 @@ private:
 	void DebugItemManager() const;
 #endif
 
+////////////////////////////////// MeshCapture ///////////////////////////////////////////
+private:
+	void SetCaptureItemMeshByMesh(TSoftObjectPtr<UStaticMesh> InMesh);
 
+public:
+	void SetCaptureItemMesh(FName ItemCode);
+	void SetCaptureItemMesh(const UItemBase* InItem);
+	void ClearCaptureItemMesh();
 };

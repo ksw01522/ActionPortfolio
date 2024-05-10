@@ -24,76 +24,54 @@ class DIALOGUERUNTIME_API UDialogueNode_Basic : public UDialogueNode
 #endif
 
 
-protected:
-	UPROPERTY()
-	FDialogueLocalization Dialogue_Name;
-	UPROPERTY()
-	FDialogueLocalization Dialogue_String;
-
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Dialogue")
-	ERichTextBlockType RichTextBlockType;
-
-#if WITH_EDITORONLY_DATA
-
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Dialogue")
+private:
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Dialogue", meta = (AllowPrivateAccess = "true"))
 	FName DialoguerNameCode;
 
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Dialogue")
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Dialogue", meta = (AllowPrivateAccess = "true"))
 	FName DialogueStringCode;
 
-	UPROPERTY(VisibleDefaultsOnly, Category = "Dialogue", AdvancedDisplay)
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(Transient)
+	TObjectPtr<class UDataTable> TargetTable;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "DialogueEditor", AdvancedDisplay, meta = (AllowPrivateAccess = "true"))
 	bool CanVisible_DialoguerName = false;
 
-	UPROPERTY(VisibleDefaultsOnly, Category = "Dialogue", AdvancedDisplay)
+	UPROPERTY(Transient, VisibleDefaultsOnly, Category = "DialogueEditor", AdvancedDisplay, meta = (AllowPrivateAccess = "true"))
 	bool CanVisible_DialogueString = false;
 
-	UPROPERTY(VisibleInstanceOnly,  Category = "Dialogue", BlueprintGetter = GetDialoguerName_Original_InEditor, meta = (DisplayAfter = "DialoguerNameCode", EditCondition = "CanVisible_DialoguerName", EditConditionHides))
+	UPROPERTY(Transient, VisibleInstanceOnly, Category = "DialogueEditor", BlueprintGetter = GetDialoguerName_Original_InEditor, meta = (DisplayAfter = "DialoguerNameCode", EditCondition = "CanVisible_DialoguerName", EditConditionHides, AllowPrivateAccess = "true"))
 	FString Original_DialoguerName;
 
-	UPROPERTY(VisibleInstanceOnly,  Category = "Dialogue", BlueprintGetter = GetDialoguerName_InEditor, meta = (DisplayAfter = "DialoguerNameCode", EditCondition = "CanVisible_DialoguerName", EditConditionHides))
+	UPROPERTY(Transient, VisibleInstanceOnly,  Category = "DialogueEditor", BlueprintGetter = GetDialoguerName_InEditor, meta = (DisplayAfter = "DialoguerNameCode", EditCondition = "CanVisible_DialoguerName", EditConditionHides, AllowPrivateAccess = "true"))
 	FString DialoguerName;
 
-	UPROPERTY(EditInstanceOnly, Category = "Dialogue", BlueprintGetter = GetDialogueString_Original_InEditor, meta = (DisplayAfter = "DialogueStringCode", EditCondition = "CanVisible_DialogueString", EditConditionHides))
+	UPROPERTY(Transient, EditInstanceOnly, Category = "DialogueEditor", BlueprintGetter = GetDialogueString_Original_InEditor, meta = (DisplayAfter = "DialogueStringCode", EditCondition = "CanVisible_DialogueString", EditConditionHides, AllowPrivateAccess = "true"))
 	FString Original_DialogueString;
 
-	UPROPERTY(EditInstanceOnly, Category = "Dialogue", BlueprintGetter = GetDialogueString_InEditor, meta = (DisplayAfter = "DialogueStringCode", EditCondition = "CanVisible_DialogueString", EditConditionHides))
+	UPROPERTY(Transient, EditInstanceOnly, Category = "DialogueEditor", BlueprintGetter = GetDialogueString_InEditor, meta = (DisplayAfter = "DialogueStringCode", EditCondition = "CanVisible_DialogueString", EditConditionHides, AllowPrivateAccess = "true"))
 	FString DialogueString;
 
-	
+	UPROPERTY(EditInstanceOnly, Category = "DialogueEditor", meta = (AllowPrivateAccess = "true"))
+	bool bSlateDeco;
+
 #endif
 
-	UPROPERTY(EditAnywhere, Category = "DialogueTextStyle", meta = (RequiredAssetDataTags = "RowStructure=/Script/UMG.RichTextStyleRow"))
-	UDataTable* DialogueTextStyleSet;
-
-	UPROPERTY(EditAnywhere, Category = "DialogueTextStyle", meta = (EditCondition = "RichTextBlockType == ERichTextBlockType::UMG", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "DialogueTextStyle")
 	TArray<TSubclassOf<class URichTextBlockDecorator>> DialogueUMGDecoratorClasses;
 
-	UPROPERTY(EditAnywhere, Category = "DialogueTextStyle", meta = (EditCondition = "RichTextBlockType == ERichTextBlockType::SLATE", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "DialogueTextStyle")
 	TArray<TSubclassOf<class USRichTextBlockDecorator>> DialogueSlateDecoratorClasses;
-
-
-public:
-#if WITH_EDITORONLY_DATA
-	UPROPERTY()
-	FOnChangedDialogueStyle OnChangedDialogueStyle;
-#endif
-
 
 public:
 	UDialogueNode_Basic();
 
-	UDataTable* GetDialogueTextStyleSet() const;
-	TArray<TSubclassOf<class URichTextBlockDecorator>> GetUMGDecoClasses() const;
-	TArray<TSubclassOf<class USRichTextBlockDecorator>> GetSlateDecoClasses() const;
+	const TArray<TSubclassOf<class URichTextBlockDecorator>>& GetUMGDecoClasses() const;
+	const TArray<TSubclassOf<class USRichTextBlockDecorator>>& GetSlateDecoClasses() const;
 
-	FString GetDialoguerName(EDialogueLanguage Language) const;
-	FString GetDialogueString(EDialogueLanguage Language) const;
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "DialogueStyle")
-	ERichTextBlockType GetRichTextBlockType() const {return RichTextBlockType;}
-
-protected:
-	virtual void GetDialogueElementContainer(FDialogueElementContainer& OutElement) const override;
+	FString GetDialoguerName() const;
+	FString GetDialogueString() const;
 
 #if WITH_EDITOR
 public:
@@ -108,11 +86,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintGetter, Category = "Dialogue")
 	FString GetDialogueString_Original_InEditor() const;
-
-	virtual FText GetNodeTitle() override;
-
-	virtual FText GetDescription_Implementation() const override;
 	
+	bool IsSlateRichTextStyle() const { return bSlateDeco; }
+
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	UFUNCTION()
@@ -121,18 +97,14 @@ public:
 	virtual void RebuildNode() override;
 
 private:
-	FDialogueLocalization* GetDialoguerNameRow();
-	FDialogueLocalization* GetDialogueStringRow();
-
-
-	virtual void ImportDialogue_String();
-
 	virtual void OnChanged_DialoguerNameCode();
 	virtual void OnChanged_DialogueStringCode();
 
 	virtual void OnChanged_PreviewLanguage() override;
 
-	virtual void OnChangedDialogueTextStyle() override;
+public:
+	FName GetDialoguerNameCode() const {return DialoguerNameCode;}
+	FName GetDialogueStringCode() const {return DialogueStringCode;}
 
 #endif
 	

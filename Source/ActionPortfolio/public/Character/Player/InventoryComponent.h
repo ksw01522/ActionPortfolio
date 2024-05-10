@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Items/Slot/ItemSlot.h"
 #include "InventoryComponent.generated.h"
 
 
@@ -14,67 +15,18 @@ struct FItemData_Base;
 class UItemBase;
 class ADroppedItem;
 
-struct FInventorySlot
+UCLASS()
+class UInventorySlot : public UItemSlot
 {
-	friend class UInventoryComponent;
-	friend struct FInventorySlotContainer;
-private:
-	FInventorySlot() : Item(nullptr), Count(0) {}
-public:
-	virtual ~FInventorySlot(){}
-
-private:
-	UPROPERTY(Transient)
-	TObjectPtr<UItemBase> Item;
-	int Count;
-	int Index;
-
-	void CheckCount();
+	GENERATED_BODY()
 
 public:
-	bool IsEmpty() const;
-	
-	UItemBase* GetItemInSlot(){ return Item.Get(); }
+	UInventorySlot() : UItemSlot("Inventory")
+	{}
 
-	FName GetItemCode() const;
-	uint8 GetCount() const {return Count;}
-
-	int GetIndex() const {return Index;}
-
-	void SetSlot(UItemBase* Item, int NewCount);
-	void SetCount(int NewCount);
-
-	void AddCount(int AddCount);
-	void RemoveCount(int RemoveCount);
-	void ClearSlot() { Item = nullptr; Count = 0; }
+private:
+	virtual void SlotDropTo(UItemSlot* To) override;
 };
-
-struct FInventorySlotContainer
-{
-	friend class UInventoryComponent;
-
-	FInventorySlotContainer(){}
-	virtual ~FInventorySlotContainer(){}
-
-private:
-	TArray<FInventorySlot> Slots;
-
-	void InitializeSlots(int NewSize);
-	FInventorySlot* GetEmptySlot(int StartIndex = 0);
-	FInventorySlot* FindSlotByCode(const FName& ItemCode, int StartIndex = 0);
-
-public:
-	bool IsValidIndex(int Idx) const{return Slots.IsValidIndex(Idx); };
-	bool IsEmptyIndex(int Idx) const{return !IsValidIndex(Idx) || Slots[Idx].IsEmpty(); };
-	int GetSize() const {return Slots.Num(); }
-
-
-	FInventorySlot& operator[](const int& Index)
-	{
-		return Slots[Index];
-	}
-};
-
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ACTIONPORTFOLIO_API UInventoryComponent : public UActorComponent
@@ -97,30 +49,30 @@ public:
 
 
 private:
-	TMap<EItemType, FInventorySlotContainer> Inventory;
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UInventorySlot>> Slots;
 
 public:
-	FOnChangedInventory OnChangedInventory;
+	TArray<UInventorySlot*> GetSlotArray() const {return Slots;}
 
-public:
 	void AddItemByDropItem(class ADroppedItem& DropItem);
 	
 	//Return Remain Item Count
-	int AddItemByCode(const FName& ItemCode, int Count);
-	int AddItemByObject(UItemBase* TargetItem, int Count);
-	int AddItemByIndex(EItemType InventoryType, int Idx, int Count);
+	int AddItemByCode(const FName& ItemCode, int Count = 1);
+	int AddItemByObject(UItemBase* TargetItem);
+	int AddItemByIndex(int Idx, int Count);
 
 public:
 	//Return Remain Item Count
 	int RemoveItemByCode(const FName& ItemCode, int Count);
-	int RemoveItemByObject(UItemBase* TargetItem, int Count);
-	int RemoveItemByIndex(EItemType InventoryType, int Idx, int Count);
+	int RemoveItemByObject(UItemBase* TargetItem);
+	int RemoveItemByIndex(int Idx, int Count);
 
-	bool TryDropItem(const EItemType& ItemType, int Idx, int Count, const FVector& DropLocation);
+	bool TryDropItem(int Idx, int Count, const FVector& DropLocation);
 
-	FInventorySlot* GetInventorySlot(EItemType InventoryType, int idx);
-	FInventorySlot* GetEmptySlot(EItemType InventoryType, int StartIdx = 0);
-
+	int GetSlotCount() const {return Slots.Num(); }
+	UInventorySlot* GetInventorySlot(int Idx) const;
+	UInventorySlot* GetEmptySlot(int StartIdx = 0) const;
 
 	int GetCountItemInInventory(const FName& ItemCode);
 };

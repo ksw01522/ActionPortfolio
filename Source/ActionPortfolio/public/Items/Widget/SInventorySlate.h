@@ -4,152 +4,94 @@
 
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
+#include "SItemSlot.h"
 /**
  * 
  */
  class SImage;
  class SUniformGridPanel;
  class STextBlock;
- class AActionPFPlayerController;
 
-
- struct FItemData_Base;
-
- enum class EItemGrade : uint8;
- enum class EItemType : uint8;
-
-DECLARE_DELEGATE_RetVal(FReply, FInventorySlotEvent);
-
-class ACTIONPORTFOLIO_API SInventorySlot : public SCompoundWidget
-{
-	SLATE_DECLARE_WIDGET(SInventorySlot, SCompoundWidget)
-
-public:
-	SLATE_BEGIN_ARGS(SInventorySlot) :
-		_BackgroundBrush(nullptr), _SlotIdx(-1)
-	{}
-
-	SLATE_ARGUMENT(const FSlateBrush*, BackgroundBrush);
-	SLATE_ARGUMENT(int, SlotIdx);
-
-	SLATE_END_ARGS()
-
-	SInventorySlot();
-	virtual ~SInventorySlot();
-
-	/** Constructs this widget with InArgs */
-	void Construct(const FArguments& InArgs);
-
-private:
-	TSharedPtr<SImage> BackgroundImage;
-
-	TSharedPtr<SImage> IconImage;
-	TSoftObjectPtr<UMaterialInterface> IconMaterial;
-	FSlateBrush IconBrush;
-
-	TSharedPtr<SImage> FrameImage;
-
-	TSharedPtr<STextBlock> CountBlock;
-
-	int SlotIdx = -1;
-
-	void SetItemIcon(TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade);
-	void SetIconFrame(EItemGrade ItemGrade);
-	void SetCount(int NewCount);
-
-private:
-	FInventorySlotEvent OnAcceptEvent;
-	FInventorySlotEvent OnBackEvent;
-
-protected:
-	virtual FReply OnFocusReceived(const FGeometry& MyGeometry, const FFocusEvent& InFocusEvent) override;
-	virtual void OnFocusLost(const FFocusEvent& InFocusEvent) override;
-
-	virtual bool SupportsKeyboardFocus() const;
-
-	virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent);
-
-	virtual FReply OnPreviewMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent);
-	virtual FReply OnMouseButtonDoubleClick(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent);
-
-	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
-
-
-	virtual void OnFocusChanging(const FWeakWidgetPath& PreviousFocusPath, const FWidgetPath& NewWidgetPath, const FFocusEvent& InFocusEvent) override;
-
-public:
-	void SetAcceptEvent(const TDelegate<FReply()>& NewEvent);
-	void SetBackEvent(const TDelegate<FReply()>& NewEvent);
-
-public:
-	void UpdateSlotWidget(TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount);
-	void ClearInventorySlotWidget();
-	int GetSlotIdx() const {return SlotIdx;}
-};
 
 class ACTIONPORTFOLIO_API SInventoryWindow : public SCompoundWidget
 {
 	SLATE_DECLARE_WIDGET(SInventoryWindow, SCompoundWidget);
 
 public:
-	SLATE_BEGIN_ARGS(SInventoryWindow) : _SlotCount(0) , _CountByRow(1)
+	SLATE_BEGIN_ARGS(SInventoryWindow) : _Count(0), _CountByRow(1), _SlotPadding(FMargin(0)), _SlotBackgroundBrush(nullptr)
 		{} 
 
-	SLATE_ARGUMENT(int, SlotCount);
+	SLATE_ARGUMENT(int, Count)
 	SLATE_ARGUMENT(int, CountByRow)
+	SLATE_ARGUMENT(FMargin, SlotPadding)
+	SLATE_ARGUMENT(const FSlateBrush*, SlotBackgroundBrush)
 
 	SLATE_END_ARGS()
 
 	SInventoryWindow();
-	~SInventoryWindow();
+	virtual ~SInventoryWindow();
 
 	/** Constructs this widget with InArgs */
 	void Construct(const FArguments& InArgs);
 
 private:
+	TSharedPtr<class SInvalidationPanel> InvalidationPanel;
+
 	TSharedPtr<SUniformGridPanel> SlotPanel;
 	int CountByRow;
 
 	TSharedPtr<class SScrollBox> ScrollBox;
 
-	TArray<TSharedPtr<SInventorySlot>> Slots;
+	TArray<TSharedPtr<class SItemSlot>> Slots;
 
-	FSlateBrush SlotBackgroundBrush;
-	TSoftObjectPtr<UMaterialInterface> SlotBackgroundMaterial;
+	const FSlateBrush* SlotBackgroundBrush;
 
 	bool bInitialized;
 
-	TSharedPtr<struct FStreamableHandle> StreamingHandle;
-	FVector2D SlotSize;
-
-
-
 public:
 	//슬롯을 갯수에 맞춰 생성하기
-	void InitializeInventoryWindow(int SlotCount, bool bReset = false);
+	void InitializeInventoryWindow(int Count, bool bReset = false);
 
 private:
 	//슬롯 네비게이션 만들기 혹은 수정 : 슬롯만들거나, 행당 슬롯카운트에 변화가 생기면 네비게이션 수정
 	void SlotNavigationBuild();
 
-public:	
-	//슬롯에 해당되는 인벤토리칸에 변화가 생기면 업데이트 해주기
-	void UpdateSlotWidget(int idx, TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount);
+	//OverBound 네비게이션 업데이트
+	void UpdateOverBoundNavi();
 
+	virtual bool SupportsKeyboardFocus() const {return true;}
+
+public:
+	void SetOverBoundNaviStop(EUINavigation Dir);
+	void SetOverBoundNaviEscape(EUINavigation Dir);
+	void SetOverBoundNaviWrap(EUINavigation Dir);
+	void SetOverBoundNaviExplicit(EUINavigation Dir, TSharedPtr<SWidget> InWidget);
+
+	SItemSlot* GetInventorySlot(int Idx) const;
+
+public:	
 	//슬롯의 Padding 수정
 	void SetSlotPadding(const FMargin& NewPadding);
 
 	//행당 카운트 바꾸기
 	void SetSlotCountByRow(int NewCount);
 
-	//슬롯 사이즈
-	void SetSlotSize(FVector2D NewSize);
-
-	void SetSlotBackgroundImage(TSoftObjectPtr<UMaterialInterface> NewImage);
+	void SetSlotBackgroundBrush(const FSlateBrush* NewBrush);
 
 	void OnSelectedWindow();
+
+	void BindInventorySlot(TArray<class UInventorySlot*> InSlots);
+
+private:
+	mutable FOnFocusedItemSlot OnFocusedItemSlot;
+
+	void OnFocusedItemSlotFunction(UItemSlot* InSlot) const;
+
+public:
+	FOnFocusedItemSlot& GetOnFocusedItemSlot() const {return OnFocusedItemSlot;}
 };
 
+/*
 class ACTIONPORTFOLIO_API SInventory : public SCompoundWidget
 {
 	SLATE_DECLARE_WIDGET(SInventory, SCompoundWidget)
@@ -187,3 +129,4 @@ public:
 
 	void ShowInventoryWindow(EItemType InventoryType);
 };
+*/

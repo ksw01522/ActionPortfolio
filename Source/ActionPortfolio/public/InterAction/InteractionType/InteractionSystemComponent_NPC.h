@@ -29,6 +29,7 @@ private:
 
 	TWeakObjectPtr<UDialoguerComponent> DialoguerComponent;
 
+
 private:
 	virtual bool CanInteract_CPP(AActor* InteractActor) const override;
 	virtual void Interact_CPP(AActor* InteractActor) override;
@@ -47,6 +48,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "NPCInteraction")
 	const TArray<UNPCInteract*> GetAbleNPCInteractions(class AActionPFPlayerController* PlayerController) const;
+
+	UFUNCTION(Client, Unreliable)
+	void CreateInteractionSlate(AActionPFPlayerController* Player);
+
+	void CreateInteractionSlate_Implementation(AActionPFPlayerController* Player);
 
 };
 
@@ -67,19 +73,18 @@ protected:
 
 	TWeakObjectPtr<UInteractionSystemComponent_NPC> OwnerSystem;
 
+
 public:
 	UFUNCTION(BlueprintPure, BlueprintCallable, Category = "NPCInteraction", BlueprintGetter)
 	const FText& GetNPCInteractionName() const { return NPCInteractionName; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, BlueprintNativeEvent, Category = "NPCInteraction")
-	bool IsCanNPCInteract(AActionPFPlayerController* InteractPlayer) const;
-	virtual bool IsCanNPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const { return false; }
+	virtual bool IsCanNPCInteract(AActionPFPlayerController* InteractPlayer) const { return false; }
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "NPCInteraction")
-	void NPCInteract(AActionPFPlayerController* InteracPlayer) const;
-	virtual void NPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const {}
+	virtual FReply NPCInteract(AActionPFPlayerController* InteractPlayer) { return FReply::Handled();  }
 
 	void SetOwnerSystem(UInteractionSystemComponent_NPC* NewOwner) {OwnerSystem = NewOwner;}
+
+	TSharedRef<class SButton> CreateInteractionButton(AActionPFPlayerController* InteractPlayer);
 };
 /**
  *
@@ -96,11 +101,8 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NPCDialogue", meta = (AllowPrivateAccess = "true"))
 	class UDialogueSession* DialogueSession;
 
-
 public:
-
-public:
-	virtual bool IsCanNPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const;
-	virtual void NPCInteract_Implementation(AActionPFPlayerController* InteractPlayer) const;
+	virtual bool IsCanNPCInteract(AActionPFPlayerController* InteractPlayer) const override;
+	virtual FReply NPCInteract(AActionPFPlayerController* InteractPlayer) override;
 };
 

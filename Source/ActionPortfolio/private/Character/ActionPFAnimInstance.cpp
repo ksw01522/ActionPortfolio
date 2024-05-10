@@ -6,15 +6,6 @@
 #include "ActionPortfolio.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
-bool UActionPFAnimInstance::IsRigidity()
-{
-	AActionPortfolioCharacter* Character = GetOwnerCharacter();
-
-	if(Character == nullptr) return false;
-
-	return Character->IsRigidity();
-} 
-
 void UActionPFAnimInstance::NativeBeginPlay()
 {
 	if (!OwnerCharacter.IsValid()) {

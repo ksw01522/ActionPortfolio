@@ -12,10 +12,12 @@ struct ActionPFDamageStatics
 {
 
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Damage);
+	DECLARE_ATTRIBUTE_CAPTUREDEF(DefenseP);
 
 	ActionPFDamageStatics()
 	{
-		DEFINE_ATTRIBUTE_CAPTUREDEF(UActionPFAttributeSet, Damage, Source, true);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UActionPFAttributeSet, Damage, Target, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UActionPFAttributeSet, DefenseP, Target, false);
 	}
 
 };
@@ -29,8 +31,13 @@ static const ActionPFDamageStatics& DamageStatics()
 UDamageExecutionCalculation::UDamageExecutionCalculation()
 {
 #if WITH_EDITORONLY_DATA
-	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("Data.Damage"));
+	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("DamageType.Meelee"));
+	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("DamageType.fire"));
+	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("DamageType.Ice"));
+	ValidTransientAggregatorIdentifiers.AddTag(FGameplayTag::RequestGameplayTag("DamageType.Electric"));
 #endif
+
+	RelevantAttributesToCapture.Add(DamageStatics().DefensePDef);
 }
 
 void UDamageExecutionCalculation::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, OUT FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const
@@ -54,15 +61,41 @@ void UDamageExecutionCalculation::Execute_Implementation(const FGameplayEffectCu
 	EvaluationParameters.SourceTags = SourceTags;
 	EvaluationParameters.TargetTags = TargetTags;
 
-	float Damage = 0.0f;
-	ExecutionParams.AttemptCalculateTransientAggregatorMagnitude(FGameplayTag::RequestGameplayTag("Data.Damage"), EvaluationParameters, Damage);
-	Damage += FMath::Max<float>(Spec.GetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.Damage"), false, 0 ), 0 );
-
-	if (Damage > 0.f)
+	float TempDamage = 0;
+	float TotalDamage = 0;
+	if(ExecutionParams.AttemptCalculateTransientAggregatorMagnitude(FGameplayTag::RequestGameplayTag("DamageType.Meelee"), EvaluationParameters, TempDamage)) 
 	{
-		OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(DamageStatics().DamageProperty, EGameplayModOp::Additive, Damage));
+		TotalDamage += FMath::Max<float>(TempDamage, 0);
 	}
-	TargetCharacter->OnDamageEvent(Damage, SourceActor);
-	SourceCharacter->OnAttackEvent(Damage, TargetCharacter);
 
+	float TempDefenceP = 0;
+	if(ExecutionParams.AttemptCalculateCapturedAttributeBaseValue(DamageStatics().DefensePDef, TempDefenceP))
+	{
+		
+	}
+
+	if (ExecutionParams.AttemptCalculateTransientAggregatorMagnitude(FGameplayTag::RequestGameplayTag("DamageType.Fire"), EvaluationParameters, TempDamage))
+	{
+		TotalDamage += FMath::Max<float>(TempDamage, 0);
+	}
+
+	if (ExecutionParams.AttemptCalculateTransientAggregatorMagnitude(FGameplayTag::RequestGameplayTag("DamageType.Ice"), EvaluationParameters, TempDamage))
+	{
+		TotalDamage += FMath::Max<float>(TempDamage, 0);
+	}
+
+	if (ExecutionParams.AttemptCalculateTransientAggregatorMagnitude(FGameplayTag::RequestGameplayTag("DamageType.Electric"), EvaluationParameters, TempDamage))
+	{
+		TotalDamage += FMath::Max<float>(TempDamage, 0);
+	}
+
+
+	OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(DamageStatics().DamageProperty, EGameplayModOp::Additive, TotalDamage));
+
+	if (TotalDamage > 0.f)
+	{
+	}
+
+	TargetCharacter->OnDamageEvent(TotalDamage, SourceActor);
+	SourceCharacter->OnAttackEvent(TotalDamage, TargetCharacter);
 }

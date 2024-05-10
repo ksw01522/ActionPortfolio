@@ -6,7 +6,8 @@
 #include "ActionPortfolio.h"
 #include "Character/ActionPortfolioCharacter.h"
 #include "Engine/Texture.h"
-
+#include "Ability/Widget/SAbilityIcon.h"
+#include "Ability/Effects/DamageExecutionCalculation.h"
 
 const FGameplayTag UActionPFGameplayAbility::OnAttackStartTag = FGameplayTag::RequestGameplayTag("CommonEvent.OnAttackStart");
 const FGameplayTag UActionPFGameplayAbility::OnAttackTargetTag = FGameplayTag::RequestGameplayTag("CommonEvent.OnAttackTarget");
@@ -26,8 +27,6 @@ TArray<FGameplayEffectSpecHandle> UActionPFGameplayAbility::MakeEffectSpecHandle
 
 void UActionPFGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	MustActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
 	if (bHasBlueprintActivate)
 	{
 		// A Blueprinted ActivateAbility function must call CommitAbility somewhere in its execution chain.
@@ -47,6 +46,7 @@ void UActionPFGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 	}
 	else
 	{
+
 		ActivateAbility_CPP(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	}
 
@@ -57,26 +57,25 @@ void UActionPFGameplayAbility::ActivateAbility_CPP(const FGameplayAbilitySpecHan
 
 }
 
-void UActionPFGameplayAbility::ReactivateAbility()
-{
-	
-}
 
 void UActionPFGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
-	Super::OnAvatarSet(ActorInfo, Spec);
-
 	if (AbilityType == EAbilityType::Passive)
 	{
 		ActorInfo->AbilitySystemComponent->TryActivateAbility(Spec.Handle, false);
 	}
 }
 
+void UActionPFGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
 void UActionPFGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
 												const FGameplayAbilityActivationInfo ActivationInfo) const
 {
 	UGameplayEffect* CooldownGE = GetCooldownGameplayEffect();
-	if (CooldownGE)
+	if (CooldownGE && 0 < CooldownDuration.GetValueAtLevel(GetAbilityLevel()))
 	{
 		FGameplayEffectSpecHandle CoolDownHandle = MakeOutgoingGameplayEffectSpec(CooldownGE->GetClass(), GetAbilityLevel());
 		CoolDownHandle.Data->DynamicGrantedTags.AppendTags(CooldownTags);
@@ -89,19 +88,30 @@ void UActionPFGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Ha
 
 const FGameplayTagContainer* UActionPFGameplayAbility::GetCooldownTags() const
 {
-	FGameplayTagContainer* MutableTags = const_cast<FGameplayTagContainer*>(&TempCooldownTags);
-	MutableTags->Reset();
-	const FGameplayTagContainer* ParentTags = Super::GetCooldownTags();
-	if (ParentTags)
+	if (!bTempCooldownTagsInitialized)
 	{
-		MutableTags->AppendTags(*ParentTags);
+		const FGameplayTagContainer* ParentTags = Super::GetCooldownTags();
+		if (ParentTags)
+		{
+			const_cast<FGameplayTagContainer&>(TempCooldownTags).AppendTags(*ParentTags);
+		}
+		const_cast<FGameplayTagContainer&>(TempCooldownTags).AppendTags(CooldownTags);
+		const_cast<bool&>(bTempCooldownTagsInitialized) = true;
 	}
-	MutableTags->AppendTags(CooldownTags);
 
-	return MutableTags;
+	return &TempCooldownTags;
 }
 
-TSoftObjectPtr<UTexture2D> UActionPFGameplayAbility::GetAbilityIconTexture() const
+TSharedPtr<class SAbilityIcon> UActionPFGameplayAbility::CreateAbilityIcon() const
 {
-	return AbilityIconTexture;
+	return
+	SNew(SAbilityIcon)
+	.Ability(const_cast<UActionPFGameplayAbility*>(this));
 }
+
+
+const FSlateBrush* UActionPFGameplayAbility::GetAbilityIconBrush(TWeakObjectPtr<const UAbilitySystemComponent> InSystem) const
+{
+	return &DefaultIconBrush;
+}
+

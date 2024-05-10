@@ -8,6 +8,54 @@
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "Character/ActionPortfolioCharacter.h"
 
+UActionPFAttributeSet::UActionPFAttributeSet()
+{
+    StatusEffect = nullptr;
+    CharacterLevel = 0;
+}
+
+void UActionPFAttributeSet::OnChangedCharacterLevelCallBack()
+{
+    OnChangedCharacterLevel.Broadcast(CharacterLevel);
+
+    UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+    
+    ASC->RemoveActiveGameplayEffect(StatusEffectHandle);
+
+    StatusEffectHandle = ASC->ApplyGameplayEffectToSelf(StatusEffect, CharacterLevel, ASC->MakeEffectContext());
+}
+
+void UActionPFAttributeSet::SetCharacterLevel(int NewLevel)
+{
+    if(CharacterLevel == NewLevel) return;
+
+    CharacterLevel = NewLevel;
+
+    OnChangedCharacterLevelCallBack();
+}
+
+void UActionPFAttributeSet::SetStatusEffect(UGameplayEffect* NewStatusEffect)
+{
+    if(StatusEffect == NewStatusEffect) return;
+
+    StatusEffect = NewStatusEffect;
+
+    UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+
+    ASC->RemoveActiveGameplayEffect(StatusEffectHandle);
+
+    StatusEffectHandle = ASC->ApplyGameplayEffectToSelf(StatusEffect, CharacterLevel, ASC->MakeEffectContext());
+}
+
+void UActionPFAttributeSet::InitializeStatus(int NewLevel, UGameplayEffect* NewStatusEffect)
+{
+    CharacterLevel = NewLevel;
+
+    StatusEffect = NewStatusEffect;
+
+    OnChangedCharacterLevelCallBack();
+}
+
 void UActionPFAttributeSet::SetHealth(float NewVal)
 {
     NewVal = FMath::Clamp<float>(NewVal, 0.0f, GetMaxHealth());
@@ -73,13 +121,7 @@ void UActionPFAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
     {
         float LocalDamage = GetDamage();
         SetDamage(0);
-        
-        #if WITH_EDITOR
-        PFLOG(Warning, TEXT("Damage = %.1f"), LocalDamage);
-        #endif
 
-        // IsDie
-        if(GetHealth() <= 0) return;
 
         float NewHealth = GetHealth() - LocalDamage;
         SetHealth(NewHealth);

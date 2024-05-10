@@ -10,17 +10,14 @@
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Ability/Effects/KnockbackExecutionCalculation.h"
 #include "AbilitySystemInterface.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Ability/Effects/GameplayEffect_Damage.h"
 #include "Character/ActionPortfolioCharacter.h"
 #include "Character/Enemy/Boss/CharacterBoss.h"
 #include "Character/Enemy/Boss/BossAIController.h"
 
 UAbility_BossFrenzy::UAbility_BossFrenzy()
 {
-	bBlockMoveInActing = true;
 }
 
 
@@ -33,7 +30,7 @@ void UAbility_BossFrenzy::ActivateAbility_CPP(const FGameplayAbilitySpecHandle H
 		return;
 	}
 
-
+	/*
 	UAbilityTask_PlayMontageAndWaitEvent* MeeleeAbilityTask = UAbilityTask_PlayMontageAndWaitEvent::PlayMontageAndWaitEvent(this, TaskInstanceName, MeeleeMontage, EventTagContainer, PlayLate, NAME_None, bStopWhenAbilityEnd);
 	ensure(MeeleeAbilityTask);
 	MeeleeAbilityTask->OnCompleted.AddDynamic(this, &UAbility_BossFrenzy::OnMontageEnded);
@@ -57,6 +54,7 @@ void UAbility_BossFrenzy::ActivateAbility_CPP(const FGameplayAbilitySpecHandle H
 	WaitFrenzyEvent->ReadyForActivation();
 
 	RotateToTarget();
+	*/
 }
 
 #if WITH_EDITOR

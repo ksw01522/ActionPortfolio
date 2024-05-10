@@ -25,7 +25,7 @@ void UANS_AttackByTag::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequen
 		return;
 	}
 	
-	AttackShape = Char->GetAttackShape(AttackTag);
+	//AttackShape = Char->GetAttackShape(AttackTag);
 	if (!AttackShape.IsValid()) {
 		PFLOG(Warning, TEXT("Can't find AttackShape By AttackTag {%s}"), *AttackTag.ToString());
 		return;

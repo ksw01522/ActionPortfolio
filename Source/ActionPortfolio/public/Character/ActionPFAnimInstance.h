@@ -26,11 +26,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
 	bool bIsInAir;
 
-protected:
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ActionPF|Animation")
-	bool IsRigidity();
-
 public:
 	virtual void NativeBeginPlay();
 

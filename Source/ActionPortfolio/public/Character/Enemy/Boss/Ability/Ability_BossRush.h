@@ -25,7 +25,7 @@ private:
 protected:
 	virtual void ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
-	virtual void OnEventReceived(FGameplayEventData EventData) override;
+	virtual void OnEventReceived(FGameplayEventData EventData);
 
 	void StopRush();
 };

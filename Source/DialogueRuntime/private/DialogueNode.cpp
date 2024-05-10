@@ -46,34 +46,27 @@ UDialogueSession* UDialogueNode::GetDialogueSession() const
 	return DialogueSession;
 }
 
-void UDialogueNode::GetDialogueElementContainer(FDialogueElementContainer& OutElement) const
+TArray<const UDialogueNode*> UDialogueNode::GetNextDialogueNodes() const
 {
-	OutElement.ContainerType = GetDialogueNodeType();
-}
+	TArray<const UDialogueNode*> ReturnNodes;
 
-const UDialogueNode* UDialogueNode::GetNextDialogueNode(FNextDialogueNodeOptionalStruct* OptionalStruct) const
-{
-	const UDialogueNode* NextNode = nullptr;
-
-	for (const auto Child : ChildrenNodes)
+	for (auto& Node : ChildrenNodes)
 	{
-		const UDialogueEdge* Edge = GetEdge(Child);
-		if (Edge->CanEnterNextNode()) {
-			NextNode = Child;
-			break;
-		}
+		ReturnNodes.Add(Node);
 	}
 
-	return NextNode;
+	return ReturnNodes;
 }
-
 
 
 const UDialogueEdge* UDialogueNode::GetEdge(const UDialogueNode* ChildNode) const
 {
-	if(!Edges.Contains(ChildNode)) return nullptr;
+	for (auto& Edge : Edges)
+	{
+		if(Edge.Key == ChildNode) return Edge.Value;
+	}
 
-	return Edges[ChildNode];
+	return nullptr;
 }
 
 bool UDialogueNode::IsLeafNode() const
@@ -105,12 +98,12 @@ FText UDialogueNode::GetNodeTitle()
 }
 
 
-bool UDialogueNode::CanCreateConnection(UDialogueNode* Other, FText& ErrorMessage)
+bool UDialogueNode::CanCreateConnection(UDialogueNode* Other, FText& ErrorMessage) const
 {
 	return true;
 }
 
-bool UDialogueNode::CanCreateConnectionTo(UDialogueNode* Other, int32 NumberOfChildrenNodes, FText& ErrorMessage)
+bool UDialogueNode::CanCreateConnectionTo(UDialogueNode* Other, int32 NumberOfChildrenNodes, FText& ErrorMessage) const
 {
 	if(!CanCreateConnection(Other, ErrorMessage)) return false;
 	if (Other->GetDialogueNodeType() == EDialogueNodeType::Start) return false;
@@ -124,7 +117,7 @@ bool UDialogueNode::CanCreateConnectionTo(UDialogueNode* Other, int32 NumberOfCh
 	return true;
 }
 
-bool UDialogueNode::CanCreateConnectionFrom(UDialogueNode* Other, int32 NumberOfParentNodes, FText& ErrorMessage)
+bool UDialogueNode::CanCreateConnectionFrom(UDialogueNode* Other, int32 NumberOfParentNodes, FText& ErrorMessage) const
 {
 	if (!CanCreateConnection(Other, ErrorMessage)) return false;
 	if (Other->GetDialogueNodeType() == EDialogueNodeType::End) return false;
@@ -141,12 +134,6 @@ bool UDialogueNode::CanCreateConnectionFrom(UDialogueNode* Other, int32 NumberOf
 
 
 #endif
-
-void FDialogueElementContainer::Clear()
-{
-	ContainerType = EDialogueNodeType::None;
-	Elements.Empty();
-}
 
 
 #undef LOCTEXT_NAMESPACE

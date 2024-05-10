@@ -12,12 +12,12 @@ public class DialogueEditor : ModuleRules
 
 		PrivateIncludePaths.AddRange(new string[]
 		{
-			"DialogueEditor/public",
 		});
 
 		PrivateIncludePaths.AddRange(new string[]
 		{
 			"DialogueEditor/private",
+			"DialogueEditor/public",
 			"DialogueRuntime/public"
 		});
 

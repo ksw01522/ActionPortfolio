@@ -22,7 +22,7 @@ public:
 	FKey Gamepad;
 };
 
-UCLASS(DisplayName = "Custom Input", Config = "Game")
+UCLASS(DisplayName = "Custom Input", Config = "Game", defaultconfig)
 class CUSTOMINPUTSETTINGRUNTIME_API UCustomInputDeveloperSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()

@@ -17,7 +17,7 @@ class ACTIONPORTFOLIO_API UAbility_GutPunch : public UGameplayAbility_Meelee
 private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GutPunchImpact", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<class UGameplayEffect_Damage> ImpactDamageEffectClass;
+	TSubclassOf<class UGameplayEffect> ImpactDamageEffectClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GutPunchImpact", meta = (AllowPrivateAccess = "true"))
 	float KnockbackStrength;

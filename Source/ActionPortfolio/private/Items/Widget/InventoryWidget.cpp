@@ -6,15 +6,32 @@
 #include "ActionPortfolio.h"
 #include "Items/ItemManagerSubsystem.h"
 #include "Items/ItemBase.h"
+#include "Character/Player/ActionPFPlayerController.h"
+#include "Character/Player/InventoryComponent.h"
 
 UInventoryWidget::UInventoryWidget() : 
-                    Preview_InventorySize(64), SlotCountByRow(8), SlotSize(32, 32),
+                    Preview_InventorySize(64), SlotCountByRow(8),
                     SlotPadding(2)
 {}
 
 TSharedRef<SWidget> UInventoryWidget::RebuildWidget()
 {
-    InventorySlate = SNew(SInventory);
+    AActionPFPlayerController* Controller = GetOwningPlayer<AActionPFPlayerController>();
+
+    int InvenCount = Controller != nullptr ? Controller->GetInventory()->GetSlotCount() : 0;
+#if WITH_EDITOR
+    if (Controller == nullptr) InvenCount = Preview_InventorySize;
+#endif
+
+    SAssignNew(InventorySlate, SInventoryWindow)
+        .Count(InvenCount)
+        .SlotPadding(SlotPadding)
+        .CountByRow(SlotCountByRow)
+        .SlotBackgroundBrush(&SlotBackgroundBrush);
+        
+
+    InventorySlate->GetOnFocusedItemSlot().AddUObject(this, &UInventoryWidget::OnNativeFocusedItemSlot);
+    if(Controller) InventorySlate->BindInventorySlot(Controller->GetInventory()->GetSlotArray());
 
     return InventorySlate.ToSharedRef();
 }
@@ -29,52 +46,26 @@ void UInventoryWidget::SynchronizeProperties()
 {
     Super::SynchronizeProperties();
 
-
     if (InventorySlate.IsValid())
     {
+        AActionPFPlayerController* Controller = GetOwningPlayer<AActionPFPlayerController>();
+
+        int InvenCount = Controller != nullptr ? Controller->GetInventory()->GetSlotCount() : 0;
 #if WITH_EDITOR
-    PFLOG(Warning, TEXT("SynchronizeProperties"));
+        if (Controller == nullptr) InvenCount = Preview_InventorySize;
 #endif
-        UItemManagerSubsystem* ManagerInstance = UItemManagerSubsystem::GetManagerInstance();
-        int InventorySize = 1;
 
         InventorySlate->SetSlotPadding(SlotPadding);
-        InventorySlate->SetSlotSize(SlotSize);
 
-        InventorySlate->SetSlotBackgroundImage(EItemType::Equipment , SlotBackgroundMaterial_Equip);
-        InventorySlate->SetSlotBackgroundImage(EItemType::Consumption , SlotBackgroundMaterial_Consum);
-        InventorySlate->SetSlotBackgroundImage(EItemType::Material , SlotBackgroundMaterial_Mat);
+        InventorySlate->SetSlotBackgroundBrush(&SlotBackgroundBrush);
         InventorySlate->SetSlotCountByRow(SlotCountByRow);
-
-
-#if WITH_EDITOR
-        if (ManagerInstance != nullptr)
-        {
-            InventorySize = ManagerInstance->GetInventorySize();
-        }
-        else
-        {
-            InventorySize = Preview_InventorySize;
-
-        }
-#else
-        InventorySize = ManagerInstance->GetInventorySize();
-#endif
-
-        InventorySlate->InitializeInventoryWindow(InventorySize, true);
     }
 }
 
 #if WITH_EDITOR
-void UInventoryWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-    Super::PostEditChangeProperty(PropertyChangedEvent);
-
-}
-
 const FText UInventoryWidget::GetPaletteCategory()
 {
-    return NSLOCTEXT("ActionPortfolio", "ActionPFWidgetCategory", "ActionPF");
+    return NSLOCTEXT("ActionPortfolio", "InventoryCategory", "Inventory");
 }
 #endif
 
@@ -88,12 +79,11 @@ TSharedPtr<SWidget> UInventoryWidget::GetAccessibleWidget() const
 
 #endif
 
-void UInventoryWidget::UpdateSlotWidget(EItemType InventoryType, int idx, TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount)
+
+
+void UInventoryWidget::OnNativeFocusedItemSlot(UItemSlot* InSlot)
 {
-    if (InventorySlate.IsValid())
-    {
-        InventorySlate->UpdateSlotWidget(InventoryType, idx, NewImage, ItemGrade, NewCount);
-    }
+    if(OnFocusedItemSlot.IsBound()) OnFocusedItemSlot.Broadcast(InSlot);
 }
 
 void UInventoryWidget::SetSlotCountByRow(int NewCount)
@@ -103,5 +93,15 @@ void UInventoryWidget::SetSlotCountByRow(int NewCount)
     if (InventorySlate.IsValid())
     {
         InventorySlate->SetSlotCountByRow(NewCount);
+    }
+}
+
+void UInventoryWidget::BindInventorySlots(TArray<UInventorySlot*> InventorySlots)
+{
+    InSlots = InventorySlots;
+
+    if (InventorySlate.IsValid())
+    {
+        InventorySlate->BindInventorySlot(InSlots);
     }
 }

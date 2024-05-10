@@ -7,7 +7,11 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "DialogueBFL.h"
 #include "DialogueManager.h"
-#include "Kismet/KismetInternationalizationLibrary.h"
+
+#if WITH_EDITOR
+#include "DialogueDeveloperSettings.h"
+#endif
+
 
 #define LOCTEXT_NAMESPACE "DialogueNode"
 
@@ -17,92 +21,47 @@ UDialogueNode_Basic::UDialogueNode_Basic()
 	ContextMenuName = LOCTEXT("Dialogue Node Basic Title", "Basic Dialogue");
 	ChildrenLimitType = ECustomNodeLimit::Limited;
 	ChildrenLimit = 1;
+
+	bSlateDeco = true;
 #endif
-	DialogueTextStyleSet = nullptr;
+	
 	DialogueNodeType = EDialogueNodeType::Basic;
 	DialogueUMGDecoratorClasses.Empty();
 	DialogueSlateDecoratorClasses.Empty();
 	DialoguerAnimations.Empty();
 }
 
-UDataTable* UDialogueNode_Basic::GetDialogueTextStyleSet() const
-{
-	return DialogueTextStyleSet;	
-}
 
-TArray<TSubclassOf<URichTextBlockDecorator>> UDialogueNode_Basic::GetUMGDecoClasses() const
+const TArray<TSubclassOf<URichTextBlockDecorator>>& UDialogueNode_Basic::GetUMGDecoClasses() const
 {
 	return DialogueUMGDecoratorClasses;
 }
 
-TArray<TSubclassOf<USRichTextBlockDecorator>> UDialogueNode_Basic::GetSlateDecoClasses() const
+const TArray<TSubclassOf<USRichTextBlockDecorator>>& UDialogueNode_Basic::GetSlateDecoClasses() const
 {
 	return DialogueSlateDecoratorClasses;
 }
 
-FString UDialogueNode_Basic::GetDialoguerName(EDialogueLanguage Language) const
+FString UDialogueNode_Basic::GetDialoguerName() const
 {
-	FString ReturnString = "Narration";
+	FString ReturnName = DialogueSession->GetDialoguerName(*this);
 
-#if WITH_EDITOR
-	//OnChanged_DialoguerNameCode();
-#endif
-
-	if(Dialogue_Name.Original == "") return ReturnString;
-
-	ReturnString = Dialogue_Name.GetStringByLanguage(Language);
-
-	return ReturnString;
+	return ReturnName;
 }
 
-FString UDialogueNode_Basic::GetDialogueString(EDialogueLanguage Language) const
+FString UDialogueNode_Basic::GetDialogueString() const
 {
-	FString ReturnString;
-
-#if WITH_EDITOR
-	//OnChanged_DialogueStringCode();
-#endif
-
-	ReturnString = Dialogue_String.GetStringByLanguage(Language);
+	FString ReturnString = DialogueSession->GetDialogueString(*this);
 
 	return ReturnString;
 }
 
 
-void UDialogueNode_Basic::GetDialogueElementContainer(FDialogueElementContainer& OutElement) const
-{
-	EDialogueLanguage Language = UDialogueManager::GetManagerInstance()->GetCurrentLanguage();
-
-	FString ReturnName = GetDialoguerName(Language);
-	FString ReturnDialogueString = GetDialogueString(Language);
-
-
-	FDialogueElement TempElement;
-	TempElement.Name = ReturnName;
-	TempElement.DialogueString = ReturnDialogueString;
-	TempElement.DialogueStyleSet = DialogueTextStyleSet;
-	TempElement.DialogueSlateDecorators = DialogueSlateDecoratorClasses;
-	TempElement.DialogueUMGDecorators = DialogueUMGDecoratorClasses;
-
-	OutElement.Elements.Add(TempElement);
-
-	//OutElement.Elements.Emplace(ReturnName, ReturnDialogueString, DialogueTextStyleSet, DialogueSlateDecoratorClasses, DialogueUMGDecoratorClasses);
-	OutElement.ContainerType = GetDialogueNodeType();
-}
-
 #if WITH_EDITOR
-
-
-
 FString UDialogueNode_Basic::GetDialoguerName_InEditor() const
 {
-	if (DialoguerNameCode.IsNone()) {
-		return FString("Narration");
-	}
-
 	return DialoguerName;
 }
-
 
 
 FString UDialogueNode_Basic::GetDialogueString_InEditor() const
@@ -124,15 +83,6 @@ FString UDialogueNode_Basic::GetDialogueString_Original_InEditor() const
 	return Original_DialogueString;
 }
 
-FText UDialogueNode_Basic::GetNodeTitle()
-{
-	//return DialogueString.IsEmpty() ? LOCTEXT( "Empty Node Title", "Empty String") : FText::FromString(DialogueString);
-	return FText::FromString(GetDialoguerName_InEditor());
-}
-FText UDialogueNode_Basic::GetDescription_Implementation() const
-{
-	return FText::FromString(GetDialogueString_InEditor());
-}
 void UDialogueNode_Basic::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	if		(PropertyChangedEvent.GetPropertyName() == "DialoguerNameCode")		{ OnChanged_DialoguerNameCode(); }
@@ -142,71 +92,11 @@ void UDialogueNode_Basic::PostEditChangeProperty(FPropertyChangedEvent& Property
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 
-FDialogueLocalization* UDialogueNode_Basic::GetDialoguerNameRow()
-{
-	if (!IsValid(DialogueSession)) {
-		LOG_ERROR(TEXT("Can't Find Dialogue Session."));
-		return nullptr;
-	}
-
-	UDataTable* NameTable = DialogueSession->DialoguerNameTable;
-	if (NameTable == nullptr) {
-		FString SessionName;
-		DialogueSession->GetName(SessionName);
-		LOG_WARNING(TEXT("Can't Find DialoguerNameTable From %s"), *SessionName);
-		return nullptr;
-	}
-
-	FString TempContext("");
-	FDialogueLocalization* NameRow = NameTable->FindRow<FDialogueLocalization>(DialoguerNameCode, TempContext);
-	if (NameRow == nullptr) {
-		LOG_WARNING(TEXT("Can't Find DialoguerName by code"));
-		return nullptr;
-	}
-
-	return NameRow;
-}
-
-FDialogueLocalization* UDialogueNode_Basic::GetDialogueStringRow()
-{
-	if (!IsValid(DialogueSession)) {
-		LOG_ERROR(TEXT("Can't Find Dialogue Session."));
-		return nullptr;
-	}
-	
-	if (DialogueStringCode.IsNone()) {
-		LOG_WARNING(TEXT("DialogueStringCode is None. Plz put Code"));
-		return nullptr;
-	}
-
-	UDataTable* DialogueTable = DialogueSession->DialogueStringTable;
-	if (DialogueTable == nullptr) {
-		FString SessionName;
-		DialogueSession->GetName(SessionName);
-		LOG_WARNING(TEXT("Can't Find DialogueStringTable From %s"), *SessionName);
-		return nullptr;
-	}
-
-	FString TempContext("");
-	FDialogueLocalization* DialogueRow = DialogueTable->FindRow<FDialogueLocalization>(DialogueStringCode, TempContext);
-	if (DialogueRow == nullptr) {
-		LOG_WARNING(TEXT("Can't Find Dialogue string by code"));
-		return nullptr;
-	}
-
-	return DialogueRow;
-}
-
-
-
 void UDialogueNode_Basic::ImportDialogue()
 {
-	if (!IsValid(DialogueSession)) {
-		LOG_ERROR(TEXT("Can't Find Dialogue Session."));
-		return;
-	}
+	check(DialogueSession);
 
-	ImportDialogue_String();
+	DialogueSession->UpdateDialogueTableByNode(*this);
 }
 
 void UDialogueNode_Basic::RebuildNode()
@@ -215,118 +105,29 @@ void UDialogueNode_Basic::RebuildNode()
 	OnChanged_DialogueStringCode();
 }
 
-void UDialogueNode_Basic::ImportDialogue_String()
-{
-	if(!CanVisible_DialogueString) {return;}
-
-	FDialogueLocalization* DialogueRow = GetDialogueStringRow();
-	if (DialogueRow == nullptr) { 
-		DialogueSession->DialogueStringTable->AddRow(DialogueStringCode, FDialogueLocalization());
-		DialogueRow = GetDialogueStringRow();
-	}
-
-	if(DialogueRow->Original != Original_DialogueString) { DialogueRow->Original = Original_DialogueString; }
-	switch (DialogueSession->PreviewLanguage)
-	{
-	case EDialogueLanguage::Korean:
-		if (DialogueRow->Korean != DialogueString) {
-			DialogueRow->Korean = DialogueString;
-		}
-		break;
-
-	case EDialogueLanguage::English:
-		if (DialogueRow->English != DialogueString) {
-			DialogueRow->English = DialogueString;
-		}
-		break;
-
-	default:
-		break;
-	}
-
-	Dialogue_String = *DialogueRow;
-}
 
 void UDialogueNode_Basic::OnChanged_DialoguerNameCode()
 {
-	FDialogueLocalization* NameRow = GetDialoguerNameRow();
-	if(NameRow == nullptr){ 
-		CanVisible_DialoguerName = false;
-		Dialogue_Name.DialogueClear();
-		return; 
-	}
-	Dialogue_Name = *NameRow;
+	check(DialogueSession);
 
-	CanVisible_DialoguerName = true;
-	Original_DialoguerName = NameRow->Original;
-	switch (DialogueSession->PreviewLanguage)
-	{
-		case EDialogueLanguage::Korean:
-			DialoguerName = NameRow->Korean;
-			break;
-		
-		case EDialogueLanguage::English:
-			DialoguerName =NameRow->English;
-			break;
-
-		default:
-			break;
-	}
+	Original_DialoguerName = DialogueSession->GetDialoguerName_Original(*this);
+	DialoguerName = DialogueSession->GetDialoguerName_InEditor(*this);
 }
 
 void UDialogueNode_Basic::OnChanged_DialogueStringCode()
 {
-	LOG_INFO(TEXT("Changed String Code"));
+	check(DialogueSession);
 
-	Original_DialogueString = "";
-	DialogueString = "";
-
-	FDialogueLocalization* DialogueRow = GetDialogueStringRow();
-	if(DialogueSession == nullptr || DialogueSession->DialogueStringTable == nullptr || DialogueRow == nullptr) { 
-		CanVisible_DialogueString = false;
-		Dialogue_String.DialogueClear();
-		return; 
-	}
-	Dialogue_String = *DialogueRow;
-
-	CanVisible_DialogueString = true;
-
-	if (DialogueRow == nullptr)
-	{
-		return;
-	}
-
-	
-	Original_DialogueString = DialogueRow->Original;
-	switch (DialogueSession->PreviewLanguage)
-	{
-	case EDialogueLanguage::Korean:
-		DialogueString = DialogueRow->Korean;
-		break;
-
-	case EDialogueLanguage::English:
-		DialogueString = DialogueRow->English;
-		break;
-
-	default:
-		break;
-	}
-	
+	Original_DialogueString = DialogueSession->GetDialogueString_InEditor(*this);
+	DialogueString = DialogueSession->GetDialoguerName_Original(*this);
 }
 
 void UDialogueNode_Basic::OnChanged_PreviewLanguage()
 {
-	if (!IsValid(DialogueSession)) {
-		LOG_ERROR(TEXT("Can't Find Dialogue Session."));
-		return;
-	}
+	check(DialogueSession);
 
 	OnChanged_DialoguerNameCode();
 	OnChanged_DialogueStringCode();
-}
-void UDialogueNode_Basic::OnChangedDialogueTextStyle()
-{
-	OnChangedDialogueStyle.ExecuteIfBound();
 }
 
 #endif

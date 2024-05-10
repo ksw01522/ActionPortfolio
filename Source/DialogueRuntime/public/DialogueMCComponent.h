@@ -9,42 +9,27 @@
 
 
 class UDialogueSession;
+class UDialogueNode;
 class UDialogueManager;
-class IDialogueMCManagerInterface;
-
-struct FDialogueElementContainer;
-struct FNextDialogueNodeOptionalStruct;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Abstract )
 class DIALOGUERUNTIME_API UDialogueMCComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-
-	DECLARE_MULTICAST_DELEGATE(FOnEnterDialogueDelegate);
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnExitDialogueDelegate, bool);
-
-private:
-	FOnEnterDialogueDelegate OnEnterDel;
-	FOnEnterDialogueDelegate OnEnterOnceDel;
-
-	FOnExitDialogueDelegate OnExitDel;
-	FOnExitDialogueDelegate OnExitOnceDel;
-
-public:
-	FOnEnterDialogueDelegate& GetEnterDialogueDelegate() { return OnEnterDel; }
-	FOnEnterDialogueDelegate& GetEnterDialogueOnceDelegate() { return OnEnterOnceDel; }
-
-	FOnExitDialogueDelegate& GetExitDialogueDelegate() { return OnExitDel; }
-	FOnExitDialogueDelegate& GetExitDialogueOnceDelegate() { return OnExitOnceDel; }
-
 public:	
 	// Sets default values for this component's properties
 	UDialogueMCComponent();
 
-
 private:
 	FDialogueHandle Handle;
+
+	const UDialogueSession* CurrentSession = nullptr;
+	const UDialogueNode* CurrentNode = nullptr;
+
+public:
+	const UDialogueSession* GetCurrentSession() const {return CurrentSession;}
+	const UDialogueNode* GetCurrentNode() const {return CurrentNode;}
 
 protected:
 	bool bCanEnterNextNodeInMC;
@@ -57,15 +42,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Dialogue")
 	void EnterDialogue(const UDialogueSession* Session);
 
-	void TryExitDialogue();
+	void TryExitDialogue(bool bCancelled);
 
-	bool TryEnterNextNode(FNextDialogueNodeOptionalStruct* OptionalStruct = nullptr);
+	bool TryEnterNextNode(const UDialogueNode* NextNode);
 
 protected:
-	virtual void OnExitDialogue(bool bIsCancelled);
-	virtual void OnEnterDialogue();
-	virtual void OnSuccedEnterNextNode(FDialogueElementContainer& Container) {};
-	virtual void OnFailedEnterNextNode() {};
+	virtual void OnExitDialogue(bool bIsCancelled){};
+	virtual void OnEnterDialogue(){};
+	virtual void OnSuccedEnterNextNode(const UDialogueNode* InNode) {};
+	virtual void OnFailedEnterNextNode(const UDialogueNode* InNode) {};
 
 public:	
 	//virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -73,7 +58,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Dialogue", BlueprintPure)
 	bool IsActingDialogue() const;
 
-	FDialogueHandle& GetDialogueHandle() const { return const_cast<FDialogueHandle&>(Handle); }
+	const FDialogueHandle& GetDialogueHandle() const { return Handle; }
 	FDialogueHandle& GetDialogueHandle() {return Handle;}
-	
 };

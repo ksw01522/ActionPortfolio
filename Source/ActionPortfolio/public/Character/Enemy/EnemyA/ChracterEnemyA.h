@@ -3,26 +3,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Character/ActionPortfolioCharacter.h"
+#include "Character/Enemy/CharacterEnemy.h"
 #include "ChracterEnemyA.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class ACTIONPORTFOLIO_API AChracterEnemyA : public AActionPortfolioCharacter
+class ACTIONPORTFOLIO_API AChracterEnemyA : public ACharacterEnemy
 {
 	GENERATED_BODY()
 	
-private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class UBoxComponent> LeftPunchBox;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttackShape", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UBoxComponent> RightPunchBox;
 
 public:
 	AChracterEnemyA();
 
-
+protected:
+	virtual void Tick(float DeltaSeconds) override;
 };

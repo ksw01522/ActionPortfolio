@@ -113,8 +113,6 @@ public:
 	{}
 	virtual ~UItemBase(){}
 
-	
-
 private:
 	FName ItemCode;
 
@@ -135,6 +133,8 @@ private:
 	bool bStackable;
 
 	int StackSize;
+
+	int Count;
 
 protected:
 	bool bInitialized;
@@ -170,6 +170,19 @@ public:
 	int GetStackSize() const {return StackSize;}
 
 	bool IsStackableItem() const {return bStackable;}
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
+	int GetCount() const {return Count;}
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	void AddCount(int InCount);
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	void RemoveCount(int InCount);
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	void SetCount(int InCount);
+
 	virtual bool CanStackableWithOther(const UItemBase* Target) const;
 	
 	virtual bool IsSame(const UItemBase* Other) const;
@@ -186,6 +199,8 @@ enum class EEquipmentPart : uint8
 	Foot
 };
 
+ENUM_RANGE_BY_FIRST_AND_LAST(EEquipmentPart, EEquipmentPart::Body, EEquipmentPart::Foot);
+
 UCLASS(Blueprintable)
 class ACTIONPORTFOLIO_API UItemBase_Equipment : public UItemBase
 {
@@ -196,7 +211,7 @@ public:
 	{};
 
 private:
-	TArray<TSubclassOf<UEquipmentAbility>> EquipmentAbilities;
+	TSubclassOf<UEquipmentAbility> EquipmentAbility;
 
 	EEquipmentPart EquipmentPart;
 
@@ -209,32 +224,18 @@ private:
 	float DefenseP;
 
 protected:
-	const class IItemUserInterface* OnEquippedUser;
-	TArray<FGameplayAbilitySpecHandle> EquipAbilitySpecHandle;
-	FActiveGameplayEffectHandle EquipEffectHandle;
-
-protected:
 	virtual void InitializeItem(const FName& NewItemCode, const FItemData_Base* Data) override;
 
 public:
-	virtual bool CanEquipItem(const IItemUserInterface* ItemUser) const;
-	bool TryEquipItem(const IItemUserInterface* ItemUser);
-
-protected:
-	virtual UGameplayEffect* MakeAddStatusEffect() const;
-	virtual void OnEquipItem(const IItemUserInterface* ItemUser);
-
-public:
-	virtual bool CanUnequipItem(const IItemUserInterface* ItemUser) const;
-	bool TryUnequipItem(const IItemUserInterface* ItemUser);
-protected:
-	virtual void OnUnequipItem();
-
-public:
-	EEquipmentPart GetEquipmentPart() const {return EquipmentPart;}
-
 	virtual bool IsSame(const UItemBase* Other) const override;
 
+	EEquipmentPart GetEquipmentPart() const {return EquipmentPart;}
+
+	virtual UGameplayEffect* MakeAddStatusEffect() const;
+
+	virtual bool CanEquipItem(class UActionPFAbilitySystemComponent* ASC) const;
+
+	TSubclassOf<UEquipmentAbility> GetEquipmentAbility() const { return EquipmentAbility;}
 };
 
 USTRUCT(BlueprintType)
@@ -246,7 +247,7 @@ struct FItemData_Equipment : public FItemData_Base
 	{}
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
-	TArray<TSubclassOf<UEquipmentAbility>> EquipmentAbilities;
+	TSubclassOf<UEquipmentAbility> EquipmentAbility;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
 	EEquipmentPart EquipmentPart;
@@ -316,22 +317,20 @@ class ACTIONPORTFOLIO_API ADroppedItem : public AActor
 {
 	GENERATED_BODY()
 
-	friend class UDropItemPoolWorldSubsystem;
+	friend class UItemWorldSubsystem;
 
 public:
 	ADroppedItem();
 
 private:
-	UPROPERTY(VisibleAnywhere, Category = "Item")
+	UPROPERTY(VisibleAnywhere, Transient, Category = "Item")
 	UStaticMeshComponent* ItemMeshComponent;
 
-	UPROPERTY(VisibleAnywhere, Category = "Item")
+	UPROPERTY(VisibleAnywhere, Transient, Category = "Item")
 	UBoxComponent* BoxCollider;
 
 	UPROPERTY(Transient)
 	UItemBase* DroppedItem;
-
-	int ItemCount;
 
 	TSharedPtr<struct FStreamableHandle> MeshStreamingHandle;
 
@@ -351,9 +350,7 @@ private:
 public:
 	virtual void SetActorHiddenInGame(bool bNewHidden) override;
 
-	void SetDroppedItem(UItemBase* NewData, int NewCount);
-	void SetItemCount(int Count);
-	int GetItemCount() const {return ItemCount;}
+	void SetDroppedItem(UItemBase* NewData);
 
 	const UItemBase* GetDroppedItem() const {return DroppedItem;}
 
@@ -362,12 +359,23 @@ public:
 private:
 	void OnReadyDropItem();
 
+public:
 	void ClearDroppedItemData();
-
-	void OnPickUpItem();
 
 private:
 	TWeakObjectPtr<APawn> MagnetizedTarget;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCurveFloat> BounceCurve;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCurveFloat> MangetizedCurve;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	float BouncePower;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	float BounceHeight;
 
 	FTimeline BounceTimeline;
 	FTimeline MagnetizedTimeline;
@@ -393,6 +401,7 @@ private:
 	void MagnetizedComplete();
 
 public:
-	
+	int GetItemCount() const {return DroppedItem->GetCount(); }
 
+	void SetItemCount(int NewCount);
 };

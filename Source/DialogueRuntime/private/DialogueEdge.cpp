@@ -38,6 +38,7 @@ bool UDialogueEdge::CanEnterNextNode() const
 	for (const auto Condition: EnterNextConditions)
 	{
 		CanEnter = CanEnter && Condition->CanEnterNextNode();
+		if(!CanEnter) break;
 	}
 
 	return CanEnter;

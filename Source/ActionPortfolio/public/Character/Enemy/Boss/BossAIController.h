@@ -19,10 +19,6 @@ class ACTIONPORTFOLIO_API ABossAIController : public AEnemyAIController
 public:
 	static const FName IsDamagedKey;
 
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BossHPBar")
-	TSubclassOf<class UWidget_HPBar_Basic> HPBarClass;
-	TObjectPtr<UWidget_HPBar_Basic> HPBarWidget;
 
 protected:
 	virtual void Tick(float DeltaTime) override;

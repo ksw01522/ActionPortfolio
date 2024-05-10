@@ -10,7 +10,7 @@
 #include "Ability/ActionPFAttributeSet.h"
 
 #include "Items/ItemManagerSubsystem.h"
-#include "Items/ItemUserInterface.h"
+#include "Items/ItemWorldSubsystem.h"
 
 #include "Components/BoxComponent.h"
 
@@ -44,7 +44,27 @@ void UItemBase::InitializeItem(const FName& NewItemCode, const FItemData_Base* D
 	bStackable = Data->bStackable;
 	StackSize = Data->StackSize;
 
+	if(!bStackable) Count = 1;
+
 	bInitialized = true;
+}
+
+void UItemBase::AddCount(int InCount)
+{
+	ensure(0 < InCount);
+	Count = FMath::Max(StackSize, Count + InCount);
+}
+
+void UItemBase::RemoveCount(int InCount)
+{
+	ensure(InCount < 0);
+	Count = FMath::Max(0, Count + InCount);
+}
+
+void UItemBase::SetCount(int InCount)
+{
+	check(0 <= InCount);
+	Count = FMath::Clamp(InCount, 0, StackSize);
 }
 
 bool UItemBase::CanStackableWithOther(const UItemBase* Target) const
@@ -61,66 +81,9 @@ bool UItemBase::IsSame(const UItemBase* Other) const
 }
 
 
-bool UItemBase_Equipment::CanEquipItem(const IItemUserInterface* ItemUser) const
+bool UItemBase_Equipment::CanEquipItem(UActionPFAbilitySystemComponent* ASC) const
 {
-	if(ItemUser == nullptr) return false;
-	UActionPFAbilitySystemComponent* UserASC = ItemUser->GetASCForItemUser();
-	if(UserASC == nullptr) return false;
-
-	bool bResult = true;
-
-	for (auto& EquipmentAbility : EquipmentAbilities)
-	{
-		bResult = bResult && EquipmentAbility.GetDefaultObject()->DoesAbilitySatisfyTagRequirements(*UserASC);
-		if(!bResult) break;
-	}
-
-	return bResult;
-}
-
-bool UItemBase_Equipment::TryEquipItem(const IItemUserInterface* ItemUser)
-{
-	bool bResult = CanEquipItem(ItemUser);
-	if(bResult) OnEquipItem(ItemUser);
-
-#if WITH_EDITOR
-	FString UserName = ItemUser != nullptr ? ItemUser->GetUserName().ToString() : "null";
-	PFLOG(Warning, TEXT("TryEquipItem : {%s}, User : {%s}"), *GetItemName().ToString(), *UserName);
-#endif
-
-	return bResult;
-}
-
-bool UItemBase_Equipment::CanUnequipItem(const IItemUserInterface* ItemUser) const
-{
-	bool bResult = ItemUser == OnEquippedUser;
-
-	return bResult;
-}
-
-bool UItemBase_Equipment::TryUnequipItem(const IItemUserInterface* ItemUser)
-{
-	bool bResult = CanUnequipItem(ItemUser);
-
-	if(bResult) OnUnequipItem();
-
-	return bResult;
-}
-
-void UItemBase_Equipment::OnUnequipItem()
-{
-	UActionPFAbilitySystemComponent* UserASC = OnEquippedUser->GetASCForItemUser();
-
-	int EquipAbilityNum = EquipAbilitySpecHandle.Num();
-	for (int i = 0; i < EquipAbilityNum; i++)
-	{
-		//UserASC->CancelAbilityHandle(EquipAbilitySpecHandle[i]);
-		UserASC->ClearAbility(EquipAbilitySpecHandle[i]);
-	}
-
-	UserASC->RemoveActiveGameplayEffect(EquipEffectHandle);
-
-	OnEquippedUser = nullptr;
+	return EquipmentAbility.GetDefaultObject()->DoesAbilitySatisfyTagRequirements(*ASC);
 }
 
 bool UItemBase_Equipment::IsSame(const UItemBase* Other) const
@@ -164,24 +127,6 @@ UGameplayEffect* UItemBase_Equipment::MakeAddStatusEffect() const
 	return AddStatusEffect;
 }
 
-void UItemBase_Equipment::OnEquipItem(const IItemUserInterface* ItemUser)
-{
-#if WITH_EDITOR
-	PFLOG(Warning, TEXT("OnEquipItem : {%s}, User : {%s}"), *GetItemName().ToString(), *ItemUser->GetUserName().ToString());
-#endif
-
-	OnEquippedUser = ItemUser;
-	UActionPFAbilitySystemComponent* UserASC = OnEquippedUser->GetASCForItemUser();
-
-	UGameplayEffect* BasicStatusUpEffect = MakeAddStatusEffect();
-	UserASC->ApplyGameplayEffectSpecToSelf(FGameplayEffectSpec(BasicStatusUpEffect, UserASC->MakeEffectContext()));
-
-	int EquipAbilityNum = EquipmentAbilities.Num();
-	for (int i = 0; i < EquipAbilityNum; i++)
-	{
-		EquipAbilitySpecHandle[i] = UserASC->GiveAbility(FGameplayAbilitySpec(EquipmentAbilities[i]));
-	}
-}
 
 void UItemBase_Equipment::InitializeItem(const FName& NewItemCode, const FItemData_Base* Data)
 {
@@ -199,7 +144,7 @@ void UItemBase_Equipment::InitializeItem(const FName& NewItemCode, const FItemDa
 
 	Super::InitializeItem(NewItemCode, Data);
 
-	EquipmentAbilities = EquipmentData->EquipmentAbilities;
+	EquipmentAbility = EquipmentData->EquipmentAbility;
 
 	EquipmentPart = EquipmentData->EquipmentPart;
 
@@ -210,8 +155,6 @@ void UItemBase_Equipment::InitializeItem(const FName& NewItemCode, const FItemDa
 	AttackP = EquipmentData->AttackP;
 
 	DefenseP = EquipmentData->DefenseP;
-
-	EquipAbilitySpecHandle.SetNum(EquipmentAbilities.Num());
 }
 
 
@@ -252,22 +195,17 @@ void ADroppedItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UItemManagerSubsystem* ManagerInstance = UItemManagerSubsystem::GetManagerInstance();
-
-
 	//Bounce Timeline 초기화
 	{
-		UCurveFloat* DefaultBounceCurve = ManagerInstance->GetDIBounceCurve();
-
 		float MinBounceTime, MaxBounceTime;
-		DefaultBounceCurve->GetTimeRange(MinBounceTime, MaxBounceTime);
+		BounceCurve->GetTimeRange(MinBounceTime, MaxBounceTime);
 
 		FOnTimelineEvent BounceFinishedEvent;
 		BounceFinishedEvent.BindUFunction(this, FName("MagnetizedEvent"));
 
 		FOnTimelineFloat BounceEvent;
 		BounceEvent.BindUFunction(this, FName("BounceTimelineFunction"));
-		BounceTimeline.AddInterpFloat(DefaultBounceCurve, BounceEvent);
+		BounceTimeline.AddInterpFloat(BounceCurve, BounceEvent);
 		BounceTimeline.SetTimelineLength(MaxBounceTime);
 		BounceTimeline.SetTimelineFinishedFunc(BounceFinishedEvent);
 	}
@@ -279,13 +217,11 @@ void ADroppedItem::BeginPlay()
 		FOnTimelineEvent MagnetizedFinishedEvent;
 		MagnetizedFinishedEvent.BindUFunction(this, FName("MagnetizedComplete"));
 
-		UCurveFloat* DefaultMangetizedCurve = ManagerInstance->GetDIMagnetizedCurve();
-
 		FOnTimelineFloat DefaultMagnetizedEvent;
 		DefaultMagnetizedEvent.BindUFunction(this, FName("MagnetizedTimelineFunction"));
-		MagnetizedTimeline.AddInterpFloat(DefaultMangetizedCurve, DefaultMagnetizedEvent);
+		MagnetizedTimeline.AddInterpFloat(MangetizedCurve, DefaultMagnetizedEvent);
 
-		DefaultMangetizedCurve->GetTimeRange(MinMagnetizedTime, MaxMagnetizedTime);
+		MangetizedCurve->GetTimeRange(MinMagnetizedTime, MaxMagnetizedTime);
 		MagnetizedTimeline.SetTimelineLength(MaxMagnetizedTime);
 
 		MagnetizedTimeline.SetTimelineFinishedFunc(MagnetizedFinishedEvent);
@@ -340,7 +276,7 @@ void ADroppedItem::CancelMeshStreaming()
 
 
 
-void ADroppedItem::SetDroppedItem(UItemBase* NewData, int NewCount)
+void ADroppedItem::SetDroppedItem(UItemBase* NewData)
 {
 	CancelMeshStreaming();
 
@@ -351,7 +287,6 @@ void ADroppedItem::SetDroppedItem(UItemBase* NewData, int NewCount)
 	}
 
 	DroppedItem = NewData;
-	SetItemCount(NewCount);
 
 	if (DroppedItem->GetItemMesh().IsValid())
 	{
@@ -371,44 +306,19 @@ void ADroppedItem::SetDroppedItem(UItemBase* NewData, int NewCount)
 	}
 }
 
-void ADroppedItem::SetItemCount(int Count)
-{
-	ItemCount = Count;
-}
+
 
 void ADroppedItem::ClearDroppedItemData()
 {
 	CancelMeshStreaming();
 
 	DroppedItem = nullptr;
-	ItemCount = 0;
 
 	ItemMeshComponent->SetStaticMesh(nullptr);
+
+	GetWorld()->GetSubsystem<UItemWorldSubsystem>()->BackToPool(*this);
 }
 
-void ADroppedItem::OnPickUpItem()
-{
-	SetMagnetizedTarget(nullptr);
-
-	if (IsValidDropItem())
-	{
-		MagnetizedTarget.Reset();
-		SetDICollisionActivate(true);
-	}
-	else
-	{
-		UItemManagerSubsystem* ManagerInstance = UItemManagerSubsystem::GetManagerInstance();
-		if (ManagerInstance == nullptr) {
-			PFLOG(Error, TEXT("Item Manager Instance == nullptr"));
-			return;
-		}
-
-		ManagerInstance->BackToDropItemPool(this);
-	}
-
-	BounceTimeline.Stop();
-	MagnetizedTimeline.Stop();
-}
 
 
 
@@ -426,7 +336,7 @@ void ADroppedItem::SetActorHiddenInGame(bool bNewHidden)
 
 bool ADroppedItem::IsValidDropItem() const
 {
-	return DroppedItem != nullptr && 0 < ItemCount;
+	return DroppedItem != nullptr;
 }
 
 void ADroppedItem::SetMagnetizedTarget(APawn* NewTarget)
@@ -472,8 +382,8 @@ void ADroppedItem::BounceItem()
 	if (Offset.IsNearlyZero())	{ Offset = MagnetizedTarget->GetActorForwardVector(); }
 	else						{ Offset.Normalize(); }
 
-	Offset *= ManagerInstance->GetBouncePower();
-	Offset.Z = ManagerInstance->GetBounceHeight();
+	Offset *= BouncePower;
+	Offset.Z = BounceHeight;
 
 	BounceGoalLocation = GetActorLocation() + Offset;
 
@@ -515,19 +425,30 @@ void ADroppedItem::MagnetizedCancel()
 
 void ADroppedItem::MagnetizedComplete()
 {
-	if (!MagnetizedTarget.IsValid())
+	SetMagnetizedTarget(nullptr);
+
+	if (IsValidDropItem())
 	{
-		OnPickUpItem();
-		return;
+		SetDICollisionActivate(true);
 	}
+	else
+	{
+		
+	}
+
+	BounceTimeline.Stop();
+	MagnetizedTimeline.Stop();
 
 	AActionPFPlayerController* PlayerController = MagnetizedTarget->GetController<AActionPFPlayerController>();
 	if (PlayerController == nullptr)
 	{
-		OnPickUpItem();
 		return;
 	}
 
 	PlayerController->PickUpItem(this);
-	OnPickUpItem();
+}
+
+void ADroppedItem::SetItemCount(int NewCount)
+{
+	DroppedItem->SetCount(NewCount);
 }

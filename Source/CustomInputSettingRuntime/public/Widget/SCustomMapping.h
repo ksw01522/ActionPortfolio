@@ -90,4 +90,5 @@ public:
 	void ReadyToCustomMapping(const FText& DisplayName);
 
 	void ShowErrorText(const FText& InText);
+
 };

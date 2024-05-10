@@ -21,10 +21,9 @@ public:
 
 	UDialogueNode_Basic* GetDialogueBasicNode() const;
 
-	UDataTable* GetDialogueTextStyleSet() const;
 	TArray<TSubclassOf<class URichTextBlockDecorator>> GetUMGDecoClasses() const;
 	TArray<TSubclassOf<class USRichTextBlockDecorator>> GetSlateDecoClasses() const;
-	ERichTextBlockType GetTextBlockType() const;
+	bool IsSlateRichTextStyle() const;
 
 
 	FString GetDialoguerName() const;
@@ -34,9 +33,6 @@ public:
 	FString GetDialogueString_Original() const;
 
 	void TryImportDialogueString() const;
-
-	UFUNCTION()
-	void OnChangedDialogueStyleFunction();
 
 	virtual void SetDialogueNode(UDialogueNode* NewNode) override;
 

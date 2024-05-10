@@ -37,6 +37,7 @@ void UAbility_PlayerFallDown::ActivateAbility_CPP(const FGameplayAbilitySpecHand
 		return;
 	}
 
+	/*
 	UAbilityTask_PlayMontageAndWaitEvent* MeeleeAbilityTask = UAbilityTask_PlayMontageAndWaitEvent::PlayMontageAndWaitEvent(this, TaskInstanceName, MeeleeMontage, EventTagContainer, PlayLate, NAME_None, bStopWhenAbilityEnd);
 	ensure(MeeleeAbilityTask);
 	MeeleeAbilityTask->OnCompleted.AddDynamic(this, &UAbility_PlayerFallDown::OnMontageEnded);
@@ -62,11 +63,12 @@ void UAbility_PlayerFallDown::ActivateAbility_CPP(const FGameplayAbilitySpecHand
 	MoveToPrePiercePos->OnTargetLocationReached.AddDynamic(this, &UAbility_PlayerFallDown::OnPreFallDownPosReached);
 	MoveToPrePiercePos->ReadyForActivation();
 
-
+	*/
 }
 
 void UAbility_PlayerFallDown::OnLandEventReceived(FGameplayEventData EventData)
 {
+/*
 	AActionPortfolioCharacter* AvatarChar = Cast<AActionPortfolioCharacter>(GetAvatarActorFromActorInfo());
 	if (!IsValid(AvatarChar)) {
 		PFLOG(Error, TEXT("Ability Call From Not Valid Actor."));
@@ -119,6 +121,7 @@ void UAbility_PlayerFallDown::OnLandEventReceived(FGameplayEventData EventData)
 	}
 
 	AvatarChar->GetMesh()->GetAnimInstance()->Montage_JumpToSection("End");
+*/
 }
 
 void UAbility_PlayerFallDown::OnPreFallDownPosReached()

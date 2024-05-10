@@ -25,6 +25,7 @@ class ACTIONPORTFOLIO_API UEquipmentAbility : public UActionPFGameplayAbility
 {
 	GENERATED_BODY()
 
+public:
 	UEquipmentAbility();
 
 protected:
@@ -32,7 +33,7 @@ protected:
 	uint8 EquipmentEventFlag = 0;
 
 protected:
-	virtual void MustActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData);
+	virtual void ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
 	UFUNCTION(BlueprintNativeEvent)
 	void OnAttackStart(FGameplayEventData EventData);

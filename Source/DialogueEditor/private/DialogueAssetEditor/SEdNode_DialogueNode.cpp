@@ -17,7 +17,6 @@
 #include "SEdNode_DialogueNode.h"
 #include "DialogueAssetEditor/SEdNode_DialogueNode.h"
 #include "DialogueEditorHeaders.h"
-#include "DialogueHeaders.h"
 #include "Styling/AppStyle.h"
 #include "Components/RichTextBlock.h"
 
@@ -30,7 +29,7 @@ public:
 	SLATE_BEGIN_ARGS(SDialoguePin) {}
 	SLATE_END_ARGS()
 
-		void Construct(const FArguments& InArgs, UEdGraphPin* InPin)
+	void Construct(const FArguments& InArgs, UEdGraphPin* InPin)
 	{
 		this->SetCursor(EMouseCursor::Default);
 

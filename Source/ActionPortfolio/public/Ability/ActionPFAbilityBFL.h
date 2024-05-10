@@ -23,4 +23,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Ability|ActionPF")
 	static UActionPFAbilitySystemComponent* GetAbilitySystemComponent(AActor* Target);
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Slot")
+	static bool TryChangeAbilitySlot(class UAbilitySlot* From, UAbilitySlot* To);
+
 };

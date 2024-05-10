@@ -17,7 +17,7 @@ UDialogueNode_Answer::UDialogueNode_Answer()
 	DialogueNodeType = EDialogueNodeType::Answer;
 }
 #if WITH_EDITOR
-bool UDialogueNode_Answer::CanCreateConnectionFrom(UDialogueNode* Other, int32 NumberOfParentNodes, FText& ErrorMessage)
+bool UDialogueNode_Answer::CanCreateConnectionFrom(UDialogueNode* Other, int32 NumberOfParentNodes, FText& ErrorMessage) const
 {
 	if (Cast<UDialogueNode_Question>(Other))
 	{

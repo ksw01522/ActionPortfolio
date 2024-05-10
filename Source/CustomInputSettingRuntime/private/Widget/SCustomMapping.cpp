@@ -189,4 +189,5 @@ void SCustomMappingSlate::ShowErrorText(const FText& InText)
 	GuideTextBlock->SetText(InText);
 }
 
+
 #undef LOCTEXT_NAMESPACE

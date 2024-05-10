@@ -42,9 +42,10 @@ public:
 	static UAbilityTask_CustomTick* CustomTick(
 							UGameplayAbility* OwningAbility,
 							FName TaskInstanceName,
-							float MaxTickTime
+							float MaxTickTime = 0
 						);
 
+protected:
 	virtual void Activate() override;
 	virtual void TickTask(float DeltaTime) override;
 

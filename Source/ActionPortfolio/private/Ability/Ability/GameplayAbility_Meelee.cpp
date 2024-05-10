@@ -4,63 +4,53 @@
 #include "Ability/Ability/GameplayAbility_Meelee.h"
 #include "Ability/Tasks/AbilityTask_PlayMontageAndWaitEvent.h"
 #include "ActionPortfolio.h"
-#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "GameplayEffect.h"
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Ability/Effects/KnockbackExecutionCalculation.h"
 #include "AbilitySystemInterface.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Ability/Effects/GameplayEffect_Damage.h"
 #include "Character/ActionPortfolioCharacter.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Ability/Tasks/AbilityTask_WaitEnterMontageSection.h"
+#include "Ability/Tasks/AbilityTask_EffectUseCollision.h"
+#include "Ability/AbilityDamageCreator.h"
+#include "Ability/Tasks/AbilityTask_WaitNewCollision.h"
+#include "Character/ActionPortfolioCharacter.h"
+#include "Ability/Tasks/AbilityTask_GrantTags.h"
+#include "Ability/Ability/Ability_Knockback.h"
+#include "Ability/Ability/Ability_Rigidity.h"
 
-UGameplayAbility_Meelee::UGameplayAbility_Meelee() : Super()
+#include "Character/Player/ActionPFPlayerController.h"
+#include "LockOn/LockOnTargetComponent.h"
+
+
+UGameplayAbility_Meelee::UGameplayAbility_Meelee() : Super(), AttackCollisionProfileName("AbilityEffect")
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerExecution;
 	bStopWhenAbilityEnd = true;
-	PlayLate = 1.f;
 
 	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Death"));
 	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Down"));
 	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Rigidity"));
-}
+	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Attacking"));
 
-void UGameplayAbility_Meelee::OnEventReceived(FGameplayEventData EventData)
-{
-	FActionPFEffectContainer* EffectsToApply = DamageMap.Find(EventData.EventTag);
-	if(EffectsToApply == nullptr || EffectsToApply->EffectClasses.IsEmpty() || !EventData.Instigator || !EventData.Target) return;
+	GrantTagsDuringAttack.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Attacking"));
 
-	UActionPFAbilitySystemComponent* SourceAbilitySystem = Cast<UActionPFAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
-	UActionPFAbilitySystemComponent* TargetAbilitySystem = nullptr;
+	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag("State.Block.Move"));
 
-	const IAbilitySystemInterface* Inter = Cast<const IAbilitySystemInterface>(EventData.Target.Get());
-	if(Inter == nullptr) return;
+	BlockAbilitiesWithTag.AddTag(FGameplayTag::RequestGameplayTag("Ability.Meelee.Basic.Start"));
+	CancelAbilitiesWithTag.AddTag(FGameplayTag::RequestGameplayTag("Ability.Meelee"));
 
-	TargetAbilitySystem = Cast<UActionPFAbilitySystemComponent>(Inter->GetAbilitySystemComponent());
-
-	if (!IsValid(SourceAbilitySystem) || !IsValid(TargetAbilitySystem)) return;
-	AActionPortfolioCharacter* SourceCharacter = Cast<AActionPortfolioCharacter>(SourceAbilitySystem->GetOwnerActor());
-	AActionPortfolioCharacter* TargetCharacter = Cast<AActionPortfolioCharacter>(TargetAbilitySystem->GetOwnerActor());
+	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag("Ability.Meelee"));
 	
-	if(SourceCharacter->GetTeamAttitudeTowards(*TargetCharacter) == ETeamAttitude::Friendly) return;
+	DamageCreator = CreateDefaultSubobject<UAbilityDamageCreator>("DamageCreator");
 
-
-	FGameplayEffectContextHandle EffectContext = SourceAbilitySystem->MakeEffectContext();
-	EffectContext.AddSourceObject(GetCurrentSourceObject());
-
-	for (auto EffectToApply : EffectsToApply->EffectClasses)
-	{
-		FGameplayEffectSpecHandle NewHandle = SourceAbilitySystem->MakeOutgoingSpec(EffectToApply, GetAbilityLevel(), EffectContext);
-		if (NewHandle.IsValid())
-		{
-			FActiveGameplayEffectHandle ActiveGEHandle = SourceAbilitySystem->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), TargetAbilitySystem);
-		}
-	}
+	CustomRigidityAnim = nullptr;
 }
 
-void UGameplayAbility_Meelee::OnMontageEnded(FGameplayEventData EventData)
+void UGameplayAbility_Meelee::OnMontageEnded()
 {
 	check(CurrentActorInfo);
 
@@ -69,7 +59,7 @@ void UGameplayAbility_Meelee::OnMontageEnded(FGameplayEventData EventData)
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
-void UGameplayAbility_Meelee::OnMontageCancelled(FGameplayEventData EventData)
+void UGameplayAbility_Meelee::OnMontageCancelled()
 {
 	check(CurrentActorInfo);
 
@@ -78,10 +68,21 @@ void UGameplayAbility_Meelee::OnMontageCancelled(FGameplayEventData EventData)
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
-void UGameplayAbility_Meelee::OffBlockMove(UGameplayAbility* Ability)
+void UGameplayAbility_Meelee::OnMontageBlendOut()
 {
-	GetCurrentActorInfo()->AbilitySystemComponent->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.BlockMove"));
+	check(CurrentActorInfo);
+
 }
+
+void UGameplayAbility_Meelee::OnMontageInterrupted()
+{
+	check(CurrentActorInfo);
+
+	bool bReplicateEndAbility = true;
+	bool bWasCancelled = false;
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
 
 void UGameplayAbility_Meelee::ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -91,20 +92,51 @@ void UGameplayAbility_Meelee::ActivateAbility_CPP(const FGameplayAbilitySpecHand
 		return;
 	}
 	
-	UAbilityTask_PlayMontageAndWaitEvent* MeeleeAbilityTask = UAbilityTask_PlayMontageAndWaitEvent::PlayMontageAndWaitEvent(this, TaskInstanceName, MeeleeMontage, EventTagContainer, PlayLate, NAME_None, bStopWhenAbilityEnd);
+	if (bAutoRotateToTarget)
+	{
+		if (ActorInfo->PlayerController.IsValid())
+		{
+			AActionPFPlayerController* PC = Cast<AActionPFPlayerController>(ActorInfo->PlayerController.Get());
+			if (ULockOnTargetComponent* Target = PC->GetLockOnTarget())
+			{
+				FVector Dir = Target->GetComponentLocation() - ActorInfo->AvatarActor->GetActorLocation();
+				Dir.Z = 0;
+				ActorInfo->AvatarActor->SetActorRotation(Dir.Rotation());
+			}
+		}
+	}
+
+	FGameplayEffectContextHandle ContextHandle = ActorInfo->AbilitySystemComponent->MakeEffectContext();
+	int32 TempAbilityLevel = GetAbilityLevel();
+
+	check(DamageCreator);
+	DamageEffectSpecHandle.Data = MakeShared<FGameplayEffectSpec>(DamageCreator->CreateDamageEffect(), ContextHandle, TempAbilityLevel);
+
+	for (auto& OptionalEffect : OptionEffects)
+	{
+		UGameplayEffect* OptionalEffectObject = NewObject<UGameplayEffect>(this, OptionalEffect);
+		FGameplayEffectSpec OptionalEffectSpec(OptionalEffectObject, ContextHandle, TempAbilityLevel);
+		FGameplayEffectSpecHandle OptionalEffectHandle(&OptionalEffectSpec);
+
+		DamageEffectSpecHandle.Data->TargetEffectSpecs.Add(OptionalEffectHandle);
+	}
+	
+	UAbilityTask_PlayMontageAndWait* MeeleeAbilityTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, "MeeleeAnim", MeeleeMontage, 1, NAME_None, bStopWhenAbilityEnd);
 	ensure(MeeleeAbilityTask);
 	MeeleeAbilityTask->OnCompleted.AddDynamic(this, &UGameplayAbility_Meelee::OnMontageEnded);
-	MeeleeAbilityTask->OnBlendOut.AddDynamic(this, &UGameplayAbility_Meelee::OnMontageEnded);
-	MeeleeAbilityTask->OnInterrupted.AddDynamic(this, &UGameplayAbility_Meelee::OnMontageCancelled);
+	MeeleeAbilityTask->OnBlendOut.AddDynamic(this, &UGameplayAbility_Meelee::OnMontageBlendOut);
+	MeeleeAbilityTask->OnInterrupted.AddDynamic(this, &UGameplayAbility_Meelee::OnMontageInterrupted);
 	MeeleeAbilityTask->OnCancelled.AddDynamic(this, &UGameplayAbility_Meelee::OnMontageCancelled);
-	MeeleeAbilityTask->EventReceived.AddDynamic(this, &UGameplayAbility_Meelee::OnEventReceived);
-
 	MeeleeAbilityTask->ReadyForActivation();
 
-	if (bBlockMoveInActing)
+	UAbilityTask_WaitEnterMontageSection* WaitAttackSection = UAbilityTask_WaitEnterMontageSection::WaitEnterMontageSection(this, "WaitAttackSectionEnter", MeeleeMontage, "Attack");
+	WaitAttackSection->OnEnterSection.AddDynamic(this, &UGameplayAbility_Meelee::OnEnterAttackSection);
+	WaitAttackSection->ReadyForActivation();
+
+	if (!GrantTagsDuringAttack.IsEmpty())
 	{
-		GetCurrentActorInfo()->AbilitySystemComponent->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.BlockMove"));
-		OnGameplayAbilityEnded.AddUObject(this, &UGameplayAbility_Meelee::OffBlockMove);
+		UAbilityTask_GrantTags* GrantTagsTask = UAbilityTask_GrantTags::GrantTags(this, "GrantTagsDuringAttack", GrantTagsDuringAttack);
+		GrantTagsTask->ReadyForActivation();
 	}
 }
 
@@ -113,4 +145,104 @@ bool UGameplayAbility_Meelee::CanActivateAbility(const FGameplayAbilitySpecHandl
 	if(!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags)) return false;
 	return MeeleeMontage != nullptr;
 }
+
+void UGameplayAbility_Meelee::OnEnterAttackSection(UAnimMontage* InMeeleeMontage, const FName& InSectionName)
+{
+	UAbilityTask_WaitNewCollision* MeeleeAttackShape = UAbilityTask_WaitNewCollision::WaitNewCollision(this, "AttackTask", false);
+	switch (CreateAttackShapePolicy)
+	{
+	case ECreateAttackShapePolicy::Sphere:
+		MeeleeAttackShape->MakeSphereCollision(SphereRadius, AttackCollisionProfileName);
+		break;
+	case ECreateAttackShapePolicy::Capsule:
+		MeeleeAttackShape->MakeCapsuleCollision(CapsuleRadius, CapsuleHalfHeight, AttackCollisionProfileName);
+		break;
+	case ECreateAttackShapePolicy::Box:
+		MeeleeAttackShape->MakeBoxCollision(BoxExtent, AttackCollisionProfileName);
+		break;
+	case ECreateAttackShapePolicy::Custom:
+		MeeleeAttackShape->SetCustomCollision(CreateCustomAttackShape());
+		break;
+	default:
+		break;
+	}
+
+	MeeleeAttackShape->AddIgnoreActor(GetAvatarActorFromActorInfo());
+	MeeleeAttackShape->OnOverlapDel.AddDynamic(this, &UGameplayAbility_Meelee::OnAttackBeginOverlap);
+	MeeleeAttackShape->AttachToAvatar(FAttachmentTransformRules::KeepRelativeTransform, SocketName);
+	MeeleeAttackShape->SetShapeTransform(AttachedRelativeTransform);
+
+	if (bOverrideCollisionLifeTime)
+	{
+		float PlayRate = 1;
+		MeeleeAttackShape->SetCollisionLifeTime(CollisionLifeTimeOverride / PlayRate);
+	}
+
+	MeeleeAttackShape->ReadyForActivation();
+
+	FGameplayEventData EventData;
+	EventData.Instigator = GetOwningActorFromActorInfo();
+	CurrentActorInfo->AbilitySystemComponent->HandleGameplayEvent(FGameplayTag::RequestGameplayTag(FName("CommonEvent.OnAttackStart")), &EventData);
+
+
+	UAbilityTask_WaitEnterMontageSection* WaitPostDelay = UAbilityTask_WaitEnterMontageSection::WaitEnterMontageSection(this, "WaitPostDelay", MeeleeMontage, "PostDelay");
+	WaitPostDelay->OnEnterSection.AddDynamic(this, &UGameplayAbility_Meelee::OnEnterPostDelay);
+	WaitPostDelay->ReadyForActivation();
+}
+
+void UGameplayAbility_Meelee::OnEnterPostDelay(UAnimMontage* InMeeleeMontage, const FName& InSectionName)
+{
+	if (!GrantTagsDuringAttack.IsEmpty())
+	{
+		EndTaskByInstanceName("GrantTagsDuringAttack");
+	}
+
+	if (!bOverrideCollisionLifeTime)
+	{
+		EndTaskByInstanceName("AttackTask");
+	}
+}
+
+void UGameplayAbility_Meelee::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerActor)
+	{
+		DamageEffectSpecHandle.Clear();
+	}
+	
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UGameplayAbility_Meelee::OnAttackBeginOverlap(const FGameplayAbilityTargetDataHandle& TargetData)
+{
+	IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>( GetAvatarActorFromActorInfo());
+	
+	for (auto& Target : TargetData.Data)
+	{
+		TArray<TWeakObjectPtr<AActor>> TargetActors = Target->GetActors();
+		for (TWeakObjectPtr<AActor>& TargetActor : TargetActors)
+		{
+			if (!TargetActor.IsValid() || TeamAgent->GetTeamAttitudeTowards(*TargetActor.Get()) == ETeamAttitude::Friendly) continue;
+			IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(TargetActor);
+			UAbilitySystemComponent* TargetASC = TargetASI->GetAbilitySystemComponent();
+			if (TargetASC == nullptr) continue;
+
+			checkf(DamageEffectSpecHandle.IsValid(), TEXT("Can't find Damage Effect In : %s"), *GetName());
+			CurrentActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*DamageEffectSpecHandle.Data, TargetASC);
+
+			FGameplayEventData EventData;
+			EventData.Instigator = GetAvatarActorFromActorInfo();
+			EventData.Target = TargetActor.Get();
+			CurrentActorInfo->AbilitySystemComponent->HandleGameplayEvent(FGameplayTag::RequestGameplayTag(FName("CommonEvent.OnAttackTarget")), &EventData);
+		
+			UAbility_Rigidity::RigidityToTarget(RigidityClass, GetCurrentActorInfo()->AbilitySystemComponent.Get(), TargetASC, RigidityTime, Target->GetHitResult(), CustomRigidityAnim);
+
+			FGameplayAbilitySpec KnockbackSpec(KnockbackClass, 1, -1, GetAvatarActorFromActorInfo());
+			TargetASC->GiveAbilityAndActivateOnce(KnockbackSpec);
+		}
+	}
+}
+
+
+
 

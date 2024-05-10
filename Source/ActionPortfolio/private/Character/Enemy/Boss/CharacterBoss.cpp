@@ -25,33 +25,7 @@ ACharacterBoss::ACharacterBoss()
 		GetMesh()->SetAnimInstanceClass(BOSSANIMINSTANCE.Class);
 	}
 
-	LeftPunchBox = CreateDefaultSubobject<UBoxComponent>("LeftPunchBox");
-	RightPunchBox = CreateDefaultSubobject<UBoxComponent>("RightPunchBox");
-	BossRushBox = CreateDefaultSubobject<UBoxComponent>("BossRushBox");
 
-	LeftPunchBox->SetupAttachment(GetMesh(), "hand_l");
-	RightPunchBox->SetupAttachment(GetMesh(), "hand_r");
-	BossRushBox->SetupAttachment(GetMesh());
-
-	LeftPunchBox->SetRelativeLocation(FVector(40, 0, 0));
-	RightPunchBox->SetRelativeLocation(FVector(-40, 0, 0));
-	BossRushBox->SetRelativeLocation(FVector(20, 150, 155));
-
-	LeftPunchBox->SetBoxExtent(FVector(64, 48, 48));
-	RightPunchBox->SetBoxExtent(FVector(64, 48, 48));
-	BossRushBox->SetBoxExtent(FVector(72,128,64));
-
-	LeftPunchBox->ComponentTags.Add("LeftPunch");
-	RightPunchBox->ComponentTags.Add("RightPunch");
-	BossRushBox->ComponentTags.Add("BossRush");
-
-	AttackShapeTags.Add("LeftPunch");
-	AttackShapeTags.Add("RightPunch");
-	AttackShapeTags.Add("BossRush");
-
-	LeftPunchBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	RightPunchBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	BossRushBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	static ConstructorHelpers::FClassFinder<UGameplayEffect> BossDefaultAttribute(TEXT("/Game/ActionPFCharacter/Enemies/Boss/Ability/DefaultAttribute_Boss.DefaultAttribute_Boss_C"));
 	if (BossDefaultAttribute.Succeeded())
@@ -73,7 +47,6 @@ void ACharacterBoss::OnBossCollisionBatteryBomb()
 	CurrentCollisionCountForStun++;
 
 	if (CollisionCountForStun <= CurrentCollisionCountForStun) {
-		CharacterRigidity(StunTime);
 		CurrentCollisionCountForStun = 0;
 	}
 }

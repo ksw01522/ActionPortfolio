@@ -18,9 +18,6 @@
 #include "Character/Player/Widget_PlayerMainUI.h"
 #include "Character/Player/PlayerDialogueMCComponent.h"
 
-#include "UI/SActionPFMainSlate.h"
-#include "UI/DialogueSlate.h"
-
 #include "Blueprint/UserWidget.h"
 
 #include "Kismet/KismetSystemLibrary.h"
@@ -33,7 +30,18 @@
 #include "CustomInputHelper.h"
 #include "InputMappingContext.h"
 #include "CustomInputSettingSubsystem.h"
-#include "Widget/CustomInputSettingWidget.h"
+
+#include "Ability/Widget/SAbilitySlot.h"
+
+#include "LockOn/LockOnTargetComponent.h"
+#include "LockOn/LockOnSubsystem.h"
+#include "GameFramework/PlayerState.h"
+
+#include "Items/Widget/SInventorySlate.h"
+#include "Items/Slot/ItemSlot.h"
+
+#include "Character/Player/Widget/UserWidget_PlayerInventory.h"
+#include "Items/Widget/InventoryWidget.h"
 
 AActionPFPlayerController::AActionPFPlayerController()
 {
@@ -41,15 +49,9 @@ AActionPFPlayerController::AActionPFPlayerController()
 
 	Inventory = CreateDefaultSubobject<UInventoryComponent>("PlayerInventory");
 
-	bRegisteredInteractMapping = false;
-	bCanInteract = true;
-	interactMappingPriority = 1;
-
 #if WITH_EDITOR
 	bDrawTraceInteractionLine = true;
 #endif
-
-	
 }
 
 void AActionPFPlayerController::Tick(float DeltaSeconds)
@@ -58,6 +60,8 @@ void AActionPFPlayerController::Tick(float DeltaSeconds)
 
 	//Interaction Tick
 	TraceInteractions();
+
+	Tick_LockOn(DeltaSeconds);
 }
 
 void AActionPFPlayerController::OnPossess(APawn* aPawn)
@@ -68,21 +72,13 @@ void AActionPFPlayerController::OnPossess(APawn* aPawn)
 	if (!IsValid(PlayerChar)) return;
 
 	PlayerChar->Tags.AddUnique(FName("PlayerCharacter"));
-
-	if (IsValid(PlayerMainUI)) {
-		PlayerMainUI->LinkASC();
-	}
-	else
-	{
-		CreatePlayerMainUI();
-	}
-
-
 }
 
 void AActionPFPlayerController::OnUnPossess()
 {
-	ClearForInteraction();
+	PlayerMainUI = nullptr;
+
+	EmptyInteractions();
 
 	APawn* PossessedPawn = GetPawn();
 	if(IsValid(PossessedPawn)){
@@ -98,7 +94,12 @@ void AActionPFPlayerController::SetupInputComponent()
 	if (UEnhancedInputComponent* EnhancedInput = CastChecked<UEnhancedInputComponent>(InputComponent)) {
 		
 		EnhancedInput->BindAction(OpenMenuAction, ETriggerEvent::Started, this, &AActionPFPlayerController::OpenMenu);
+		
+		EnhancedInput->BindAction(OpenInventoryAction, ETriggerEvent::Started, this, &AActionPFPlayerController::OpenInventory);
+		
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &AActionPFPlayerController::InteractFocusedInteraction);
+
+		EnhancedInput->BindAction(LockOnAction, ETriggerEvent::Triggered, this, &AActionPFPlayerController::PressLockOnAction);
 
 		UCustomInputSettingSubsystem::GetInstance()->RegisterAffectedController(this);
 
@@ -113,27 +114,28 @@ void AActionPFPlayerController::PostInitializeComponents()
 	Super::PostInitializeComponents();
 
 
-	SetGenericTeamId(1);
-
-	//NPC와의 상호작용을 위한 예상 버튼개수만큼 미리 메모리 잡기
-	NPCInteractBTNs.Reserve(4);
-
-	//겹치게 될 Interaction들의 예상 최대개수만큼 미리 메모리 잡기 : 한 Actor에 여러개의 상호작용이 있을 수도 있으니
-	PrevTracedInteractions.Reserve(4);
-
-	Inventory->OnChangedInventory.AddDynamic(this, &AActionPFPlayerController::UpdateInventoryWidget);
 }
 
 void AActionPFPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	SetGenericTeamId(1);
+
+	//겹치게 될 Interaction들의 예상 최대개수만큼 미리 메모리 잡기 : 한 Actor에 여러개의 상호작용이 있을 수도 있으니
+	PrevTracedInteractionActors.Reserve(4);
+	TracedInteractionActors.Reserve(4);
+	FocusedInteractions.Reserve(2);
+
 	ChangeGameInputMode();
-	if (!PlayerMainSlate.IsValid()) { CreatePlayerSlates(); }
 
+	MenuWidget = CreateWidget(this, MenuWidgetClass, "PlayerMenu");
+	MenuWidget->AddToViewport(10);
+	MenuWidget->SetVisibility(ESlateVisibility::Collapsed);
 
-	SetInputMode(FInputModeGameAndUI());
-	SetShowMouseCursor(true);
+	CreateInventorySlate();
+
+	Inventory->AddItemByCode("Test", 1);
 }
 
 
@@ -149,47 +151,44 @@ void AActionPFPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID
 
 
 
-
-
-UWidget_PlayerMainUI* AActionPFPlayerController::CreatePlayerMainUI()
+void AActionPFPlayerController::AddCustomFocuseWidget(SWidget& InWidget, bool bSaveToStack)
 {
-	if (PlayerMainUIClass.GetDefaultObject() == nullptr)
-	{
-		PFLOG(Error, TEXT("Not Allocated Main UI Class."));
-		return nullptr;
-	}
+	TSharedRef<SWidget> Shared = InWidget.AsShared();
 
-	if (IsValid(PlayerMainUI))
-	{
-		PlayerMainUI->RemoveFromParent();
-	}
-
-	PlayerMainUI = CreateWidget<UWidget_PlayerMainUI>(this, PlayerMainUIClass, "Player Main UI");
-	PlayerMainUI->AddToViewport(0);
-	MainUIHideCount = 0;
-
-	return PlayerMainUI;
+	AddCustomFocuseWidget(Shared, bSaveToStack);
 }
 
-void AActionPFPlayerController::CreatePlayerSlates()
+void AActionPFPlayerController::AddCustomFocuseWidget(TSharedRef<SWidget> InWidget, bool bSaveToStack)
 {
-	ForceHiddenSlateCount = 0;
+	FInputModeUIOnly UIInputMode;
+	UIInputMode.SetWidgetToFocus(InWidget);
 
-	SAssignNew(PlayerMainSlate, SActionPFMainSlate)
-		.Visibility(EVisibility::Visible);
-		
-	//PlayerDialogueMC Slate 묶기
-	PlayerDialogueMC->BindDialogueBox(PlayerMainSlate->MainDialogueBox);
-	PlayerDialogueMC->BindAnswerBox(PlayerMainSlate->AnswersVerticalBox);
+	bShowMouseCursor = true;
+	SetInputMode(UIInputMode);
 
-	//컨트롤러 안에 있는 Slate Weak ptr이랑 묶기
-	NPCInteractBTNBox = PlayerMainSlate->NPCInteractBTNBox;
+	if (bSaveToStack)
+	{
+		FocusedWidgetStack.Add(MoveTemp(InWidget));
+	}
+}
 
-	SButton* ExitNPCInteractBTN = static_cast<SButton*>(&NPCInteractBTNBox.Pin()->GetSlot(0).GetWidget().Get());
+void AActionPFPlayerController::RemoveCustomFocuseWidgetStack()
+{
+	if(FocusedWidgetStack.IsEmpty()) return;
 
-	ExitNPCInteractBTN->SetOnClicked(TDelegate<FReply()>::CreateUObject(this, &AActionPFPlayerController::OnClickExitInteractNPC));
+	FocusedWidgetStack.Pop();
 
-	GEngine->GameViewport->AddViewportWidgetContent(PlayerMainSlate.ToSharedRef());
+	if (FocusedWidgetStack.IsEmpty())
+	{
+		ChangeGameInputMode();
+	}
+	else
+	{
+		FInputModeUIOnly UIInputMode;
+		UIInputMode.SetWidgetToFocus(FocusedWidgetStack.Last());
+
+		SetInputMode(UIInputMode);
+	}
 }
 
 void AActionPFPlayerController::HideMainUI()
@@ -210,43 +209,34 @@ void AActionPFPlayerController::DisplayMainUI()
 	}
 }
 
+void AActionPFPlayerController::SetPlayerMainUI(UWidget_PlayerMainUI* InMainUI)
+{
+	PlayerMainUI = InMainUI;
+
+	if (PlayerMainUI)
+	{
+		if (0 < MainUIHideCount)
+		{
+			PlayerMainUI->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		else
+		{
+			PlayerMainUI->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
+}
+
 
 
 void AActionPFPlayerController::OpenMenu()
 {
-	UUserWidget* CurrentMenuWidget = GetMenuWidget();
-	if(CurrentMenuWidget == nullptr || CurrentMenuWidget->GetVisibility() == ESlateVisibility::Visible) return;
-
 	ChangeUIInputMode();
-	CurrentMenuWidget->SetVisibility(ESlateVisibility::Visible);
+	MenuWidget->SetVisibility(ESlateVisibility::Visible);
+
 	HideMainUI();
 }
 
-void AActionPFPlayerController::CloseMenu()
-{
-	UUserWidget* CurrentMenuWidget = GetMenuWidget();
-	if (CurrentMenuWidget == nullptr || CurrentMenuWidget->GetVisibility() == ESlateVisibility::Collapsed) return;
 
-	ChangeGameInputMode();
-	CurrentMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
-	DisplayMainUI();
-}
-
-UUserWidget* AActionPFPlayerController::GetMenuWidget()
-{
-	if (!IsValid(MenuWidget)) {
-		if (MenuWidgetClass.GetDefaultObject() == nullptr) return nullptr;
-
-		MenuWidget = CreateWidget(this, MenuWidgetClass, "PlayerMenu");
-		MenuWidget->AddToViewport(100);
-		MenuWidget->SetVisibility(ESlateVisibility::Collapsed);
-	}
-	if (!IsValid(MenuWidget)) return nullptr;
-
-	
-
-	return MenuWidget;
-}
 
 
 void AActionPFPlayerController::ChangeUIInputMode()
@@ -268,55 +258,46 @@ void AActionPFPlayerController::ChangeGameInputMode()
 }
 
 
-
-/////////////////////// Slate /////////////////////
-
-
-
-void AActionPFPlayerController::HideMainSlate()
+void AActionPFPlayerController::OnChangedFocusedInteractionActor()
 {
-	++ForceHiddenSlateCount;
+	if (TracedInteractionActors.IsEmpty())
+	{
+		EmptyInteractions();
+		return;
+	}
 
-	PlayerMainSlate->SetVisibility(EVisibility::Collapsed);
+	if(CurrentFocusedActor.Get() == TracedInteractionActors[0]) return;
+
+	EmptyInteractions();
+
+	CurrentFocusedActor = TracedInteractionActors[0];
+	TArray<UInteractionSystemComponent*> TempInteractions;
+
+	CurrentFocusedActor->GetComponents<UInteractionSystemComponent>(TempInteractions);
+	for (auto& TempInteraction : TempInteractions)
+	{
+		if (TempInteraction->IsEnableInteract())
+		{
+			FocusedInteractions.Add(TempInteraction);
+		}
+	}
+
+	FocusedInteractions[FocusedInteractionIDX]->OnFocusedOnByPlayer();
 }
 
-void AActionPFPlayerController::DisplayMainSlate()
-{
-	--ForceHiddenSlateCount;
 
-	ensure(0 <= ForceHiddenSlateCount);
 
-	if (ForceHiddenSlateCount == 0)
-	{
-		PlayerMainSlate->SetVisibility(EVisibility::SelfHitTestInvisible);
-	}
-}
-
-void AActionPFPlayerController::SetCanInteract(bool NewState)
-{
-	if(bCanInteract == NewState) return;
-
-	bCanInteract = NewState;
-
-	if (bCanInteract)
-	{
-		
-	}
-	else
-	{
-		UnregisterInteractMapping();
-	}
-}
 
 void AActionPFPlayerController::TraceInteractions()
 {
 	APawn* PlayerPawn = GetPawn();
 	if (!IsValid(PlayerPawn)){return;}
 
-	TArray<UInteractionSystemComponent*> CurrentTracedInteractions;
+	PrevTracedInteractionActors = TracedInteractionActors;
+	TracedInteractionActors.Empty();
 
 	//Trace를 위한 매개변수들
-	static const float TraceDistance = 200;
+	static const float TraceDistance = 300;
 	TArray<FHitResult> HitResults;
 	FVector TraceStart = PlayerPawn->GetActorLocation();
 	FVector TraceEnd = TraceStart + TraceDistance * PlayerPawn->GetActorForwardVector();
@@ -326,16 +307,9 @@ void AActionPFPlayerController::TraceInteractions()
 	//ECC_GameTraceChannel1 == InteractorSensor
 	GetWorld()->LineTraceMultiByChannel(HitResults, TraceStart, TraceEnd, ECC_GameTraceChannel1, CQP);
 
-
-#if WITH_EDITOR
-	if (bDrawTraceInteractionLine)
-	{
-		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, HitResults.IsEmpty() ? FColor::Red : FColor::Green);
-	}
-
-#endif
-
-	//Trace에 걸린 Actor들이 있을 시에 UInteractionSystemComponent를 TracedInteractions에 추가
+	TArray<AActor*> TracedActors;
+	
+	//Trace에 걸린 Actor들이 있을 시에 상호작용컴포넌트가 있는지 체크
 	for (const auto& HitResult : HitResults)
 	{
 		AActor* TracedActor = HitResult.GetActor();
@@ -343,128 +317,77 @@ void AActionPFPlayerController::TraceInteractions()
 
 		TArray<UInteractionSystemComponent*> TempComponents;
 		TracedActor->GetComponents<UInteractionSystemComponent>(TempComponents);
-		for (const auto& TempComponent : TempComponents)
+		
+		bool bCanInteract = false;
+
+		for (auto& InteractComponent : TempComponents)
 		{
-			CurrentTracedInteractions.AddUnique(TempComponent);
+			bCanInteract = bCanInteract || InteractComponent->IsEnableInteract();
 		}
+		
+		if(bCanInteract) TracedActors.Add(TracedActor);
 	}
 	
-	//기존에 이미 주목하고있는 상호작용 체크
-	if(CurrentTracedInteractions.Contains(FocusedInteraction.Get())) { CurrentTracedInteractions.Remove(FocusedInteraction.Get()); }
-	else if (FocusedInteraction.IsValid()) 
-	{ 
-		FocusedInteraction->OnFocusedOff();
-		FocusedInteraction.Reset(); 		
-	}
-
-	
-	int PrevInteractionsNum = PrevTracedInteractions.Num();
-	for (int i = 0; i < PrevInteractionsNum; i++)
+#if WITH_EDITOR
+	if (bDrawTraceInteractionLine)
 	{
-		if (CurrentTracedInteractions.Contains(PrevTracedInteractions[i].Get()))
-		{
-			CurrentTracedInteractions.Remove(PrevTracedInteractions[i].Get());
-		}
-		else
-		{
-			PrevTracedInteractions.RemoveAt(i);
-			--i;
-			--PrevInteractionsNum;
-		}
+		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, TracedActors.IsEmpty() ? FColor::Red : FColor::Green);
 	}
+#endif
 
-	PrevTracedInteractions.Append(CurrentTracedInteractions);
-
-	if (!CheckFocusedInteraction())
+	//비어있는지 체크
+	if (TracedActors.IsEmpty())
 	{
-		FocusNextInteraction();
-	}
-
-	if (!FocusedInteraction.IsValid() && PrevTracedInteractions.IsEmpty())
-	{
-		UnregisterInteractMapping();
-	}
-}
-
-void AActionPFPlayerController::AddInteraction(UInteractionSystemComponent* NewInteraction)
-{
-	//상호작용이 유효한가 체크
-	if(NewInteraction == nullptr || !IsValid(NewInteraction)) return;
-	
-	//상호작용이 이미 등록되어 있는가 체크
-	if (NewInteraction == FocusedInteraction.Get() || PrevTracedInteractions.Find(NewInteraction) != INDEX_NONE) return;
-
-	//주목하고 있는 상호작용이 없다면 바로 주목하기
-	if (!FocusedInteraction.IsValid())
-	{
-		FocusInteraction(NewInteraction);
-	}
-	else //없다면 그냥 배열에 넣기
-	{
-		PrevTracedInteractions.Add(NewInteraction);
-	}
-}
-
-void AActionPFPlayerController::RemoveInteraction(UInteractionSystemComponent* NewInteraction)
-{
-	//상호작용이 유효한가 체크
-	if (NewInteraction == nullptr || !IsValid(NewInteraction)) return;
-
-	if (NewInteraction == FocusedInteraction)
-	{
-		FocusedInteraction.Reset();
+		OnChangedFocusedInteractionActor();
 		return;
 	}
 
-	PrevTracedInteractions.Remove(NewInteraction);
+	//이미 있던 액터들 추가
+	for (auto& PrevTracedActor : PrevTracedInteractionActors)
+	{
+		if (TracedActors.Contains(PrevTracedActor))
+		{
+			TracedInteractionActors.Add(PrevTracedActor);
+		}
+	}
+	
+	//새로운 액터들 추가
+	for (auto& TracedActor : TracedActors)
+	{
+		if (!TracedInteractionActors.Contains(TracedActor))
+		{
+			TracedInteractionActors.Add(TracedActor);
+		}
+	}
+
+	OnChangedFocusedInteractionActor();
 }
 
-void AActionPFPlayerController::FocusInteraction(UInteractionSystemComponent* NewInteraction)
+void AActionPFPlayerController::EmptyInteractions()
 {
-	//상호작용이 유효한가 체크
-	if (NewInteraction == nullptr || !IsValid(NewInteraction)) return;
+	if(!CurrentFocusedActor.IsValid()) return;
 
-	if (FocusedInteraction.IsValid())
-	{
-		FocusedInteraction->OnFocusedOff();
-		PrevTracedInteractions.Add(FocusedInteraction);
-	}
-	else
-	{
-		RegisterInteractMapping();
-	}
-
-	FocusedInteraction = NewInteraction;
-	FocusedInteraction->OnFocusedOn();
+	FocusedInteractions[FocusedInteractionIDX]->OnFocusedOffByPlayer();
+	FocusedInteractions.Empty();
+	CurrentFocusedActor.Reset();
+	FocusedInteractionIDX = 0;
 }
 
 void AActionPFPlayerController::FocusNextInteraction()
 {
-	if(PrevTracedInteractions.IsEmpty()) return;
+	if(!CurrentFocusedActor.IsValid() || (FocusedInteractions.Num() == 1 && TracedInteractionActors.Num() == 1)) return;
 
-	int PrevTracedNum = PrevTracedInteractions.Num();
-	for (int i = 0; i < PrevTracedNum; i++)
+	FocusedInteractions[FocusedInteractionIDX]->OnFocusedOffByPlayer();
+	if (FocusedInteractions.IsValidIndex(++FocusedInteractionIDX))
 	{
-		if (!PrevTracedInteractions[i].IsValid())
-		{
-			PrevTracedInteractions.RemoveAt(i);
-			--i;
-			--PrevTracedNum;
-			continue;
-		}
-
-		if (PrevTracedInteractions[i]->IsEnableInteract())
-		{
-			FocusInteraction(PrevTracedInteractions[i].Get());
-			PrevTracedInteractions.RemoveAt(i);
-			break;
-		}
+		FocusedInteractions[FocusedInteractionIDX]->OnFocusedOnByPlayer();
 	}
-}
-
-bool AActionPFPlayerController::CheckFocusedInteraction()
-{
-	return FocusedInteraction.IsValid() && FocusedInteraction->IsEnableInteract();
+	else
+	{
+		TracedInteractionActors.Add(CurrentFocusedActor.Get());
+		TracedInteractionActors.RemoveAt(0);
+		OnChangedFocusedInteractionActor();
+	}
 }
 
 
@@ -474,152 +397,35 @@ void AActionPFPlayerController::InteractFocusedInteraction()
 #if WITH_EDITOR
 	PFLOG(Warning, TEXT("Try Interact FocusedInteraction"));
 #endif
-	if(!FocusedInteraction.IsValid()) return;
+	if(!FocusedInteractions.IsValidIndex(FocusedInteractionIDX)) return;
 #if WITH_EDITOR
 	PFLOG(Warning, TEXT("Call Interact FocusedInteraction"));
 #endif
 
-	FocusedInteraction->Interact(GetPawn());
-}
-
-void AActionPFPlayerController::ClearForInteraction()
-{
-	if (!PrevTracedInteractions.IsEmpty()) PrevTracedInteractions.Empty();
-	if (FocusedInteraction.IsValid()) {
-		FocusedInteraction->OnFocusedOff();
-		FocusedInteraction.Reset();
-	}
-}
-
-void AActionPFPlayerController::RegisterInteractMapping()
-{
-	if(bRegisteredInteractMapping) return;
-	UCustomInputHelper::AddInputMapping(this, InteractMapping, interactMappingPriority);
-	bRegisteredInteractMapping = true;
-}
-
-void AActionPFPlayerController::UnregisterInteractMapping()
-{
-	if(!bRegisteredInteractMapping) return;
-	UCustomInputHelper::RemoveInputMapping(this, InteractMapping);
+	FocusedInteractions[FocusedInteractionIDX]->Interact(GetPawn());
 }
 
 
-/////////////////////// Interact /////////////////////
 
-void AActionPFPlayerController::InteractWithNPC(UInteractionSystemComponent_NPC* NPCInteractionSystem)
+void AActionPFPlayerController::CreateInventorySlate()
 {
-	if (!IsValid(NPCInteractionSystem)){ return; }
-	////////////////////////
-	ChangeUIInputMode();
+	InventoryWidget = CreateWidget<UUserWidget_PlayerInventory>(this, InventoryWidgetClass, "PlayerInventory");
 
-	HideMainUI();
-	AssginNPCInteractButton(NPCInteractionSystem);
-
-	const UDialogueSession* GreetingDialogue = NPCInteractionSystem->GetGreetingDialogue(this);
-
-	if (GreetingDialogue)
-	{
-		EnterDialogueInNPCInteract(GreetingDialogue);
-	}
-	else
-	{
-		ShowNPCInteractBTNs();
-	}
 }
 
-void AActionPFPlayerController::AssginNPCInteractButton(UInteractionSystemComponent_NPC* NPCInteracts)
+void AActionPFPlayerController::OpenInventory()
 {
-	TArray<UNPCInteract*> AbleNPCInteracts =  NPCInteracts->GetAbleNPCInteractions(this);
-
-	const int AbleInteractCount = AbleNPCInteracts.Num();
-	const int NPCInteractBTNCount = NPCInteractBTNs.Num();
-
-	CheckAndCreateNPCinteractBTNs(AbleInteractCount);
-
-	for (int i = 0; i < AbleInteractCount; ++i)
-	{
-		NPCInteractBTNs[i].Pin()->BindNPCInteract(this, AbleNPCInteracts[i]);
-	}
-
-	for (int i = AbleInteractCount; i < NPCInteractBTNCount; ++i)
-	{
-		NPCInteractBTNs[i].Pin()->SetVisibility(EVisibility::Collapsed);
-	}
-}
-
-void AActionPFPlayerController::CheckAndCreateNPCinteractBTNs(int TargetCount)
-{
-	ensure(NPCInteractBTNBox.Pin().IsValid());
+	InventoryWidget->AddToViewport(10);
+	InventoryWidget->GetInventoryWidget()->SetUserFocus(this);
 	
-	//충분하면 바로 return
-	if (TargetCount <= NPCInteractBTNs.Num()) { return; }
-
-	const float BTNBotPadding = 20;
-
-	for (int i = NPCInteractBTNs.Num(); i < TargetCount; ++i)
-	{
-		TSharedPtr<SNPCInteractButton> TempButton;
-		SAssignNew(TempButton, SNPCInteractButton)
-			.Visibility(EVisibility::Visible);
-
-		NPCInteractBTNBox.Pin()->
-		InsertSlot(NPCInteractBTNs.Num())
-		.HAlign(HAlign_Fill)
-		.AutoHeight()
-		.Padding(0, 0, 0, BTNBotPadding)
-			[
-				TempButton.ToSharedRef()
-			];
-
-		NPCInteractBTNs.Add(TempButton);
-	}
+	ChangeUIInputMode();
 }
 
-void AActionPFPlayerController::ShowNPCInteractBTNs()
+void AActionPFPlayerController::CloseInventory()
 {
-	#if WITH_EDITOR
-		PFLOG(Warning, TEXT("Show NPCInteract Buttons"));
-	#endif
+	InventoryWidget->RemoveFromParent();
 
-	NPCInteractBTNBox.Pin()->SetVisibility(EVisibility::SelfHitTestInvisible);
-}
-
-void AActionPFPlayerController::HideNPCInteractBTNs()
-{
-	NPCInteractBTNBox.Pin()->SetVisibility(EVisibility::Collapsed);
-}
-
-void AActionPFPlayerController::ExitInteractNPC()
-{
-#if WITH_EDITOR
-	PFLOG(Warning,TEXT("Call ExitInteract NPC"));
-#endif
 	ChangeGameInputMode();
-	DisplayMainUI();
-	HideNPCInteractBTNs();
-
-}
-
-FReply AActionPFPlayerController::OnClickExitInteractNPC()
-{
-	ExitInteractNPC();
-
-	return FReply::Unhandled();
-}
-
-void AActionPFPlayerController::EnterDialogueInNPCInteract(const UDialogueSession* NewSession)
-{
-	if (NewSession == nullptr)
-	{
-		PFLOG(Error, TEXT("Call By null Dialogue Session."));
-		return;
-	}
-
-	PlayerDialogueMC->EnterDialogue(NewSession);
-	PlayerDialogueMC->TryEnterNextNode();
-	PlayerDialogueMC->GetExitDialogueOnceDelegate().AddLambda([&](bool bIsCancelled) {ShowNPCInteractBTNs(); });
-	HideNPCInteractBTNs();
 }
 
 void AActionPFPlayerController::PickUpItem(ADroppedItem* Target)
@@ -633,64 +439,114 @@ void AActionPFPlayerController::PickUpItem(ADroppedItem* Target)
 	Inventory->AddItemByDropItem(*Target);
 }
 
-
-bool AActionPFPlayerController::TryEquipItemInInventory(APlayerCharacter* Target, int idx)
+void AActionPFPlayerController::Tick_LockOn(float DeltaTime)
 {
-	if(!IsValid(Target)) return false;
+	if (!LockOnTarget.IsValid()) return;
 
-	FInventorySlot* InventorySlot = Inventory->GetInventorySlot(EItemType::Equipment, idx);
-
-	if (InventorySlot == nullptr || InventorySlot->IsEmpty())
-	{
-		return false;
-	}
-
-	UItemBase_Equipment* TargetEquipment = Cast<UItemBase_Equipment>(InventorySlot->GetItemInSlot());
-	UItemBase_Equipment* AlreadyEquipment = Target->GetEquipment(TargetEquipment->GetEquipmentPart());
-
-	bool bResult = Target->EquipItem(TargetEquipment);
-
-	if(bResult)
-	{
-		InventorySlot->SetSlot(AlreadyEquipment, 1);
-		UpdateInventoryWidget(EItemType::Equipment, idx);
-	}
-
-	return bResult;
+	FVector DeltaVector = LockOnTarget->GetComponentLocation() - PlayerCameraManager->GetCameraLocation();
+	FRotator NewRot = DeltaVector.Rotation();
+	ClientSetRotation(NewRot, false);
 }
 
-bool AActionPFPlayerController::TryUnequipItem(APlayerCharacter* Target, EEquipmentPart Part)
+void AActionPFPlayerController::AddPitchInput(float Val)
 {
-	FInventorySlot* EmptySlot = Inventory->GetEmptySlot(EItemType::Equipment);
-	if(EmptySlot == nullptr) return false;
+	if(LockOnTarget.IsValid()) return;
 
-	return Target->UnequipItem(Target->GetEquipment(Part));
+	Super::AddPitchInput(Val);
 }
 
-
-void AActionPFPlayerController::UpdateInventoryWidget(EItemType InventoryType, int Idx)
+void AActionPFPlayerController::AddYawInput(float Val)
 {
-	FInventorySlot* InventorySlot = Inventory->GetInventorySlot(InventoryType, Idx);
-	if (InventorySlot == nullptr)
-	{
-		ensureMsgf(false, TEXT("Can't find Inventory Slot."));
-		return;
-	}
+	if (LockOnTarget.IsValid()) return;
 
-	TSoftObjectPtr<UMaterialInterface> UpdateIcon;
-	int UpdateCount = 0;
-	EItemGrade UpdateItemGrade = EItemGrade::None;
-
-
-	if (!InventorySlot->IsEmpty())
-	{
-		UItemManagerSubsystem* ItemManager = UItemManagerSubsystem::GetManagerInstance();
-		const UItemBase* TempItem = InventorySlot->GetItemInSlot();
-
-		UpdateIcon = TempItem->GetIconMaterial();
-		UpdateCount = InventorySlot->GetCount();
-		UpdateItemGrade = TempItem->GetItemGrade();
-	}
-
-	PlayerMainUI->UpdateInventorySlot(InventoryType, Idx, UpdateIcon, UpdateItemGrade, UpdateCount);
+	Super::AddYawInput(Val);
 }
+
+bool AActionPFPlayerController::CanLockOnTarget(ULockOnTargetComponent* InTarget) const
+{
+	if(InTarget == nullptr) return false;
+
+	AActor* TargetActor = InTarget->GetOwner();
+
+	if(GetTeamAttitudeTowards(*TargetActor) == ETeamAttitude::Friendly) return false;
+
+	return true;
+}
+
+void AActionPFPlayerController::SearchLockOnTarget()
+{
+	ULockOnSubsystem* LockOnSS = GetWorld()->GetSubsystem<ULockOnSubsystem>();
+	check(LockOnSS);
+
+	TArray<ULockOnTargetComponent*> AbleTargets;
+	float Dist = LockOnSearchDistance * LockOnSearchDistance;
+
+#if WITH_EDITOR
+	FVector ActorCenterPos = GetPawn()->GetActorLocation();
+	DrawDebugSphere(GetWorld(), ActorCenterPos, LockOnSearchDistance, 32, FColor::Green, false, 2);
+#endif
+
+	if (LockOnSS->GetLockOnAbleTargets(AbleTargets, TDelegate<bool(ULockOnTargetComponent*)>::CreateUObject(this, &AActionPFPlayerController::CanLockOnTarget)))
+	{
+		FVector CenterPos = GetPawn()->GetActorLocation();
+
+		FVector CameraForward = PlayerCameraManager->GetCameraRotation().Vector();
+		
+		for (int i = 0; i < AbleTargets.Num(); i++)
+		{
+			if(Dist < FVector::DistSquared(CenterPos, AbleTargets[i]->GetComponentLocation())) continue;
+
+			FVector DistVector = AbleTargets[i]->GetComponentLocation() - CenterPos;
+
+			float Cos = FVector::DotProduct(CameraForward, DistVector);
+			
+			#if WITH_EDITOR
+			float Test = 0.8125 * DistVector.Length();
+			PFLOG(Warning, TEXT("%.1f, Cos = %.1f"), Test, Cos);
+			#endif 
+
+			if (0.8125 * DistVector.Length() <= Cos)
+			{
+				LockOnTarget = AbleTargets[i];
+			}
+		}
+	}
+}
+
+void AActionPFPlayerController::ClearLockOnTarget()
+{
+	LockOnTarget.Reset();
+}
+
+UAbilitySystemComponent* AActionPFPlayerController::GetAbilitySystemComponent() const
+{
+	if(IAbilitySystemInterface* PawnASI = Cast<IAbilitySystemInterface>(GetPawn()))
+	{
+		return PawnASI->GetAbilitySystemComponent();
+	}
+
+	return nullptr;
+}
+
+UCharacterStatusComponent* AActionPFPlayerController::GetStatusComponent() const
+{
+	if (APlayerCharacter* PlayerCharacter = GetPawn<APlayerCharacter>())
+	{
+		return PlayerCharacter->GetCharacterStatusComponent();
+	}
+
+	return nullptr;
+}
+
+void AActionPFPlayerController::PressLockOnAction()
+{
+	if (LockOnTarget.IsValid())
+	{
+		ClearLockOnTarget();
+	}
+	else
+	{
+		SearchLockOnTarget();
+	}
+}
+

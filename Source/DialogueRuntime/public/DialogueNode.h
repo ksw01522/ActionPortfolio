@@ -44,46 +44,6 @@ enum class EDialogueNodeType : uint8
 	End				UMETA(DislplayName = "End")
 };
 
-struct FDialogueElement
-{
-	FDialogueElement() : Name(""), DialogueString(""), DialogueStyleSet(nullptr)
-	{
-		DialogueSlateDecorators.Empty();
-		DialogueUMGDecorators.Empty();
-	}
-
-	FDialogueElement(FString Name, FString DialogueString, UDataTable* StyleSet, TArray<TSubclassOf<USRichTextBlockDecorator>> SlateDeco, TArray<TSubclassOf<URichTextBlockDecorator>> UMGDeco)
-						: Name(Name), DialogueString(DialogueString), DialogueSlateDecorators(SlateDeco), DialogueUMGDecorators(UMGDeco)
-	{
-		DialogueSlateDecorators.Empty();
-		DialogueUMGDecorators.Empty();
-	}
-
-
-public:
-	FString Name;
-
-	FString DialogueString;
-
-	TObjectPtr<UDataTable> DialogueStyleSet;
-
-	TArray<TSubclassOf<USRichTextBlockDecorator>> DialogueSlateDecorators;
-
-	TArray<TSubclassOf<URichTextBlockDecorator>> DialogueUMGDecorators;
-
-};
-
-struct FDialogueElementContainer
-{
-	FDialogueElementContainer(){}
-	~FDialogueElementContainer(){}
-public:
-	EDialogueNodeType ContainerType;
-
-	TArray<FDialogueElement> Elements;
-
-	void Clear();
-};
 
 UENUM(BlueprintType)
 enum class ERichTextBlockType : uint8
@@ -188,9 +148,7 @@ public:
 
 	EDialogueNodeType GetDialogueNodeType() const { return DialogueNodeType; }
 
-	virtual void GetDialogueElementContainer(FDialogueElementContainer& OutElement) const;
-
-	virtual const UDialogueNode* GetNextDialogueNode(FNextDialogueNodeOptionalStruct* OptionalStruct = nullptr) const;
+	virtual TArray<const UDialogueNode*> GetNextDialogueNodes() const;
 
 	TArray<UDialogueEvent*> GetDialogueEvents() const {return EnterEvents;}
 
@@ -199,9 +157,7 @@ public:
 	FText GetDescription() const;
 	virtual FText GetDescription_Implementation() const;
 
-
 	virtual void OnChangedDialogueTextStyle() {}
-
 #endif
 
 #if WITH_EDITORONLY_DATA
@@ -237,10 +193,10 @@ public:
 
 	virtual void SetNodeTitle(const FText& NewTitle) {};
 
-	virtual bool CanCreateConnection(UDialogueNode* Other, FText& ErrorMessage);
+	virtual bool CanCreateConnection(UDialogueNode* Other, FText& ErrorMessage) const;
 
-	virtual bool CanCreateConnectionTo(UDialogueNode* Other, int32 NumberOfChildrenNodes, FText& ErrorMessage);
-	virtual bool CanCreateConnectionFrom(UDialogueNode* Other, int32 NumberOfParentNodes, FText& ErrorMessage);
+	virtual bool CanCreateConnectionTo(UDialogueNode* Other, int32 NumberOfChildrenNodes, FText& ErrorMessage) const;
+	virtual bool CanCreateConnectionFrom(UDialogueNode* Other, int32 NumberOfParentNodes, FText& ErrorMessage) const;
 
 	virtual void RebuildNode() {};
 

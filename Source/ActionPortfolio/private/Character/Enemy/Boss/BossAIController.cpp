@@ -8,7 +8,6 @@
 #include "Perception/AISenseConfig_Sight.h"
 #include "Kismet/GameplayStatics.h"
 #include "Blueprint/UserWidget.h"
-#include "Character/Widget_HPBar_Basic.h"
 
 
 const FName ABossAIController::IsDamagedKey(TEXT("IsDamaged"));
@@ -66,9 +65,7 @@ void ABossAIController::OnUnPossess()
 	{
 		Boss->OnDamagedDel.RemoveAll(this);
 	}
-	if (HPBarWidget != nullptr) {
-		HPBarWidget->RemoveFromParent();
-	}
+
 
 	Super::OnUnPossess();
 }
@@ -87,6 +84,8 @@ void ABossAIController::FocusPlayer()
 {
 	SetFocusTargetForced(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+
+	/*
 	if (HPBarClass.GetDefaultObject() != nullptr && IsValid(PlayerController)) {
 		HPBarWidget = CreateWidget<UWidget_HPBar_Basic>(PlayerController, HPBarClass);
 		if (HPBarWidget != nullptr) {
@@ -95,5 +94,5 @@ void ABossAIController::FocusPlayer()
 		}
 
 	}
-
+	*/
 }

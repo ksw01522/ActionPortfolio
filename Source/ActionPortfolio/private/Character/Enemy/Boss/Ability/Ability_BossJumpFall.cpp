@@ -51,11 +51,12 @@ void UAbility_BossJumpFall::ActivateAbility_CPP(const FGameplayAbilitySpecHandle
 	}
 	else
 	{
-		TargetCharacter = AvatarChar->GetLastAttackedTarget();
+		
 	}
 
 	MakeFallDownLocation();
 
+	/*
 	UAbilityTask_PlayMontageAndWaitEvent* MeeleeAbilityTask = UAbilityTask_PlayMontageAndWaitEvent::PlayMontageAndWaitEvent(this, TaskInstanceName, MeeleeMontage, EventTagContainer, PlayLate, NAME_None, bStopWhenAbilityEnd);
 	ensure(MeeleeAbilityTask);
 	MeeleeAbilityTask->OnCompleted.AddDynamic(this, &UAbility_BossJumpFall::OnMontageEnded);
@@ -88,10 +89,12 @@ void UAbility_BossJumpFall::ActivateAbility_CPP(const FGameplayAbilitySpecHandle
 	DangerZonePtr = GetWorld()->SpawnActorDeferred<ADangerZone>(DangerZoneClass, DangerZoneSpawnTransform, AvatarChar, AvatarChar);
 	DangerZonePtr->SetDangerZoneRadius(JumpFallImpactRadius);
 	DangerZonePtr->FinishSpawning(DangerZoneSpawnTransform);
+	*/
 }
 
 void UAbility_BossJumpFall::OnLandEventReceived(FGameplayEventData EventData)
 {
+/*
 	if(DangerZonePtr.IsValid()) DangerZonePtr->Destroy();
 	
 	AActionPortfolioCharacter* AvatarChar = Cast<AActionPortfolioCharacter>(GetAvatarActorFromActorInfo());
@@ -174,6 +177,7 @@ void UAbility_BossJumpFall::OnLandEventReceived(FGameplayEventData EventData)
 	{
 		MontageJumpToSection("Land");
 	}
+	*/
 }
 
 void UAbility_BossJumpFall::OnJumpEventReceived(FGameplayEventData EventData)
@@ -265,6 +269,7 @@ void UAbility_BossJumpFall::OnExplosionEventReceived(FGameplayEventData EventDat
 	DrawDebugSphere(GetWorld(), AvatarChar->GetActorLocation(), JumpFallImpactRadius, 32, !OverlapResults.IsEmpty() ? FColor::Red : FColor::Blue, false, 1);
 #endif
 
+	/*
 	FActionPFEffectContainer* EffectsToApply = DamageMap.Find(FGameplayTag::RequestGameplayTag("Ability.Boss.JumpFall.Explosion"));
 	TArray<AActor*> AlreadyEffectedTargets;
 	bool bAttackedTarget = false;
@@ -297,4 +302,5 @@ void UAbility_BossJumpFall::OnExplosionEventReceived(FGameplayEventData EventDat
 			}
 		}
 	}
+	*/
 }

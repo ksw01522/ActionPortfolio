@@ -6,8 +6,6 @@
 #include "ActionPortfolio.h"
 #include "Character/GAEffectActor.h"
 #include "Character/Player/PlayerCharacter.h"
-#include "Ability/Effects/GameplayEffect_Damage.h"
-#include "Ability/Effects/KnockbackExecutionCalculation.h"
 
 void UAbility_GutPunch::ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {

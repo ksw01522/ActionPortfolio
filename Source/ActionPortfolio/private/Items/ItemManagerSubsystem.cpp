@@ -6,22 +6,15 @@
 #include "Items/ItemBase.h"
 #include "ActionPortfolio.h"
 #include "Misc/ScopeLock.h"
-#include "Items/DropItemPoolWorldSubsystem.h"
+#include "Items/ItemWorldSubsystem.h"
 #include "ActionPortfolioInstance.h"
+#include "Items/ItemDeveloperSetting.h"
 
 TObjectPtr<UItemManagerSubsystem> UItemManagerSubsystem::ManagerInstance = nullptr;
 
 UItemManagerSubsystem::UItemManagerSubsystem()
 {
-	InventorySize = 64;
-	
-
-	DropItemPool = nullptr;
-	DefaultDIBounceCurve = nullptr;
-	DefaultDIMagnetizedCurve = nullptr;
-
-	BouncePower = 250;
-	BounceHeight = 100;
+	MeshCaptureMaterial = nullptr;
 }
 
 void UItemManagerSubsystem::AddItemData(const TSoftObjectPtr<UDataTable>& NewItemDataTable)
@@ -60,30 +53,22 @@ void UItemManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	ManagerInstance = this;
 
-	UActionPortfolioInstance* GameInstance = Cast<UActionPortfolioInstance>(GetGameInstance());
+	const UItemDeveloperSetting* ItemDeveloperSetting = GetDefault<UItemDeveloperSetting>();
 
 	//아이템 데이타들
-	TArray<TSoftObjectPtr<UDataTable>> ItemDatas = GameInstance->GetItemDataTables();
+	TArray<TSoftObjectPtr<UDataTable>> ItemDatas = ItemDeveloperSetting->GetItemDataTables();
 	for (auto& ItemData : ItemDatas)
 	{
 		AddItemData(ItemData);
 	}
 
-	//그 외 데이터들 등록
-	DefaultDIBounceCurve = GameInstance->GetDefaultDIBounceCurve().LoadSynchronous();
-	BouncePower = GameInstance->GetBouncePower();
-	BounceHeight = GameInstance->GetBounceHeight();
-	DefaultDIMagnetizedCurve = GameInstance->GetDefaultDIMagnetizedCurve().LoadSynchronous();
-
-	InventorySize = GameInstance->GetInventorySize();
-	DropItemPoolSize = GameInstance->GetDropItemPoolSize();
-
+	InventorySize = ItemDeveloperSetting->GetInventorySize();
+	MeshCaptureMaterial = ItemDeveloperSetting->GetMeshCaptureMaterial().LoadSynchronous();
 
 #if WITH_EDITOR
 	DebugItemManager();
 #endif
 
-		
 	SetInitialized(true);
 	PFLOG(Log, TEXT("End Item Manager Initialize."));
 }
@@ -108,13 +93,14 @@ const FItemData_Base* UItemManagerSubsystem::FindItemData(const FName& Code) con
 	return nullptr;
 }
 
-UItemBase* UItemManagerSubsystem::MakeItemInstance(const FName& Code)
+UItemBase* UItemManagerSubsystem::MakeItemInstance(const FName& Code, int Count)
 {
 	const FItemData_Base* ItemData = FindItemData(Code);
 	if(ItemData == nullptr) return nullptr;
 
 	UItemBase* NewItemInstance = NewObject<UItemBase>(this, ItemData->ItemClass, ItemData->Name);
 	NewItemInstance->InitializeItem(Code, ItemData);
+	NewItemInstance->SetCount(Count);
 
 #if WITH_EDITOR
 	PFLOG(Warning, TEXT("Make New Item Instance : Code {%s}, ItemName {%s}"), *Code.ToString(), *NewItemInstance->GetItemName().ToString());
@@ -124,75 +110,42 @@ UItemBase* UItemManagerSubsystem::MakeItemInstance(const FName& Code)
 }
 
 
-void UItemManagerSubsystem::SetDropItemPool(UDropItemPoolWorldSubsystem* NewPool)
-{
-	DropItemPool = NewPool;
-}
-
-void UItemManagerSubsystem::SetDropItemPoolSize(int NewSize)
-{
-	DropItemPoolSize = NewSize;
-
-	if (DropItemPool.IsValid())
-	{
-		DropItemPool->SetDropItemPoolSize(NewSize);
-	}
-}
-
-void UItemManagerSubsystem::ItemDrop(const FName& ItemCode, int Count, const FVector& Position)
-{
-	if (Count <= 0)
-	{
-		PFLOG(Error, TEXT("Invalidate Count : %d"), Count);
-		return;
-	}
-
-	UItemBase* TargetItem = MakeItemInstance(ItemCode);
-	ItemDrop(TargetItem, Count, Position);
-}
-
-void UItemManagerSubsystem::ItemDrop(UItemBase* Item, int Count, const FVector& Position)
-{
-	if(!IsValid(Item)) 
-	{
-		PFLOG(Error, TEXT("Try Drop Invalid Item"));
-		return;
-	}
-	ADroppedItem* DroppedItemInstance = DropItemPool->GetDroppedItem();
-
-	DroppedItemInstance->SetActorLocation(Position);
-	DroppedItemInstance->SetDroppedItem(Item, Count);
-}
-
-void UItemManagerSubsystem::BackToDropItemPool(ADroppedItem* Target)
-{
-	if (!IsValid(Target))
-	{
-		PFLOG(Error, TEXT("Invalid Draopped Item."));
-		return;
-	}
-
-	DropItemPool->BackToPool(Target);
-}
-
 
 #if WITH_EDITOR
 void UItemManagerSubsystem::DebugItemManager() const
 {
-	if (DefaultDIBounceCurve == nullptr)
-	{
-		PFLOG(Error, TEXT("Can't find Default DI Bounce Curve"));
-	}
-	else
-	{
-		float MinDIBTime, MaxDIBTime;
-		DefaultDIBounceCurve->GetTimeRange(MinDIBTime, MaxDIBTime);
-		PFLOG(Warning, TEXT("Default DI Bounce Curve TimeRange : %.1f ~ %.1f"), MinDIBTime, MaxDIBTime);
-	}
-
-
 
 }
 
+
+
 #endif
 
+void UItemManagerSubsystem::SetCaptureItemMeshByMesh(TSoftObjectPtr<UStaticMesh> InMesh)
+{
+	UWorld* World = GetWorld();
+	check(World);
+
+	UItemWorldSubsystem* IWS = World->GetSubsystem<UItemWorldSubsystem>();
+	if (IWS == nullptr) return;
+
+	IWS->SetCaptureItemMesh(InMesh);
+}
+
+void UItemManagerSubsystem::SetCaptureItemMesh(FName ItemCode)
+{
+	const FItemData_Base* ItemData = FindItemData(ItemCode);
+	check(ItemData);
+
+	SetCaptureItemMeshByMesh(ItemData->ItemMesh);
+}
+
+void UItemManagerSubsystem::SetCaptureItemMesh(const UItemBase* InItem)
+{
+	SetCaptureItemMeshByMesh(InItem->GetItemMesh());
+}
+
+void UItemManagerSubsystem::ClearCaptureItemMesh()
+{
+	SetCaptureItemMeshByMesh(nullptr);
+}

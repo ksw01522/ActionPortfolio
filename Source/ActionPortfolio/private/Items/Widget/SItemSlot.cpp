@@ -171,32 +171,15 @@ void SItemSlot::SetCount(int NewCount)
 	}
 }
 
-void SItemSlot::SetItemIcon(TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade)
+void SItemSlot::SetItemIcon(UTexture2D* NewImage, EItemGrade ItemGrade)
 {
-	if (IconMaterial == NewImage) return;
-
-	IconMaterial = NewImage;
-
-	// 아이템 아이콘 프레임 설정
 	SetIconFrame(ItemGrade);
-	FrameImage->SetVisibility(EVisibility::SelfHitTestInvisible);
 
-	if (!NewImage.IsValid())
-	{
-		IconImage->SetVisibility(EVisibility::Collapsed);
-		FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
-		Streamable.RequestAsyncLoad(NewImage.ToSoftObjectPath(), FStreamableDelegate::CreateLambda([&, NewImage]() {
-			if (IconMaterial != NewImage) return;
+	IconBrush.SetResourceObject(NewImage);
 
-			IconBrush.SetResourceObject(NewImage.Get());
-			IconImage->SetVisibility(EVisibility::SelfHitTestInvisible);
-			}));
-	}
-	else
-	{
-		IconBrush.SetResourceObject(NewImage.Get());
-		IconImage->SetVisibility(EVisibility::SelfHitTestInvisible);
-	}
+	EVisibility NewVisibility = NewImage == nullptr ? EVisibility::Collapsed : EVisibility::SelfHitTestInvisible;
+	IconImage->SetVisibility(NewVisibility);
+	FrameImage->SetVisibility(NewVisibility);
 }
 
 void SItemSlot::SetIconFrame(EItemGrade ItemGrade)
@@ -356,10 +339,10 @@ void SItemSlot::UpdateSlotSlate(const UItemBase* InItem)
 	if (InItem != nullptr)
 	{
 		int Count = InItem->GetCount();
-		TSoftObjectPtr<UMaterialInterface> IconMat = InItem->GetIconMaterial();
+		UTexture2D* Icon = InItem->GetItemIcon();
 		EItemGrade Grade = InItem->GetItemGrade();
 
-		UpdateSlotSlate(IconMat, Grade, Count);
+		UpdateSlotSlate(Icon, Grade, Count);
 	}
 	else
 	{
@@ -368,39 +351,19 @@ void SItemSlot::UpdateSlotSlate(const UItemBase* InItem)
 }
 
 
-void SItemSlot::UpdateSlotSlate(TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount)
-{
-#if WITH_EDITOR
-	if (NewImage.IsNull())
-	{
-		PFLOG(Error, TEXT("if u need Clear Slot, Call ClearInventorySlotWidget."));
-		return;
-	}
-	if (ItemGrade == EItemGrade::None)
-	{
-		PFLOG(Error, TEXT("U Call Set Inventory Slot Widget by None Grade."));
-		return;
-	}
-	if (NewCount == 0)
-	{
-		PFLOG(Error, TEXT("U use Zero Count , if u need Clear Slot, Call ClearInventorySlotWidget."));
-		return;
-	}
-#endif
 
+void SItemSlot::UpdateSlotSlate(UTexture2D* NewImage, EItemGrade ItemGrade, int NewCount)
+{
 	SetCount(NewCount);
 	SetItemIcon(NewImage, ItemGrade);
 }
 
 void SItemSlot::ClearSlotSlate()
 {
-	if(IconMaterial.IsNull()) return;
-
 	IconImage->SetVisibility(EVisibility::Collapsed);
 	FrameImage->SetVisibility(EVisibility::Collapsed);
 	CountBlock->SetVisibility(EVisibility::Collapsed);
 
-	IconMaterial.Reset();
 	IconBrush.SetResourceObject(nullptr);
 
 	CountBlock->SetText(FText::GetEmpty());
@@ -410,7 +373,7 @@ void SItemSlot::ClearSlotSlate()
 
 FItemSlotDragDropOperation::FItemSlotDragDropOperation(UItemSlot* InFromSlot) : FromSlot(InFromSlot)
 {
-	IconBrush = FSlateImageBrush(InFromSlot->GetItem()->GetIconMaterial().Get(), FVector2D(32));
+	IconBrush = FSlateImageBrush(InFromSlot->GetItem()->GetItemIcon(), FVector2D(32));
 }
 
 void FItemSlotDragDropOperation::Construct()

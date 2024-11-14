@@ -9,30 +9,56 @@
 /**
  * 
  */
+struct FLinkAbilityHotKeySlotNode
+{
+	FLinkAbilityHotKeySlotNode() : Slot(nullptr), SlotWidget(nullptr)
+	{}
+
+	FLinkAbilityHotKeySlotNode(class UAbilityHotKeySlotWidget* InSlotWidget);
+	
+
+	TWeakObjectPtr<class UAbilitySlot_HotKey> Slot;
+
+	TWeakObjectPtr<class UAbilityHotKeySlotWidget> SlotWidget;
+
+	FDelegateHandle Handle;
+};
+
 UCLASS()
 class ACTIONPORTFOLIO_API USkillHotKeyWindow : public UUserWidget
 {
 	GENERATED_BODY()
 	
-
-private:
-	UPROPERTY(Transient)
-	TMap<int, class UAbilityHotKeySlotWidget*> AbilitySlots;
-
-
-	TWeakObjectPtr<class APlayerCharacter> OwnerCharacter;
-
 protected:
 	virtual void NativeConstruct() override;
 
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
+	virtual void BeginDestroy() override;
+
+private:
+	TWeakObjectPtr<class UActionPFAbilitySystemComponent> LinkedASC;
+
+	TArray<FLinkAbilityHotKeySlotNode> HotKeySlotNodes;
+
+	FDelegateHandle OnChangedMappingHandle;
+	FDelegateHandle OnResetMappingHandle;
+
+	void UpdateAbilityIcon();
+
+	void OnChangedInputMapping(const FName& InCode, const FKey& NewKey);
+
+	void OnResetInputMapping(class UPlayerMappableInputConfig* InConfig);
+
+	void LinkAbilityHotKeySlots(const TArray<class UAbilitySlot_HotKey*>& InSlots);
+
+	void UnlinkAbilityHotKeySlots();
+
+	void SetLinkedAbilitySystem(UActionPFAbilitySystemComponent* InASC) { LinkedASC = InASC; }
+
+	UFUNCTION()
+	void OnChangedPawn(APawn* OldPawn, APawn* NewPawn);
+
 public:
-
-	UFUNCTION(BlueprintCallable, Category = "Initialize")
-	void SetAbilitySlots(TMap<int, UAbilityHotKeySlotWidget*> InSlots);
-
-	UAbilityHotKeySlotWidget* GetAbilitySlot(int InputID);
-	void ClearWindow();
-	void SetAbilityIcon(int InputID, const TSharedPtr<class SAbilityIcon>& InIcon);
-
-	void SetOwnerCharacter(APlayerCharacter* InOwner);
+	void UpdateHotKeyIcon();
 };

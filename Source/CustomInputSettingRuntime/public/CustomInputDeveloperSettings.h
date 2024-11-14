@@ -78,7 +78,7 @@ private:
 #endif
 
 
-//½½·¹ÀÌÆ® °ü·Ã
+//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Slate", GlobalConfig)
 	FVector2D GuideBoxSize;

@@ -24,7 +24,10 @@ DECLARE_DELEGATE_OneParam(FOnDialogueAnimComplete, bool);
  */
 class ACTIONPORTFOLIO_API SDialogueMainSlate : public SCompoundWidget
 {
+	SLATE_DECLARE_WIDGET(SDialogueMainSlate, SCompoundWidget);
+
 public:
+
 	SLATE_BEGIN_ARGS(SDialogueMainSlate)
 		: _AnswerButtonPadding(0, 5)
 	{}
@@ -70,9 +73,13 @@ public:
 
 class ACTIONPORTFOLIO_API SDialogueBox : public SCompoundWidget
 {
-public:
-	SLATE_BEGIN_ARGS(SDialogueBox){}
+	SLATE_DECLARE_WIDGET(SDialogueBox, SCompoundWidget);
 
+public:
+	SLATE_BEGIN_ARGS(SDialogueBox) : _TextStyleSet(nullptr)
+	{}
+
+	SLATE_ARGUMENT(const UDataTable*, TextStyleSet)
 	SLATE_EVENT(FOnDialogueAnimComplete, OnAnimComplete)
 
 	SLATE_END_ARGS()
@@ -92,9 +99,10 @@ private:
 	////////////////////////// Text Block ////////////////////////
 	TSharedPtr<STextBlock> DialoguerNameBlock;
 	TSharedPtr<SRichTextBlock> DialogueTextBlock;
+	TSharedPtr<SBorder> BoxBorder;
 
-	TObjectPtr<UDataTable> TextStyleSet;
-	FTextBlockStyle TextBlockStyle;
+	TObjectPtr<const UDataTable> TextStyleSet;
+	FTextBlockStyle DefaultTextStyle;
 
 	TSharedPtr<FSlateStyleSet> StyleInstance;
 
@@ -106,6 +114,9 @@ private:
 	void MakeStyleInstance();
 	void MakeDecoInstance(TArray< TSharedRef<ITextDecorator > >& OutDecorators);
 
+public:
+	void SetTextStyleSet(const UDataTable* InStyleSet);
+
 	/////////////////////////// Text /////////////////////////////
 private:
 	FString TargetText;
@@ -113,11 +124,11 @@ private:
 
 	bool bIsDecorating = false;
 
+public:
 	void SetDialoguerName(const FString& InName);
 	void SetDialogueString(const FString& InString);
 	void SetSlateDecorators(const TArray<TSubclassOf<class USRichTextBlockDecorator>>& Decos);
 
-public:
 	void SetDialogueBox(const FString& InName, const FString& InString, const TArray<TSubclassOf<class USRichTextBlockDecorator>>& Decos);
 
 	void ClearDialogueBox();

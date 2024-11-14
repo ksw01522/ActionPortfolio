@@ -9,15 +9,11 @@
 
 void UDialogueWorldSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
-	LOG_WARNING(TEXT("On World BeginPlay"));
-
 	const UDialogueDeveloperSettings* DDS = GetDefault<UDialogueDeveloperSettings>();
 
 	const FVector CameraSpawnLocation = FVector(0, 0, 1000000);
 
 	SceneCapture = GetWorld()->SpawnActor<ASceneCapture2D>(DDS->GetDialogueSceneCaptureClass(), CameraSpawnLocation, FRotator::ZeroRotator);
-
-	//SceneCapture->OnlyCom
 }
 
 void UDialogueWorldSubsystem::RegisterAnimActor(ADialogueAnimationActor* InActor, FName InCode)

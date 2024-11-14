@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Ability/ActionPFGameplayAbility.h"
+#include "Ability/Effects/Damage/DamageEffect.h"
+#include "Ability/Ability/Ability_Rigidity.h"
 #include "Ability_Whirlwind.generated.h"
 
 /**
@@ -35,8 +37,8 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Whirlwind", meta = (AllowPrivateAccess = "true"))
 	FGameplayTagContainer GrantTagsDuringAttack;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Whirlwind|Damage", Instanced, meta = (AllowPrivateAccess = "true", ShowOnlyInnerProperties))
-	TObjectPtr<class UAbilityDamageCreator> DamageCreator;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Whirlwind|Damage", meta = (AllowPrivateAccess = "true"))
+	FDamageDataStruct DamageData;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Whirlwind|Collision", meta = (AllowPrivateAccess = "true"))
 	float WhirlwindRadius;
@@ -47,11 +49,8 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Whirlwind|Collision", meta = (AllowPrivateAccess = "true"))
 	FTransform RelativeTransform;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Whirlwind|Rigidity", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<class UAbility_Rigidity> RigidityClass;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Whirlwind|Rigidity", meta = (AllowPrivateAccess = "true"))
-	float RigidityTime;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rigidity", meta = (AllowPrivateAccess = "true", ShowOnlyInnerProperties))
+	FRigidityData RigidityData;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Whirlwind|Knockback", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<class UAbility_Knockback> KnockbackClass;
@@ -66,8 +65,6 @@ protected:
 
 
 private:
-	FGameplayEffectSpecHandle DamageEffectSpecHandle;
-
 	UFUNCTION()
 	void OnEnterAttackSection(UAnimMontage* InMeeleeMontage, const FName& InSectionName);
 

@@ -38,10 +38,7 @@ private:
 	FActiveGameplayEffectHandle StatusUpEffectHandle;
 
 private:
-	virtual bool CanDropFrom(const UItemSlot* From) const;
-	virtual bool CanDropTo(const UItemSlot* To) const;
-
-	virtual bool CanItemInSlot(UItemBase* InItem) const;
+	virtual bool CanItemInSlot(UItemBase* InItem) const override;
 
 	void ApplyItemEffects();
 

@@ -22,14 +22,22 @@ SAbilitySlot::SAbilitySlot()
 	SetCanTick(false);
 }
 
+SAbilitySlot::~SAbilitySlot()
+{
+	ClearAbilitySlot();
+}
+
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SAbilitySlot::Construct(const FArguments& InArgs)
 {
 	SetVisibility(EVisibility::Visible);
 	
+	LinkAbilitySlot(InArgs._LinkSlot);
 	BackgroundBrush = InArgs._BackgroundBrush;
 	BGColorAndOpacity = InArgs._BackgroundColorAndOpacity;
 	SlotSize = InArgs._SlotSize;
+
+	
 }
 
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
@@ -47,11 +55,6 @@ FVector2D SAbilitySlot::ComputeDesiredSize(float) const
 	return SlotSize;
 }
 
-void SAbilitySlot::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
-{
-	
-}
-
 int32 SAbilitySlot::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
 	const bool bEnabled = ShouldBeEnabled(bParentEnabled);
@@ -63,43 +66,42 @@ int32 SAbilitySlot::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeo
 		const FLinearColor FinalColorAndOpacity(InWidgetStyle.GetColorAndOpacityTint() * BGColorAndOpacity.GetColor(InWidgetStyle) * BackgroundBrush->GetTint(InWidgetStyle));
 
 		FSlateDrawElement::MakeBox(OutDrawElements, NewLayerId, AllottedGeometry.ToPaintGeometry(), BackgroundBrush, DrawEffects, FinalColorAndOpacity);
-	
 	}
 
-	return SCompoundWidget::OnPaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, NewLayerId, InWidgetStyle, bEnabled);
-}
-
-UAbilitySlot* SAbilitySlot::GetOwnerSlot() const
-{
-	return OwnerSlot.Get();
-}
-
-void SAbilitySlot::LinkOwnerSlot(UAbilitySlot* InOwner)
-{
-	OwnerSlot = InOwner;
-}
-
-void SAbilitySlot::UnlinkOwnerSlot(UAbilitySlot* InOwner)
-{
-	if (OwnerSlot == InOwner)
+	if (AbilityIcon.IsValid())
 	{
-		OwnerSlot = nullptr;
+		NewLayerId = AbilityIcon->Paint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, NewLayerId, InWidgetStyle, bParentEnabled);
 	}
+
+	return NewLayerId;
 }
+
+
+
+
+void SAbilitySlot::LinkAbilitySlot(UAbilitySlot* InSlot)
+{
+	if(LinkedSlot == InSlot) return;
+
+	ClearAbilitySlot();
+
+	LinkedSlot = InSlot;
+
+}
+
+void SAbilitySlot::ClearAbilitySlot()
+{
+	if(LinkedSlot == nullptr) return;
+
+	LinkedSlot.Reset();
+
+	AbilityIcon.Reset();
+}
+
 
 void SAbilitySlot::SetAbilityIcon(const TSharedPtr<SAbilityIcon>& InIcon)
 {
-	if (InIcon.IsValid())
-	{
-		ChildSlot
-		[
-			InIcon.ToSharedRef()
-		];
-	}
-	else
-	{
-		ChildSlot.DetachWidget();
-	}
+	AbilityIcon = InIcon;
 }
 
 
@@ -107,23 +109,22 @@ void SAbilitySlot::SetAbilityIcon(const TSharedPtr<SAbilityIcon>& InIcon)
 FReply SAbilitySlot::OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
 {
 	TSharedPtr<FDragDropOperation_AbilitySlot> DDO = DragDropEvent.GetOperationAs<FDragDropOperation_AbilitySlot>();
-
+	
+	check(LinkedSlot.IsValid());
 	if (DDO.IsValid())
 	{
-		UActionPFAbilityBFL::TryChangeAbilitySlot(DDO->GetFromSlot(), OwnerSlot.Get());
+		DDO->SetToSlot(LinkedSlot.Get());
 	}
-	else
-	{
-	}
+	
 
 	return FReply::Handled();
 }
 
 FReply SAbilitySlot::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && OwnerSlot.IsValid() && OwnerSlot->GetAbilityClass().GetDefaultObject() != nullptr)
+	if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && LinkedSlot.IsValid() && LinkedSlot->GetAbilityInSlot().GetDefaultObject() != nullptr)
 	{
-		TSharedRef<FDragDropOperation_AbilitySlot> DDO = FDragDropOperation_AbilitySlot::AbilitySlotDrag(OwnerSlot.Get());
+		TSharedRef<FDragDropOperation_AbilitySlot> DDO = FDragDropOperation_AbilitySlot::AbilitySlotDrag(LinkedSlot.Get());
 
 		return FReply::Handled().BeginDragDrop(DDO);
 	}
@@ -141,12 +142,17 @@ void FDragDropOperation_AbilitySlot::Construct()
 
 void FDragDropOperation_AbilitySlot::OnDrop(bool bDropWasHandled, const FPointerEvent& MouseEvent)
 {
-	FDragDropOperation::OnDrop(bDropWasHandled, MouseEvent);
+	DestroyCursorDecoratorWindow();
+
+	if (ToSlot.IsValid())
+	{
+		FromSlot->SlotDropTo(ToSlot.Get());
+	}
 }
 
 TSharedPtr<SWidget> FDragDropOperation_AbilitySlot::GetDefaultDecorator() const
 {
-	return FromSlot->GetAbilityIcon();
+	return nullptr;
 }
 
 TSharedRef<FDragDropOperation_AbilitySlot> FDragDropOperation_AbilitySlot::AbilitySlotDrag(UAbilitySlot* InFromSlot)
@@ -169,7 +175,7 @@ void SAbilitySlot_HotKey::PrivateRegisterAttributes(FSlateAttributeInitializer& 
 SAbilitySlot_HotKey::SAbilitySlot_HotKey()
 {
 	SetCanTick(false);
-	CurrentHotKeyBrush = nullptr;
+	bIsGamepad = false;
 }
 
 SAbilitySlot_HotKey::~SAbilitySlot_HotKey()
@@ -187,8 +193,8 @@ void SAbilitySlot_HotKey::Construct(const FArguments& InArgs)
 					.BackgroundColorAndOpacity(InArgs._BackgroundColorAndOpacity)
 					.SlotSize(InArgs._SlotSize));
 	
-	CurrentHotKeyBrush = &HotKeyBrush_Keyboard;
-
+	SetHotKeys(InArgs._HotKey_Keyboard, InArgs._HotKey_Gamepad);
+	
 	AddOnChangedDeviceEvent();
 }
 
@@ -197,20 +203,11 @@ END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SAbilitySlot_HotKey::AddOnChangedDeviceEvent()
 {
 	UCustomInputSettingSubsystem* CISS = UCustomInputSettingSubsystem::GetInstance();
-
-#if WITH_EDITOR
-	if (CISS == nullptr) return;
-#endif
-
-	OnChangedInputDeviceHandle = CISS->AddInputDeviceChangeEvent(TDelegate<void(EInputDeviceType)>::CreateSP(this, &SAbilitySlot_HotKey::OnCurrentDeviceChanged));
-
-	if (CISS->GetCurrentInputDevice() == EInputDeviceType::Keyboard)
+	if (CISS)
 	{
-		CurrentHotKeyBrush = &HotKeyBrush_Keyboard;
-	}
-	else
-	{
-		CurrentHotKeyBrush = &HotKeyBrush_Gamepad;
+		OnChangedInputDeviceHandle = CISS->AddInputDeviceChangeEvent(TDelegate<void(EInputDeviceType)>::CreateSP(this, &SAbilitySlot_HotKey::OnCurrentDeviceChanged));
+
+		bIsGamepad = CISS->GetCurrentInputDevice() == EInputDeviceType::Gamepad;
 	}
 }
 
@@ -218,25 +215,15 @@ void SAbilitySlot_HotKey::ClearOnChangedDeviceEvent()
 {
 	UCustomInputSettingSubsystem* CISS = UCustomInputSettingSubsystem::GetInstance();
 
-#if WITH_EDITOR
 	if (CISS == nullptr) return;
-#endif
 
 	CISS->RemoveInputDeviceChangeEvent(OnChangedInputDeviceHandle);
 	OnChangedInputDeviceHandle.Reset();
-	CurrentHotKeyBrush = nullptr;
 }
 
 void SAbilitySlot_HotKey::OnCurrentDeviceChanged(EInputDeviceType InType)
 {
-	if (InType == EInputDeviceType::Keyboard)
-	{
-		CurrentHotKeyBrush = &HotKeyBrush_Keyboard;
-	}
-	else
-	{
-		CurrentHotKeyBrush = &HotKeyBrush_Gamepad;
-	}
+	bIsGamepad = InType == EInputDeviceType::Gamepad;
 }
 
 int32 SAbilitySlot_HotKey::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
@@ -245,16 +232,20 @@ int32 SAbilitySlot_HotKey::OnPaint(const FPaintArgs& Args, const FGeometry& Allo
 	const bool bEnabled = ShouldBeEnabled(bParentEnabled);
 	const ESlateDrawEffect DrawEffects = bEnabled ? ESlateDrawEffect::None : ESlateDrawEffect::DisabledEffect;
 
+	const FSlateBrush* CurrentHotKeyBrush = bIsGamepad ? &HotKeyBrush_Gamepad : &HotKeyBrush_Keyboard;
+
 	if (CurrentHotKeyBrush != nullptr)
 	{
+		IconLayerId++;
+
 		const FLinearColor FinalColorAndOpacity(InWidgetStyle.GetColorAndOpacityTint() * CurrentHotKeyBrush->GetTint(InWidgetStyle));
 
 		FGeometry HotKeyGeometry = AllottedGeometry.MakeChild(FSlateRenderTransform(FScale2f(0.35,0.35)), FVector2D(1));
 
-		FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 2, HotKeyGeometry.ToPaintGeometry(), CurrentHotKeyBrush, DrawEffects, FinalColorAndOpacity);
+		FSlateDrawElement::MakeBox(OutDrawElements, IconLayerId, HotKeyGeometry.ToPaintGeometry(), CurrentHotKeyBrush, DrawEffects, FinalColorAndOpacity);
 	}
 
-	return IconLayerId < LayerId + 2 ? LayerId + 2 : IconLayerId;
+	return IconLayerId;
 }
 
 void SAbilitySlot_HotKey::SetHotKeyKeyboard(const FKey& InKey)

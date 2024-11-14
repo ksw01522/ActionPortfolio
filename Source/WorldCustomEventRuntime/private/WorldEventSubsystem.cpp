@@ -107,7 +107,7 @@ bool UWorldEventSubsystem::CallWorldCustomEvent(FString EventKey)
 {
 	LOG_INFO(TEXT("Call World Custom Event Key = %s"), *EventKey);
 
-	UWorldEventObject** FindedEvent = CustomEvents.Find(EventKey);
+	TObjectPtr<UWorldEventObject>* FindedEvent = CustomEvents.Find(EventKey);
 	if(FindedEvent == nullptr)
 	{
 		LOG_ERROR(TEXT("Can't Find Event From \"%s\""), *EventKey);

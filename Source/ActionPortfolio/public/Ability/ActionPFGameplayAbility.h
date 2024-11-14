@@ -53,7 +53,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ability")
 	TArray<FGameplayEffectSpecHandle> MakeEffectSpecHandle(TArray<TSubclassOf<UGameplayEffect>> ArrayEffectClass);
 
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override final;
 	virtual void ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData);
 
 protected:
@@ -69,9 +69,9 @@ protected:
 	FGameplayTagContainer CooldownTags;
 
 	UPROPERTY(Transient)
-	FGameplayTagContainer TempCooldownTags;
+	mutable FGameplayTagContainer TempCooldownTags;
 private:
-	bool bTempCooldownTagsInitialized = false;
+	mutable bool bTempCooldownTagsInitialized = false;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
@@ -80,14 +80,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style")
 	FSlateBrush DefaultIconBrush;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+	bool bExposeToPlayer = true;
 
 public:
+	virtual UGameplayEffect* GetCooldownGameplayEffect() const override;
+
 	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const override;
 	virtual const FGameplayTagContainer* GetCooldownTags() const override;
 
-	virtual TSharedPtr<class SAbilityIcon> CreateAbilityIcon() const;
-
-	virtual const FSlateBrush* GetAbilityIconBrush(TWeakObjectPtr<const UAbilitySystemComponent> InSystem) const;
+	virtual TSharedRef<class SAbilityIcon> CreateAbilityIcon() const;
+	virtual void UpdateAbilityIcon(class UActionPFAbilitySystemComponent* InASC, SAbilityIcon* InIcon) const;
 
 	EAbilityType GetAbilityType() const { return AbilityType; }
 

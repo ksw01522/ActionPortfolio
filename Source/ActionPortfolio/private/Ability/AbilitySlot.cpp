@@ -6,92 +6,30 @@
 #include "Ability/Widget/SAbilityIcon.h"
 #include "ActionPortfolio.h"
 
-void UAbilitySlot::ChangeSlotWithOther(UAbilitySlot* Other)
+
+UAbilitySlot::UAbilitySlot() : SlotType()
 {
-	TempAbilityClass = Other->GetAbilityClass();
 }
 
-bool UAbilitySlot::CanChangeSlotFrom(UAbilitySlot* From) const
+UAbilitySlot::UAbilitySlot(FName InSlotType) : SlotType(InSlotType)
 {
-	if(From == nullptr) return false;
-
-	return true;
 }
 
-bool UAbilitySlot::CanChangeSlotTo(UAbilitySlot* To) const
+bool UAbilitySlot::CanSetAbilityClass(TSubclassOf<class UActionPFGameplayAbility> InClass)
 {
-	if (To == nullptr) return false;
-
-	return true;
-}
-
-void UAbilitySlot::ApplyChangeSlot()
-{
-	SetAbilityClass(TempAbilityClass);
-	TempAbilityClass = nullptr;
-	
-}
-
-void UAbilitySlot::LinkAbilitySlotSlate(const TSharedPtr<SAbilitySlot>& InSlot)
-{
-	if(SlotSlate == InSlot) return;
-	if (SlotSlate.IsValid())
-	{
-		SlotSlate.Pin()->UnlinkOwnerSlot(this);
-	}
-
-	SlotSlate = InSlot;
-	if (SlotSlate.IsValid())
-	{
-		SlotSlate.Pin()->LinkOwnerSlot(this);
-		if (AbilityClass.GetDefaultObject() != nullptr)
-		{
-			BringAbilityIcon();
-		}
-		else
-		{
-			SlotSlate.Pin()->SetAbilityIcon(nullptr);
-		}
-	}
-}
-
-void UAbilitySlot::ClearSlot()
-{
-	TempAbilityClass = nullptr;
-
-	ApplyChangeSlot();
-}
-
-
-
-bool UAbilitySlot::PreSetAbilityClass(TSubclassOf<class UActionPFGameplayAbility> InClass)
-{
-	return true;
+	return AbilityClass != InClass;
 }
 
 void UAbilitySlot::SetAbilityClass(TSubclassOf<class UActionPFGameplayAbility> InClass)
 {
-	if(!PreSetAbilityClass(InClass)) return;
+	if(!CanSetAbilityClass(InClass)) return;
 
 	AbilityClass = InClass;
 
-	if (SlotSlate.IsValid())
+	if (OnSetAbilityDel.IsBound())
 	{
-		if (AbilityClass.GetDefaultObject() != nullptr)
-		{
-			BringAbilityIcon();
-		}
-		else
-		{
-			SlotSlate.Pin()->SetAbilityIcon(nullptr);
-		}
+		OnSetAbilityDel.Broadcast(this);
 	}
 
 	PostSetAbilityClass();
-}
-
-
-void UAbilitySlot::BringAbilityIcon()
-{
-	
 }

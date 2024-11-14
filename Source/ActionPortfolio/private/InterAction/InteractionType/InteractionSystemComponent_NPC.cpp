@@ -169,7 +169,7 @@ void UInteractionSystemComponent_NPC::CreateInteractionSlate_Implementation(AAct
 			if (WeakSlate.IsValid())
 			{
 				GEngine->GameViewport->RemoveViewportWidgetContent(WeakSlate.Pin().ToSharedRef());
-				Player->RemoveCustomFocuseWidgetStack();
+				//Player->RemoveCustomFocuseWidgetStack();
 			}
 			return FReply::Handled();
 			})
@@ -190,7 +190,7 @@ void UInteractionSystemComponent_NPC::CreateInteractionSlate_Implementation(AAct
 
 	GEngine->GameViewport->AddViewportWidgetContent(InteractionSlate.ToSharedRef(), 100);
 
-	Player->AddCustomFocuseWidget(InteractionSlate.ToSharedRef());
+	//Player->AddCustomFocuseWidget(InteractionSlate.ToSharedRef());
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -38,9 +38,6 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-private:
-	void OnCompleteLoadMesh(TSoftObjectPtr<class UStaticMesh> NewItemMesh);
-
 public:
-	void SetItemMesh(TSoftObjectPtr<class UStaticMesh> NewItemMesh);
+	void SetItemMesh(UStaticMesh* NewItemMesh);
 };

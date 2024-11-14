@@ -8,7 +8,6 @@
 #include "Ability/ActionPFGameplayAbility.h"
 #include "ActionPortfolio.h"
 
-TSharedPtr<SAbilityIcon> SAbilityIcon::EmptyAbilityIcon = nullptr;
 
 SLATE_IMPLEMENT_WIDGET(SAbilityIcon)
 void SAbilityIcon::PrivateRegisterAttributes(FSlateAttributeInitializer& Initailizer)
@@ -27,32 +26,18 @@ BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
 void SAbilityIcon::Construct(const FArguments& InArgs)
 {
-	Ability = InArgs._Ability;
+	IconBrush = InArgs._IconBrush;
 	SetVisibility(EVisibility::HitTestInvisible);
+
+	SetCanTick(false);
+
+	bCanAct = true;
+	CoolTimeDuration = 0;
+	RemainCoolTime = 0;
 }
 
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
-void SAbilityIcon::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
-{
-	if (!Ability.IsValid())
-	{
-		IconBrush = nullptr;
-		return;
-	}
-
-	IconBrush = Ability->GetAbilityIconBrush(AbilitySystem);
-	if (AbilitySystem.IsValid())
-	{
-		if(AbilitySystem->GetCooldownRemainingAndDurationByTag(*Ability->GetCooldownTags(), RemainCoolTime, CoolTimeDuration))
-		{ }
-	
-		bCanAct = AbilitySystem->CanActivateAbility(Ability->GetClass());
-	}
-	
-			
-	
-}
 
 FVector2D SAbilityIcon::ComputeDesiredSize(float) const
 {
@@ -71,28 +56,9 @@ void SAbilityIcon::SetIconSize(FVector2D InSize)
 	IconSizeOverride = InSize;
 }
 
-void SAbilityIcon::LinkAbility(UActionPFGameplayAbility* InAbility)
-{
-	Ability = InAbility;
-	if (Ability.IsValid())
-	{
-		IconBrush = Ability->GetAbilityIconBrush(AbilitySystem);
-	}
-	else
-	{
-		IconBrush = nullptr;
-	}
-}
-
-void SAbilityIcon::LinkAbilitySystem(UActionPFAbilitySystemComponent* InSystem)
-{
-	AbilitySystem = InSystem;
-}
 
 int32 SAbilityIcon::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
-	if(!AbilitySystem.IsValid() || !Ability.IsValid()) return LayerId;
-
 	int32 NewLayerId = LayerId;
 
 	const bool bEnabled = ShouldBeEnabled(bParentEnabled);
@@ -106,9 +72,9 @@ int32 SAbilityIcon::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeo
 
 		FSlateDrawElement::MakeBox(OutDrawElements, NewLayerId, AllottedGeometry.ToPaintGeometry(), IconBrush, DrawEffects, FinalColorAndOpacity);
 	
-		if (AbilitySystem.IsValid() && !bCanAct && 0 < RemainCoolTime)
+		if (!bCanAct && 0 < CoolTimeDuration)
 		{
-			NewLayerId += 2;
+			NewLayerId++;
 			static const FSlateBrush CoolCoverBrush = FSlateImageBrush(NAME_None, FVector2D(32), (FSlateColor)(FLinearColor(0, 0, 0, 0.5)));
 			const FLinearColor CoolCoverColorAndOpacity(InWidgetStyle.GetColorAndOpacityTint() * CoolCoverBrush.GetTint(InWidgetStyle));
 

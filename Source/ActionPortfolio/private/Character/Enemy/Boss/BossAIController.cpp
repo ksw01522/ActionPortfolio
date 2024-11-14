@@ -61,11 +61,6 @@ void ABossAIController::OnPossess(APawn* InPawn)
 void ABossAIController::OnUnPossess()
 {
 	ACharacterBoss* Boss = GetPawn<ACharacterBoss>();
-	if (IsValid(Boss))
-	{
-		Boss->OnDamagedDel.RemoveAll(this);
-	}
-
 
 	Super::OnUnPossess();
 }

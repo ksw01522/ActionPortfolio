@@ -15,7 +15,7 @@
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Ability/Tasks/AbilityTask_WaitEnterMontageSection.h"
 #include "Ability/Tasks/AbilityTask_EffectUseCollision.h"
-#include "Ability/AbilityDamageCreator.h"
+#include "Ability/ActionPFAbilityBFL.h"
 #include "Ability/Tasks/AbilityTask_WaitNewCollision.h"
 #include "Character/ActionPortfolioCharacter.h"
 #include "Ability/Tasks/AbilityTask_GrantTags.h"
@@ -25,6 +25,7 @@
 #include "Character/Player/ActionPFPlayerController.h"
 #include "LockOn/LockOnTargetComponent.h"
 
+#include "Ability/ActionPFAbilityBFL.h"
 
 UGameplayAbility_Meelee::UGameplayAbility_Meelee() : Super(), AttackCollisionProfileName("AbilityEffect")
 {
@@ -44,10 +45,8 @@ UGameplayAbility_Meelee::UGameplayAbility_Meelee() : Super(), AttackCollisionPro
 	CancelAbilitiesWithTag.AddTag(FGameplayTag::RequestGameplayTag("Ability.Meelee"));
 
 	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag("Ability.Meelee"));
-	
-	DamageCreator = CreateDefaultSubobject<UAbilityDamageCreator>("DamageCreator");
 
-	CustomRigidityAnim = nullptr;
+	RigidityData.RigidityClass = UAbility_Rigidity::StaticClass();
 }
 
 void UGameplayAbility_Meelee::OnMontageEnded()
@@ -106,20 +105,7 @@ void UGameplayAbility_Meelee::ActivateAbility_CPP(const FGameplayAbilitySpecHand
 		}
 	}
 
-	FGameplayEffectContextHandle ContextHandle = ActorInfo->AbilitySystemComponent->MakeEffectContext();
-	int32 TempAbilityLevel = GetAbilityLevel();
 
-	check(DamageCreator);
-	DamageEffectSpecHandle.Data = MakeShared<FGameplayEffectSpec>(DamageCreator->CreateDamageEffect(), ContextHandle, TempAbilityLevel);
-
-	for (auto& OptionalEffect : OptionEffects)
-	{
-		UGameplayEffect* OptionalEffectObject = NewObject<UGameplayEffect>(this, OptionalEffect);
-		FGameplayEffectSpec OptionalEffectSpec(OptionalEffectObject, ContextHandle, TempAbilityLevel);
-		FGameplayEffectSpecHandle OptionalEffectHandle(&OptionalEffectSpec);
-
-		DamageEffectSpecHandle.Data->TargetEffectSpecs.Add(OptionalEffectHandle);
-	}
 	
 	UAbilityTask_PlayMontageAndWait* MeeleeAbilityTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, "MeeleeAnim", MeeleeMontage, 1, NAME_None, bStopWhenAbilityEnd);
 	ensure(MeeleeAbilityTask);
@@ -205,40 +191,44 @@ void UGameplayAbility_Meelee::OnEnterPostDelay(UAnimMontage* InMeeleeMontage, co
 
 void UGameplayAbility_Meelee::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerActor)
-	{
-		DamageEffectSpecHandle.Clear();
-	}
-	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 void UGameplayAbility_Meelee::OnAttackBeginOverlap(const FGameplayAbilityTargetDataHandle& TargetData)
 {
 	IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>( GetAvatarActorFromActorInfo());
+	if(TargetData.Num() == 0) return;
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
 	
+	FGameplayEffectSpecHandle DamageSpecHandle = UDamageEffect::CreateDamageEffectSpec(DamageData, ContextHandle);
+
 	for (auto& Target : TargetData.Data)
 	{
 		TArray<TWeakObjectPtr<AActor>> TargetActors = Target->GetActors();
 		for (TWeakObjectPtr<AActor>& TargetActor : TargetActors)
 		{
 			if (!TargetActor.IsValid() || TeamAgent->GetTeamAttitudeTowards(*TargetActor.Get()) == ETeamAttitude::Friendly) continue;
-			IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(TargetActor);
-			UAbilitySystemComponent* TargetASC = TargetASI->GetAbilitySystemComponent();
+			
+			UAbilitySystemComponent* TargetASC = UActionPFAbilityBFL::GetAbilitySystemComponent(TargetActor.Get());
 			if (TargetASC == nullptr) continue;
 
-			checkf(DamageEffectSpecHandle.IsValid(), TEXT("Can't find Damage Effect In : %s"), *GetName());
-			CurrentActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*DamageEffectSpecHandle.Data, TargetASC);
+			ASC->ApplyGameplayEffectSpecToTarget(*DamageSpecHandle.Data, TargetASC);
 
 			FGameplayEventData EventData;
 			EventData.Instigator = GetAvatarActorFromActorInfo();
 			EventData.Target = TargetActor.Get();
-			CurrentActorInfo->AbilitySystemComponent->HandleGameplayEvent(FGameplayTag::RequestGameplayTag(FName("CommonEvent.OnAttackTarget")), &EventData);
+			ASC->HandleGameplayEvent(FGameplayTag::RequestGameplayTag(FName("CommonEvent.OnAttackTarget")), &EventData);
 		
-			UAbility_Rigidity::RigidityToTarget(RigidityClass, GetCurrentActorInfo()->AbilitySystemComponent.Get(), TargetASC, RigidityTime, Target->GetHitResult(), CustomRigidityAnim);
+			UAbility_Rigidity::RigidityToTarget(GetCurrentActorInfo()->AbilitySystemComponent.Get(), TargetASC, RigidityData);
 
-			FGameplayAbilitySpec KnockbackSpec(KnockbackClass, 1, -1, GetAvatarActorFromActorInfo());
-			TargetASC->GiveAbilityAndActivateOnce(KnockbackSpec);
+			if (KnockbackClass.GetDefaultObject() != nullptr)
+			{
+				FGameplayAbilitySpec KnockbackSpec(KnockbackClass, 1, -1, GetAvatarActorFromActorInfo());
+				TargetASC->GiveAbilityAndActivateOnce(KnockbackSpec);
+			}
+
 		}
 	}
 }

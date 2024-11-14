@@ -21,12 +21,6 @@ AChracterEnemyA::AChracterEnemyA()
 	{
 		GetMesh()->SetSkeletalMeshAsset(EnemyASkeletalMesh.Object);
 	}
-
-	static ConstructorHelpers::FClassFinder<UGameplayEffect> EnemyADefaultAttribute(TEXT("/Game/ActionPFCharacter/Enemies/EnemyA/Ability/DefaultAttribute_EnemyA.DefaultAttribute_EnemyA_C"));
-	if (EnemyADefaultAttribute.Succeeded())
-	{
-		DefaultAttributes = EnemyADefaultAttribute.Class;
-	}
 }
 
 void AChracterEnemyA::Tick(float DeltaSeconds)

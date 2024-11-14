@@ -17,6 +17,11 @@ class ACTIONPORTFOLIO_API AEnemyAIController : public AAIController
 public:
 	AEnemyAIController();
 
+
+	//////////////////////// Team /////////////////////
+public:
+	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
+
 private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ActionPF|AI", meta = (AllowPrivateAccess = "true"))

@@ -5,31 +5,33 @@
 #include "Character/ActionPortfolioCharacter.h"
 #include "ActionPortfolio.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Ability/ActionPFAbilitySystemComponent.h"
 
 void UActionPFAnimInstance::NativeBeginPlay()
 {
-	if (!OwnerCharacter.IsValid()) {
-		OwnerCharacter = Cast<AActionPortfolioCharacter>(GetOwningActor());
-	}
+
 
 
 }
 
 void UActionPFAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
-	if (!GetOwnerCharacter()) return;
+	AActionPortfolioCharacter* PFCharacter = Cast<AActionPortfolioCharacter>(GetOwningActor());
+	if(PFCharacter == nullptr) return;
 
-	FVector Vel = OwnerCharacter->GetVelocity();
+	UActionPFAbilitySystemComponent* ASC = StaticCast<UActionPFAbilitySystemComponent*>(PFCharacter->GetAbilitySystemComponent());
+	TagsInASC.Reset();
+	ASC->GetOwnedGameplayTags(TagsInASC);
+	
+	FVector Vel = PFCharacter->GetVelocity();
 	Speed = Vel.Size();
-
-	bIsInAir = OwnerCharacter->GetCharacterMovement()->IsFalling();
 
 	if (FMath::IsNearlyZero(Speed)) {
 		Degree = 0;
 	}
 	else
 	{
-		FVector Forward = OwnerCharacter->GetActorForwardVector();
+		FVector Forward = PFCharacter->GetActorForwardVector();
 		Forward.Z = 0;
 		Forward.Normalize();
 		Vel.Normalize();
@@ -43,11 +45,19 @@ void UActionPFAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 }
 
-AActionPortfolioCharacter* UActionPFAnimInstance::GetOwnerCharacter()
+UAnimMontage* UActionPFAnimInstance::GetAnimMontageByTag(const FGameplayTag& InTag)
 {
-	if (!OwnerCharacter.IsValid()) {
-		OwnerCharacter = Cast<AActionPortfolioCharacter>(GetOwningActor());
+	UAnimMontage* ReturnAnim = AnimMontageMap.FindRef(InTag);
+
+	if (ReturnAnim == nullptr)
+	{
+		PFLOG(Warning, TEXT("%s don't have %s Tag Rigidity Anim"), *GetOwningActor()->GetName(), *InTag.ToString());
 	}
 
-	return OwnerCharacter.Get();
+	return ReturnAnim;
+}
+
+UAnimMontage* UActionPFAnimInstance::GetAnimMontageByTag(FName InTag)
+{
+	return GetAnimMontageByTag(FGameplayTag::RequestGameplayTag(InTag, true));
 }

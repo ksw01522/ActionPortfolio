@@ -81,7 +81,10 @@ void UAbilityTask_WaitNewCollision::SetCollisionProfileName(const FName& Profile
 
 void UAbilityTask_WaitNewCollision::AttachToAvatar(const FAttachmentTransformRules& AttachmentRules, const FName& SocketName)
 {
-	Cast<ICustomAbilityHelperInterface>(Ability->GetAvatarActorFromActorInfo())->AttachComponentToCharacter(CollisionShape, AttachmentRules, SocketName);
+	AActor* Avatar = Ability->GetAvatarActorFromActorInfo();
+	USceneComponent* DefaultAttachComponent = Avatar->GetDefaultAttachComponent();
+	
+	CollisionShape->AttachToComponent(DefaultAttachComponent, AttachmentRules, SocketName);
 }
 
 void UAbilityTask_WaitNewCollision::AddIgnoreActor(AActor* InActor)

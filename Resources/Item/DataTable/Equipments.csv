@@ -1,0 +1,2 @@
+---,EquipmentAbility,EquipmentPart,MaxHP,MaxStamina,AttackP,DefenseP,ItemType,Grade,Name,Description,Price,StackSize
+Test,"/Script/Engine.BlueprintGeneratedClass'/Game/Item/ItemDatas/ItemAbility/TestEquipAbility.TestEquipAbility_C'","Body","100.000000","0.000000","100.000000","0.000000","Equipment","Epic","TestItem","TestDescription","0","1"

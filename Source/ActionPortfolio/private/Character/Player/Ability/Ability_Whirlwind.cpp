@@ -15,7 +15,6 @@
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Ability/Tasks/AbilityTask_WaitEnterMontageSection.h"
 #include "Ability/Tasks/AbilityTask_EffectUseCollision.h"
-#include "Ability/AbilityDamageCreator.h"
 #include "Ability/Tasks/AbilityTask_WaitNewCollision.h"
 #include "Character/ActionPortfolioCharacter.h"
 #include "Ability/Tasks/AbilityTask_GrantTags.h"
@@ -23,6 +22,7 @@
 #include "Ability/Ability/Ability_Knockback.h"
 #include "Ability/Ability/Ability_Rigidity.h"
 #include "Abilities/Tasks/AbilityTask_Repeat.h"
+#include "Ability/ActionPFAbilityBFL.h"
 
 UAbility_Whirlwind::UAbility_Whirlwind()
 {
@@ -46,8 +46,6 @@ UAbility_Whirlwind::UAbility_Whirlwind()
 
 	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag("Ability.Meelee"));
 	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag("Ability.Player.Whirlwind"));
-
-	DamageCreator = CreateDefaultSubobject<UAbilityDamageCreator>("DamageCreator");
 
 	DamageCount = 1;
 }
@@ -90,11 +88,6 @@ bool UAbility_Whirlwind::CanActivateAbility(const FGameplayAbilitySpecHandle Han
 
 void UAbility_Whirlwind::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerActor)
-	{
-		DamageEffectSpecHandle.Clear();
-	}
-
 	WaitInputRelease.Reset();
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
@@ -104,9 +97,6 @@ void UAbility_Whirlwind::OnEnterAttackSection(UAnimMontage* InMeeleeMontage, con
 {
 	FGameplayEffectContextHandle ContextHandle = GetCurrentActorInfo()->AbilitySystemComponent->MakeEffectContext();
 	int32 TempAbilityLevel = GetAbilityLevel();
-
-	check(DamageCreator);
-	DamageEffectSpecHandle.Data = MakeShared<FGameplayEffectSpec>(DamageCreator->CreateDamageEffect(), ContextHandle, TempAbilityLevel);
 
 	AttackRepeat = UAbilityTask_Repeat::RepeatAction(this, DamageIntervalTime, DamageCount);
 	AttackRepeat->OnPerformAction.AddDynamic(this, &UAbility_Whirlwind::WhirlwindAttackCheck);
@@ -120,8 +110,16 @@ void UAbility_Whirlwind::OnEnterAttackSection(UAnimMontage* InMeeleeMontage, con
 
 void UAbility_Whirlwind::WhirlwindAttackCheck(int32 ActionNumber)
 {
-	TArray<FOverlapResult> OverlapResults;
+	//EffectContext
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
+
 	AActor* Avatar = GetAvatarActorFromActorInfo();
+
+	FGameplayEffectSpecHandle SpecHandle = UDamageEffect::CreateDamageEffectSpec(DamageData, ContextHandle);
+	FGameplayEffectSpec* Spec = SpecHandle.Data.Get();
+
+	TArray<FOverlapResult> OverlapResults;
 
 	FVector CenterPos = Avatar->GetActorLocation();
 
@@ -138,21 +136,17 @@ void UAbility_Whirlwind::WhirlwindAttackCheck(int32 ActionNumber)
 	{
 		AActor* TargetActor = OverlapResult.GetActor();
 		if (TeamAgent->GetTeamAttitudeTowards(*TargetActor) == ETeamAttitude::Friendly) continue;
-		IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(TargetActor);
-		UAbilitySystemComponent* TargetASC =  TargetASI->GetAbilitySystemComponent();
+		UAbilitySystemComponent* TargetASC =  UActionPFAbilityBFL::GetAbilitySystemComponent(TargetActor);
 		if (TargetASC == nullptr) continue;
 		
-		checkf(DamageEffectSpecHandle.IsValid(), TEXT("Can't find Damage Effect In : %s"), *GetName());
-		CurrentActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*DamageEffectSpecHandle.Data, TargetASC);
-			
-		UAbility_Rigidity::RigidityToTarget(UAbility_Rigidity::StaticClass(), GetCurrentActorInfo()->AbilitySystemComponent.Get(), TargetASC, RigidityTime);
+		ASC->ApplyGameplayEffectSpecToTarget(*Spec, TargetASC);
 
 		FGameplayEventData EventData;
 		EventData.Instigator = GetAvatarActorFromActorInfo();
 		EventData.Target = TargetActor;
 		CurrentActorInfo->AbilitySystemComponent->HandleGameplayEvent(FGameplayTag::RequestGameplayTag(FName("CommonEvent.OnAttackTarget")), &EventData);
 
-		UAbility_Rigidity::RigidityToTarget(RigidityClass, GetCurrentActorInfo()->AbilitySystemComponent.Get(), TargetASC, RigidityTime);
+		UAbility_Rigidity::RigidityToTarget(GetCurrentActorInfo()->AbilitySystemComponent.Get(), TargetASC, RigidityData);
 
 		FGameplayAbilitySpec KnockbackSpec(KnockbackClass, 1, -1, GetAvatarActorFromActorInfo());
 		TargetASC->GiveAbilityAndActivateOnce(KnockbackSpec);

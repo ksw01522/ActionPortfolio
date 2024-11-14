@@ -117,9 +117,10 @@ void UItemWorldSubsystem::SetDropItemPoolSize(int NewSize)
 	DroppedItemInstancePool.Reserve(DroppedItemInstancePool_Size);
 }
 
-void UItemWorldSubsystem::SetCaptureItemMesh(TSoftObjectPtr<UStaticMesh> InMesh)
+
+void UItemWorldSubsystem::SetCaptureItemMesh(UStaticMesh* InMesh)
 {
-	if(ItemMeshCaptureActor == nullptr) return;
+	if (ItemMeshCaptureActor == nullptr) return;
 
 	ItemMeshCaptureActor->SetItemMesh(InMesh);
 }

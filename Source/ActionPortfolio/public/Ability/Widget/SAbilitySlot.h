@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Widgets/SCompoundWidget.h"
+#include "Widgets/SLeafWidget.h"
 
 /**
  * 
@@ -20,6 +20,7 @@ public:
 
 protected:
 	TWeakObjectPtr<class UAbilitySlot> FromSlot;
+	TWeakObjectPtr<class UAbilitySlot> ToSlot;
 
 protected:
 	virtual void Construct() override;
@@ -31,25 +32,28 @@ private:
 	virtual TSharedPtr<SWidget> GetDefaultDecorator() const override;
 
 public:
-	UAbilitySlot* GetFromSlot() const {return FromSlot.Get(); }
-
 	static TSharedRef<FDragDropOperation_AbilitySlot> AbilitySlotDrag(UAbilitySlot* InFromSlot);
+
+	void SetToSlot(UAbilitySlot* InSlot) { ToSlot = InSlot; }
 };
 
 
-class ACTIONPORTFOLIO_API SAbilitySlot : public SCompoundWidget
+class ACTIONPORTFOLIO_API SAbilitySlot : public SLeafWidget
 {
-	SLATE_DECLARE_WIDGET(SAbilitySlot, SCompoundWidget)
+	SLATE_DECLARE_WIDGET(SAbilitySlot, SLeafWidget)
 
 public:
 	SAbilitySlot();
+	virtual ~SAbilitySlot();
 
 	SLATE_BEGIN_ARGS(SAbilitySlot) :
+			_LinkSlot(nullptr),
 			_BackgroundBrush(nullptr),
 			_BackgroundColorAndOpacity(FLinearColor(1,1,1,1)),
 			_SlotSize(36)
 	{}
 
+	SLATE_ARGUMENT(class UAbilitySlot*, LinkSlot)
 	SLATE_ARGUMENT(const FSlateBrush*, BackgroundBrush)
 	SLATE_ARGUMENT(FSlateColor, BackgroundColorAndOpacity)
 	SLATE_ARGUMENT(FVector2D, SlotSize)
@@ -68,22 +72,20 @@ public:
 	void SetBackgroundBrush(const FSlateBrush* InBrush);
 	void SetSlotSize(FVector2D InSize) { SlotSize = InSize; }
 
-private:
-	TWeakObjectPtr<class UAbilitySlot> OwnerSlot;
-
 protected:
 	virtual FVector2D ComputeDesiredSize(float) const override;
-
-	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
 
 public:
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
+private:
+	TWeakObjectPtr<class UAbilitySlot> LinkedSlot;
+
+	TSharedPtr<class SAbilityIcon> AbilityIcon;
 
 public:
-	UAbilitySlot* GetOwnerSlot() const;
-	void LinkOwnerSlot(UAbilitySlot* InOwner);
-	void UnlinkOwnerSlot(UAbilitySlot* InOwner);
+	void LinkAbilitySlot(UAbilitySlot* InSlot);
+	void ClearAbilitySlot();
 
 	void SetAbilityIcon(const TSharedPtr<class SAbilityIcon>& InIcon);
 
@@ -112,6 +114,9 @@ public:
 		SLATE_ARGUMENT(const FSlateBrush*, BackgroundBrush)
 		SLATE_ARGUMENT(FSlateColor, BackgroundColorAndOpacity)
 		SLATE_ARGUMENT(FVector2D, SlotSize)
+		SLATE_ARGUMENT(FKey, HotKey_Keyboard)
+		SLATE_ARGUMENT(FKey, HotKey_Gamepad)
+
 
 	SLATE_END_ARGS()
 
@@ -121,7 +126,7 @@ public:
 private:
 	FDelegateHandle OnChangedInputDeviceHandle;
 
-	const FSlateBrush* CurrentHotKeyBrush;
+	bool bIsGamepad;
 	FSlateBrush HotKeyBrush_Keyboard;
 	FSlateBrush HotKeyBrush_Gamepad;
 

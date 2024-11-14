@@ -23,7 +23,6 @@ protected:
 	FString EventKey;
 	bool bDestroyAfterCall;
 
-
 public:
 	virtual void DestroyEvent();
 	virtual void ActivateEvent();
@@ -49,7 +48,7 @@ class WORLDCUSTOMEVENTRUNTIME_API UWorldEventSubsystem : public UWorldSubsystem
 
 private:
 	UPROPERTY()
-	TMap<FString , UWorldEventObject*> CustomEvents;
+	TMap<FString , TObjectPtr<UWorldEventObject>> CustomEvents;
 
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;

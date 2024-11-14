@@ -16,10 +16,10 @@ public:
 	SAbilityIcon();
 
 	SLATE_BEGIN_ARGS(SAbilityIcon) :
-				_Ability(nullptr)
+				_IconBrush(nullptr)
 	{}
 
-	SLATE_ARGUMENT(class UActionPFGameplayAbility*, Ability)
+	SLATE_ARGUMENT(const FSlateBrush*, IconBrush)
 
 	SLATE_END_ARGS()
 
@@ -30,8 +30,6 @@ public:
 protected:
 	virtual FVector2D ComputeDesiredSize(float) const override;
 
-	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
-
 private:
 	const FSlateBrush* IconBrush;
 
@@ -41,19 +39,14 @@ private:
 
 	TOptional<FVector2D> IconSizeOverride;
 
-	TWeakObjectPtr<class UActionPFAbilitySystemComponent> AbilitySystem;
-	TWeakObjectPtr<UActionPFGameplayAbility> Ability;
-
-	static TSharedPtr<SAbilityIcon> EmptyAbilityIcon;
-
 public:
 	void SetIconSize(FVector2D InSize);
-
-	virtual void LinkAbility(UActionPFGameplayAbility* InAbility);
-	void LinkAbilitySystem(UActionPFAbilitySystemComponent* InSystem);
 
 
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
-	static const TSharedPtr<SAbilityIcon>& GetEmptyIcon() {return EmptyAbilityIcon;}
+	void SetIconBrush(const FSlateBrush* InBrush) { IconBrush = InBrush; }
+	void SetCanAbilityAct(bool NewState) {bCanAct = NewState;};
+	void SetRemainCoolTime(float NewTime) { RemainCoolTime = NewTime; };
+	void SetCoolTimeDuration(float NewTime) { CoolTimeDuration = NewTime; };
 };

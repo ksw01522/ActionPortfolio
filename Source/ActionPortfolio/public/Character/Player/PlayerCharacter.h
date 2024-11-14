@@ -11,20 +11,6 @@
  */
  enum class EEquipmentPart : uint8;
 
-struct FAddedPlayerAbilityStruct
-{
-	FAddedPlayerAbilityStruct(const FGameplayAbilitySpecHandle& InHandle, const TSubclassOf<UActionPFGameplayAbility>& InClass, TSharedPtr<class SAbilityIcon> InIcon) :
-						Handle(InHandle), AbilityClass(InClass), Icon(InIcon)
-	{}
-	virtual ~FAddedPlayerAbilityStruct() {}
-
-	FGameplayAbilitySpecHandle Handle;
-
-	TSubclassOf<UActionPFGameplayAbility> AbilityClass;
-
-	TSharedPtr<SAbilityIcon> Icon;
-};
-
 UCLASS()
 class ACTIONPORTFOLIO_API APlayerCharacter : public AActionPortfolioCharacter
 {
@@ -42,7 +28,7 @@ private:
 	TObjectPtr<class UCameraComponent> FollowCamera;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class UPlayerMappableInputConfig> CharacterInputConfig;
+	TObjectPtr<class UPlayerMappableInputConfig> OptionalInputConfig;
 
 	/** Move Input Action */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -55,30 +41,11 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> LookAction;
 
-//Player Main UI
-private:
-	/* UIClass For Create UI On Possessed By Player Controller */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = UI, meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<class UWidget_PlayerMainUI> MainUIClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> WeakAttackAction;
 
-	UPROPERTY(Transient)
-	TObjectPtr<UWidget_PlayerMainUI> MainUI;
-
-	/* Create UI On Possessed By Player Controller */
-	void TryCreateMainUI();
-	
-	virtual void PreCreateMainUI() {}
-
-	/* Call Function On Complete Create Main UI */
-	virtual void PostCreateMainUI(){}
-
-	/* Remove UI On Unpossessed By Player Controller */
-	void TryRemoveMainUI();
-
-	virtual void PreRemoveMainUI() {}
-
-	/* Call Function On Remove UI */
-	virtual void PostRemoveMainUI() {}
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> StrongAttackAction;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status", meta = (AllowPrivateAccess ="true"))
@@ -87,31 +54,23 @@ private:
 public:
 	UCharacterStatusComponent* GetCharacterStatusComponent() const { return CSC; }
 
-
-public:
-	UWidget_PlayerMainUI* GetPlayerMainUI() const { return MainUI; }
-
-//Character Ability
 private:
+	void OnPlayerLevelChanged(const FOnAttributeChangeData& ChangeData);
+	void OnPlayerLevelChanged(float NewLevel);
+private:
+//Character Ability
 	//Key = InputID, Value = Act Ability By Receive Input
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Ability, Instanced, meta = (AllowPrivateAccess = "true"))
-	TArray<TObjectPtr<class UAbilitySlotWithInput>> AbilitiesWithInput;
+	TArray<TObjectPtr<class UAbilitySlot_HotKey>> AbilityHotKeySlots;
 
-	//On Added Active Ability Container
-	TArray<FAddedPlayerAbilityStruct> AddedActiveAbilities;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Ability, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class UActionPFGameplayAbility> WeakAttackClass;
 
-	//On Added Passive AbilityContainer
-	TArray<FAddedPlayerAbilityStruct> AddedPassiveAbilities;
-
-private:
-	//Event for Give CharacterAbility
-	virtual void OnAddedAbility(FGameplayAbilitySpecHandle Handle) override;
-
-	//virtual void OnHealthChanged(const FOnAttributeChangeData& Data) override;
-	//virtual void OnMaxHealthChanged(const FOnAttributeChangeData& Data) override;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Ability, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class UActionPFGameplayAbility> StrongAttackClass;
 
 public:
-	const TSharedPtr<SAbilityIcon>& GetGivenAbilityIcon(TSubclassOf<UActionPFGameplayAbility> InAbilityClass) const;
+	void GetAbilityHotKeySlots(TArray<UAbilitySlot_HotKey*>& OutArray);
 
 protected:
 	virtual void BeginPlay() override;
@@ -124,9 +83,13 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
-	void PressInputAbility(const FInputActionValue& Value, int ID);
-	void ReleaseInputAbility(const FInputActionValue& Value, int ID);
+	void PressInputAbility(const FInputActionValue& Value, UAbilitySlot_HotKey* HotKey);
+	void ReleaseInputAbility(const FInputActionValue& Value, UAbilitySlot_HotKey* HotKey);
 	
+	void PressInputAbilityID(const FInputActionValue& Value, int ID);
+	void ReleaseInputAbilityID(const FInputActionValue& Value, int ID);
+
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -134,8 +97,8 @@ protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void UnPossessed() override;
 
-public:
-	virtual void LinkSkillHotKeyWindow(class USkillHotKeyWindow* SkillWindow);
+	virtual void AddStartupAbilities() override;
+	virtual void InitializeAttributes() override;
 
 public:
 	/** Returns CameraBoom subobject **/
@@ -155,5 +118,4 @@ protected:
 
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif // WITH_EDITOR
-
 };

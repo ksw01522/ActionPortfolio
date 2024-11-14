@@ -7,7 +7,7 @@
 #include "Character/ActionPortfolioCharacter.h"
 #include "Engine/Texture.h"
 #include "Ability/Widget/SAbilityIcon.h"
-#include "Ability/Effects/DamageExecutionCalculation.h"
+
 
 const FGameplayTag UActionPFGameplayAbility::OnAttackStartTag = FGameplayTag::RequestGameplayTag("CommonEvent.OnAttackStart");
 const FGameplayTag UActionPFGameplayAbility::OnAttackTargetTag = FGameplayTag::RequestGameplayTag("CommonEvent.OnAttackTarget");
@@ -54,7 +54,7 @@ void UActionPFGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 
 void UActionPFGameplayAbility::ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-
+	
 }
 
 
@@ -71,15 +71,20 @@ void UActionPFGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handl
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
-void UActionPFGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
+UGameplayEffect* UActionPFGameplayAbility::GetCooldownGameplayEffect() const
+{
+	return CooldownGameplayEffectClass.GetDefaultObject();
+}
+
+void UActionPFGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 												const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	UGameplayEffect* CooldownGE = GetCooldownGameplayEffect();
+	const UGameplayEffect* CooldownGE = GetCooldownGameplayEffect();
 	if (CooldownGE && 0 < CooldownDuration.GetValueAtLevel(GetAbilityLevel()))
 	{
 		FGameplayEffectSpecHandle CoolDownHandle = MakeOutgoingGameplayEffectSpec(CooldownGE->GetClass(), GetAbilityLevel());
 		CoolDownHandle.Data->DynamicGrantedTags.AppendTags(CooldownTags);
-		CoolDownHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.CooldownTime")), 
+		CoolDownHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.Duration")), 
 															CooldownDuration.GetValueAtLevel(GetAbilityLevel()));
 		ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, CoolDownHandle);
 	}
@@ -93,25 +98,44 @@ const FGameplayTagContainer* UActionPFGameplayAbility::GetCooldownTags() const
 		const FGameplayTagContainer* ParentTags = Super::GetCooldownTags();
 		if (ParentTags)
 		{
-			const_cast<FGameplayTagContainer&>(TempCooldownTags).AppendTags(*ParentTags);
+			TempCooldownTags.AppendTags(*ParentTags);
 		}
-		const_cast<FGameplayTagContainer&>(TempCooldownTags).AppendTags(CooldownTags);
-		const_cast<bool&>(bTempCooldownTagsInitialized) = true;
+		TempCooldownTags.AppendTags(CooldownTags);
+		bTempCooldownTagsInitialized = true;
 	}
 
 	return &TempCooldownTags;
 }
 
-TSharedPtr<class SAbilityIcon> UActionPFGameplayAbility::CreateAbilityIcon() const
+TSharedRef<class SAbilityIcon> UActionPFGameplayAbility::CreateAbilityIcon() const
 {
 	return
 	SNew(SAbilityIcon)
-	.Ability(const_cast<UActionPFGameplayAbility*>(this));
+	.IconBrush(&DefaultIconBrush);
+
 }
 
-
-const FSlateBrush* UActionPFGameplayAbility::GetAbilityIconBrush(TWeakObjectPtr<const UAbilitySystemComponent> InSystem) const
+void UActionPFGameplayAbility::UpdateAbilityIcon(UActionPFAbilitySystemComponent* InASC, SAbilityIcon* InIcon) const
 {
-	return &DefaultIconBrush;
+	if(InASC == nullptr || InIcon == nullptr) return;
+
+	bool bCanAbilityAct = InASC->CanActivateAbility(GetClass());
+	InIcon->SetCanAbilityAct(bCanAbilityAct);
+
+	if (bCanAbilityAct)
+	{
+
+	}
+	else
+	{
+		float RemainCoolTime, CoolTimeDuration;
+
+		if (InASC->GetCooldownRemainingAndDurationByTag(*GetCooldownTags(), RemainCoolTime, CoolTimeDuration))
+		{
+			InIcon->SetRemainCoolTime(RemainCoolTime);
+			InIcon->SetCoolTimeDuration(CoolTimeDuration);
+		}
+	}
 }
+
 

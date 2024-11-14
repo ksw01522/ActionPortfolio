@@ -156,10 +156,10 @@ void FActionPortfolioWidgetStyle::Initialize()
 			StyleSet->Set(InventoryStyle::CountTextStyle, CountTextBlockStyle);
 
 			
-			UMaterialInterface* MeshCaptureMaterial = GetDefault<UItemDeveloperSetting>()->GetMeshCaptureMaterial().LoadSynchronous();
-			FSlateImageBrush* MeshCaptureBrush = new FSlateImageBrush(MeshCaptureMaterial, FVector2D(64,64));
+			//UMaterialInterface* MeshCaptureMaterial = GetDefault<UItemDeveloperSetting>()->GetMeshCaptureMaterial().LoadSynchronous();
+			//FSlateImageBrush* MeshCaptureBrush = new FSlateImageBrush(MeshCaptureMaterial, FVector2D(64,64));
 
-			StyleSet->Set(InventoryStyle::InformationSlate::MeshCaptureStyle, MeshCaptureBrush);
+			//StyleSet->Set(InventoryStyle::InformationSlate::MeshCaptureStyle, MeshCaptureBrush);
 
 			FSlateFontInfo NameTextBlockFont(TTF_FONT("NPCInteract/Font/Default", 12));
 			FTextBlockStyle NameTextBlockStyle;

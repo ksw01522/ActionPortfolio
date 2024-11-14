@@ -9,27 +9,27 @@
 /**
  * 
  */
-USTRUCT(BlueprintType)
-struct FAbilityChainNode
-{
-	GENERATED_BODY()
+//USTRUCT(BlueprintType)
+//struct FAbilityChainNode
+//{
+//	GENERATED_BODY()
+//
+//	UPROPERTY(EditAnywhere)
+//	int32 InputKey;
+//
+//	UPROPERTY(EditAnywhere)
+//	TSubclassOf<UActionPFGameplayAbility> AbilityClass;
+//};
 
-	UPROPERTY(EditAnywhere)
-	int32 InputKey;
 
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<UActionPFGameplayAbility> AbilityClass;
-};
-
-
-UCLASS()
+UCLASS(Abstract)
 class ACTIONPORTFOLIO_API UAbility_Meelee_Chain : public UGameplayAbility_Meelee
 {
 	GENERATED_BODY()
 	
-private:
+private:/*
 	UPROPERTY(EditAnywhere, Category = "Meelee", meta = (AllowPrivateAccess = "true"))
-	TArray<FAbilityChainNode> ChainedAbilityNodes;
+	TArray<FAbilityChainNode> ChainedAbilityNodes;*/
 
 protected:
 	virtual void ActivateAbility_CPP(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -39,7 +39,7 @@ private:
 	void OnEventInput(int32 InputKey);
 
 public:
-	FAbilityChainNode* FindChainNode(int32 InputKey) const;
+	//FAbilityChainNode* FindChainNode(int32 InputKey) const;
 
 #if WITH_EDITOR
 protected:

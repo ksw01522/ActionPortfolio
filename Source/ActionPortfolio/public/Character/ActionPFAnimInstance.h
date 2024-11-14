@@ -4,32 +4,37 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
+#include "GameplayTagContainer.h"
 #include "ActionPFAnimInstance.generated.h"
 
 /**
  * 
  */
+
 UCLASS()
 class ACTIONPORTFOLIO_API UActionPFAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
 	
-protected:
-	TWeakObjectPtr<class AActionPortfolioCharacter> OwnerCharacter;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
+private:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 	float Speed;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 	float Degree;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
-	bool bIsInAir;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
+	FGameplayTagContainer TagsInASC;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
+	TMap<FGameplayTag, TObjectPtr<UAnimMontage>> AnimMontageMap;
 
 public:
 	virtual void NativeBeginPlay();
 
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
-	AActionPortfolioCharacter* GetOwnerCharacter();
+	UAnimMontage* GetAnimMontageByTag(const FGameplayTag& InTag);
+	UAnimMontage* GetAnimMontageByTag(FName InTag);
+
 };

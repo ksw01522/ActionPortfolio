@@ -4,7 +4,7 @@
 #include "Dialogue/Slate/DialogueSlate.h"
 #include "Character/Player/ActionPFPlayerController.h"
 #include "DialogueNode.h"
-#include "ActionPortfolioInstance.h"
+#include "Instance/ActionPortfolioInstance.h"
 
 #include "WidgetStyle/ActionPortfolioWidgetStyle.h"
 #include "Widgets/Layout/SConstraintCanvas.h"
@@ -20,6 +20,7 @@
 #include "Widgets/Layout/SBackgroundBlur.h"
 #include "Widgets/SOverlay.h"
 #include "DialogueManager.h"
+
 
 
 template< class ObjectType >
@@ -44,6 +45,14 @@ template< class ObjectType >
 FORCEINLINE TSharedPtr< ObjectType > MakeSRichTextBlockShareableDeferredCleanup(ObjectType* InObject)
 {
 	return MakeShareable(InObject, [](ObjectType* ObjectToDelete) { BeginCleanup(new FSRichTextBlockDeferredDeletor<ObjectType>(ObjectToDelete)); });
+}
+
+
+
+SLATE_IMPLEMENT_WIDGET(SDialogueMainSlate)
+void SDialogueMainSlate::PrivateRegisterAttributes(FSlateAttributeInitializer& AttributeInitializer)
+{
+
 }
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
@@ -247,13 +256,17 @@ SDialogueBox::SDialogueBox()
 	SetCanTick(false);
 }
 
+SLATE_IMPLEMENT_WIDGET(SDialogueBox)
+void SDialogueBox::PrivateRegisterAttributes(FSlateAttributeInitializer& AttributeInitializer)
+{
+
+}
+
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SDialogueBox::Construct(const FArguments& InArgs)
 {
-	UDialogueManager* Manager = UDialogueManager::GetManagerInstance();
 
-	TextStyleSet = Manager->GetDialogueTextStyleSet();
 	DecoClasses.Empty();
 	InstanceDecorators.Empty();
 
@@ -265,7 +278,7 @@ void SDialogueBox::Construct(const FArguments& InArgs)
 	OnAnimComplete = InArgs._OnAnimComplete;
 
 	ChildSlot[
-		SNew(SBorder)
+		SAssignNew(BoxBorder, SBorder)
 			.BorderImage(NewBrush)
 			[
 				SNew(SVerticalBox)
@@ -293,9 +306,7 @@ void SDialogueBox::Construct(const FArguments& InArgs)
 			]
 	];
 
-	MakeStyleInstance();
-	DialogueTextBlock->SetTextStyle(TextBlockStyle);
-	DialogueTextBlock->SetDecoratorStyleSet(StyleInstance.Get());
+	SetTextStyleSet(InArgs._TextStyleSet);
 }
 
 void SDialogueBox::MakeStyleInstance()
@@ -312,7 +323,7 @@ void SDialogueBox::MakeStyleInstance()
 
 			if (SubStyleName == FName(TEXT("Default")))
 			{
-				TextBlockStyle = RichTextStyle->TextStyle;
+				DefaultTextStyle = RichTextStyle->TextStyle;
 			}
 
 			StyleInstance->Set(SubStyleName, RichTextStyle->TextStyle);
@@ -348,13 +359,25 @@ void SDialogueBox::MakeDecoInstance(TArray<TSharedRef<ITextDecorator>>& OutDecor
 	{
 		if (Decorator)
 		{
-			TSharedPtr<ITextDecorator> TextDecorator = Decorator->CreateDecorator(TextBlockStyle);
+			TSharedPtr<ITextDecorator> TextDecorator = Decorator->CreateDecorator(DefaultTextStyle);
 			if (TextDecorator.IsValid())
 			{
 				OutDecorators.Add(TextDecorator.ToSharedRef());
 			}
 		}
 	}
+}
+
+void SDialogueBox::SetTextStyleSet(const UDataTable* InStyleSet)
+{
+	UDialogueManager* Manager = UDialogueManager::GetManagerInstance();
+
+	TextStyleSet = InStyleSet != nullptr ? InStyleSet : Manager->GetDialogueTextStyleSet();
+	
+	MakeStyleInstance();
+
+	DialogueTextBlock->SetTextStyle(DefaultTextStyle);
+	DialogueTextBlock->SetDecoratorStyleSet(StyleInstance.Get());
 }
 
 

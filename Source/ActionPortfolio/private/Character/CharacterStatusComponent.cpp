@@ -5,23 +5,14 @@
 #include "Character/ActionPortfolioCharacter.h"
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "Items/ItemManagerSubsystem.h"
-#include "Items/ItemBase.h"
-#include "Items/Euipment/EquipmentAbility.h"
+#include "Items/Equipment/Item_Equipment.h"
+#include "Items/Equipment/EquipmentAbility.h"
 #include "Ability/ActionPFAttributeSet.h"
 #include "Character/Player/InventoryComponent.h"
 
 #include "ActionPortfolio.h"
 
 
-bool UEquipmentSlot::CanDropFrom(const UItemSlot * From) const
-{
-	return CanItemInSlot(From->GetItem());
-}
-
-bool UEquipmentSlot::CanDropTo(const UItemSlot* To) const
-{
-	return CanItemInSlot(To->GetItem());
-}
 
 bool UEquipmentSlot::CanItemInSlot(UItemBase* InItem) const
 {
@@ -54,8 +45,8 @@ void UEquipmentSlot::ApplyItemEffects()
 	FGameplayAbilitySpec AbilitySpec(EquipItem->GetEquipmentAbility());
 	AbilitySpecHandle = BindedASC->GiveAbility(AbilitySpec);
 
-	UGameplayEffect* BasicStatusUpEffect = EquipItem->MakeAddStatusEffect();
-	StatusUpEffectHandle = BindedASC->ApplyGameplayEffectSpecToSelf(FGameplayEffectSpec(BasicStatusUpEffect, BindedASC->MakeEffectContext()));
+	FGameplayEffectSpec BasicStatusUpEffectSpec = EquipItem->MakeAddStatusEffect(BindedASC->MakeEffectContext());
+	StatusUpEffectHandle = BindedASC->ApplyGameplayEffectSpecToSelf(BasicStatusUpEffectSpec);
 	
 }
 

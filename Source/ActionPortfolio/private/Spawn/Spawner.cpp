@@ -54,7 +54,7 @@ void ASpawner::SpawnCharacters()
 		if (IsValid(SpawnChar))
 		{
 			SpawnedCharacters.Add(SpawnChar);
-			SpawnChar->OnCharacterDie.AddDynamic(this, &ASpawner::OnSpawnedCharacterDie);
+			SpawnChar->OnCharacterDieDelegate.AddDynamic(this, &ASpawner::OnSpawnedCharacterDie);
 			CurrentSpawnedCount++;
 		}
 	}

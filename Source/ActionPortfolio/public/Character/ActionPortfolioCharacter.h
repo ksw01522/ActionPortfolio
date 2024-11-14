@@ -20,73 +20,9 @@ class UInputAction;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCharcterDieDelegate, class AActionPortfolioCharacter*, OnDieCharacter);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCharacterDamagedDelegate, float, DamageAmount, AActor*, DamageInstigator);
 
-UENUM(BlueprintType, meta = (Bitflags, UseEnumValueAsMaskValuesInEidtor = "true"))
-enum class EDebuffState : uint8
-{
-	None = 0,
-	Poison = 1 << 0,
-	Flame = 1 << 1,
-	Stun = 1 << 2,
-	ElectricShock = 1 << 3
-};
-
-UENUM(BlueprintType)
-enum class EHitReactionDirection : uint8
-{
-	Front = 0,
-	Back = 1,
-	Right = 2,
-	Left = 3
-};
-
-USTRUCT(BlueprintType)
-struct FHitReactionAnimations
-{
-	GENERATED_BODY()
-public:
-	FHitReactionAnimations() {
-		Front = nullptr;
-		Back = nullptr;
-		Right = nullptr;
-		Left = nullptr;
-
-		Death = nullptr;
-	}
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UAnimMontage> Front;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UAnimMontage> Back;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UAnimMontage> Right;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UAnimMontage> Left;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Death")
-	TObjectPtr<UAnimMontage> Death;
-};
-
-USTRUCT(BlueprintType)
-struct FAbilityDataForGive
-{
-	GENERATED_BODY()
-public:
-	FAbilityDataForGive() : Level(1)
-	{}
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-	TSubclassOf<class UActionPFGameplayAbility> Class;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (ClampMin = "1"))
-	int Level;
-};
 
 UCLASS(config=Game)
-class AActionPortfolioCharacter : public ACharacter, public IAbilitySystemInterface, public IGenericTeamAgentInterface, public ICustomAbilityHelperInterface
+class AActionPortfolioCharacter : public ACharacter, public IAbilitySystemInterface, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -105,14 +41,30 @@ protected:
 
 	virtual void Landed(const FHitResult& Hit) override;
 
+	virtual USceneComponent* GetDefaultAttachComponent() const override;
+
 #if WITH_EDITOR
 protected:
 	virtual EDataValidationResult IsDataValid(TArray<FText>& ValidationErrors) override;
 #endif // WITH_EDITOR
 
-///////////////// Team //////////////////////////
 public:
-	/** Retrieve team identifier in form of FGenericTeamId */
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+private:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attribute", meta = (AllowPrivateAccess = "true"))
+	FName CharacterCode;
+public:
+	UFUNCTION(BlueprintPure)
+	FName GetCharacterCode() const { return CharacterCode; }
+
+///////////////// Team //////////////////////////
+private:
+	FGenericTeamId TeamId;
+
+public:
+	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
+
 	virtual FGenericTeamId GetGenericTeamId() const override;
 
 /////////////////// AbilitySystem ////////////////////
@@ -120,53 +72,42 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UActionPFAbilitySystemComponent> AbilitySystem;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class UActionPFAttributeSet> AttributeSet;
-
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-	TArray<FAbilityDataForGive> CharacterAbilities;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-	TArray<TSubclassOf<UGameplayEffect>> StartupEffects;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attributes")
-	TSubclassOf<class UGameplayEffect> DefaultAttributes;
+	bool bStartupAbilitiesGiven = false;
+	bool bStartupEffectsAdded = false;
 
 public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
-	//Initialize Ability System Component
-private:
-	void InitializeAbilitySystem();
-		void InitializeAttributes();
-		void AddCharacterAbilities();
-		void AddStartupEffects();
-		
-	void ClearCharacterAbilities();
-
-	virtual void OnAddedAbility(FGameplayAbilitySpecHandle Handle) {}
-		
-protected:
-	virtual void OnActiveGameplayEffectAddedCallback(UAbilitySystemComponent* Target, const FGameplayEffectSpec& SpecApplied, FActiveGameplayEffectHandle ActiveHandle);
-	virtual void OnRemoveGameplayEffectCallback(const FActiveGameplayEffect& EffectRemoved);
-
-
-
-///////////////// Attributte /////////////////
-protected:
-
-
-	virtual void InitializeAttributeChangedDelegate();
-	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
-	virtual void OnMaxHealthChanged(const FOnAttributeChangeData& Data);
-
 public:
-
-
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Attributes")
 	int32 GetCharacterLevel() const;
 
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
+	TArray<TSubclassOf<class UActionPFGameplayAbility>> StartupAbilities;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
+	TArray<TSubclassOf<UGameplayEffect>> StartupEffects;
+
+
+protected:
+	virtual void AddStartupAbilities();
+	void AddStartupEffects();
+	virtual void InitializeAttributes();
+
+	virtual void ClearStartupAbilities();
+	
+	void ClearStartupEffects();
+
+	UFUNCTION()
+	virtual bool ConditionRemoveStartupEffects(const FActiveGameplayEffect& ActiveEffect);
+
+///////////////// Attribute /////////////////
+protected:
+	UPROPERTY(BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UCharacterAttributeSet> AttributeSet;
+
+public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Attributes")
 	float GetHealth() const;
 
@@ -180,46 +121,30 @@ public:
 	bool CanCharacterMove() const;
 
 
-//////////////////////////////// CustomAbilityHelperInterface ////////////////////////////////
-private:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HitReaction", meta = (AllowPrivateAccess = "true"))
-	FHitReactionAnimations HitReactionAnimations;
-
-protected:
-	virtual void AttachComponentToCharacter(class USceneComponent* InComponent, const FAttachmentTransformRules& AttachmentRules, const FName& SocketName) override;
-	virtual UAnimMontage* GetRigidityAnim(float RigidityTime, const FHitResult* HitResult) const override;
-
-
-//////////////////////////////// Character State ////////////////////////////////
-private:
-	uint8 DebuffState;
-
-public:
-	uint8 GetDebuffState() const { return DebuffState; }
+	//////////////////////////////// Character State ////////////////////////////////
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Death", meta = (AllowPrivateAccess = "true"))
-	bool bDestroyOnDie;
+	bool bAutoDestroyOnDie;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Death", meta = (AllowPrivateAccess = "true"))
+	float DestroyTime;
+
+	UFUNCTION()
+	void DestroyCharacter();
 
 public:
 	UPROPERTY(BlueprintAssignable)
-	FOnCharcterDieDelegate OnCharacterDie;
-	
-	
-	FOnCharacterDamagedDelegate OnDamagedDel;
+	FOnCharcterDieDelegate OnCharacterDieDelegate;
 
-private:
-	void OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+protected:
+	virtual void OnCharacterDie(const FGameplayEffectModCallbackData& Data) {}
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "CharacterState")
 	bool IsCharacterDie() const;
 
-	virtual void CharacterDie();
-
-	virtual void OnDamageEvent(float DamageAmount, AActor* DamageInstigator);
-
-	virtual void OnAttackEvent(float DamageAmount, AActor* Target);
+	void CharacterDie(const FGameplayEffectModCallbackData& Data);
 
 protected:
 
@@ -250,16 +175,6 @@ public:
 public:
 	virtual bool CanBasicAct() const;
 
-//////////////////////// Lock On State Widget ////////////////////
-private:
-	UPROPERTY(EditDefaultsOnly, Category = "LockOnState")
-	TSubclassOf<class ULockOnStateWidget> LockOnStateWidgetClass;
-
-	UPROPERTY(Transient)
-	TObjectPtr<ULockOnStateWidget> LockOnStateWidget;
-
-public:
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	ULockOnStateWidget* GetLockOnStateWidget() const { return LockOnStateWidget.Get(); }
+	class UActionPFAnimInstance* GetAnimInstance() const; 
 };
 

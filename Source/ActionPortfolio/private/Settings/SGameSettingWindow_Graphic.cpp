@@ -149,8 +149,8 @@ void SGameSettingWindow_Graphic::Construct(const FArguments& InArgs)
 								}));
 
 		//텍스쳐
-		FText TQName = LOCTEXT("TextureQuality Name", "가시거리");
-		const TArray<FText>& TQOptions = UserSetting->GetShadowQualityOptions();
+		FText TQName = LOCTEXT("TextureQuality Name", "텍스쳐 품질");
+		const TArray<FText>& TQOptions = UserSetting->GetTextureQualityOptions();
 		int CurrentTQIdx = UserSetting->GetShadowQuality();
 
 		CreateMultipleNode(TQName, TQOptions, CurrentTQIdx, SGameSettingNode_Multiple::FOnChangeOption::CreateLambda([UserSetting](int Idx) {

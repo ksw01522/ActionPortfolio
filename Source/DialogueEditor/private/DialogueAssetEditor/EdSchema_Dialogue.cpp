@@ -408,6 +408,7 @@ void UEdSchema_Dialogue::GetContextMenuActions(UToolMenu* Menu, UGraphNodeContex
 		}
 
 		Section.AddMenuEntry(FGraphEditorCommands::Get().BreakNodeLinks);
+		Section.AddMenuEntry(FGenericCommands::Get().SelectAll);
 	}
 }
 

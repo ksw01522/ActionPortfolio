@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Ability/ActionPFGameplayAbility.h"
 #include "GameplayTagContainer.h"
+#include "Ability/Effects/Damage/DamageEffect.h"
+#include "Ability/Ability/Ability_Rigidity.h"
 #include "GameplayAbility_Meelee.generated.h"
 
 /**
@@ -35,11 +37,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> MeeleeMontage;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage", Instanced, meta = (AllowPrivateAccess = "true", ShowOnlyInnerProperties))
-	TObjectPtr<class UAbilityDamageCreator> DamageCreator;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage", meta = (AllowPrivateAccess = "true"))
-	TArray<TSubclassOf<UGameplayEffect>> OptionEffects;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee|Damage", meta = (AllowPrivateAccess = "true"))
+	FDamageDataStruct DamageData;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee", meta = (AllowPrivateAccess = "true"))
 	FGameplayTagContainer GrantTagsDuringAttack;
@@ -74,14 +73,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee|Collision", meta = (AllowPrivateAccess = "true", EditCondition = "bOverrideCollisionLifeTime"))
 	float CollisionLifeTimeOverride;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee|Rigidity", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<class UAbility_Rigidity> RigidityClass;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee|Rigidity", meta = (AllowPrivateAccess = "true"))
-	float RigidityTime;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee|Rigidity", meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* CustomRigidityAnim;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee|Rigidity", meta = (AllowPrivateAccess = "true", ShowOnlyInnerProperties))
+	FRigidityData RigidityData;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee")
 	TSubclassOf<class UAbility_Knockback> KnockbackClass;
@@ -107,8 +100,6 @@ protected:
 
 
 private:
-	FGameplayEffectSpecHandle DamageEffectSpecHandle;
-
 	UFUNCTION()
 	virtual void OnEnterAttackSection(UAnimMontage* InMeeleeMontage, const FName& InSectionName);
 

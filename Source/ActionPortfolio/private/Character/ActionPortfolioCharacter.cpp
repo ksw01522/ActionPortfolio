@@ -20,11 +20,22 @@
 #include "Kismet/KismetSystemLibrary.h"
 
 #include "Character/Player/ActionPFPlayerController.h"
+#include "Character/ActionPFAnimInstance.h"
 
 #include "Ability/Ability/Ability_Rigidity.h"
 
 #include "Character/LockOnStateWidget.h"
 #include "LockOn/LockOnTargetComponent.h"
+
+#include "Net/UnrealNetwork.h"
+
+#include "Ability/Effects/CharacterRegenEffect.h"
+
+#include "Ability/Effects/AttributeEffect.h"
+#include "Instance/CharacterDataManager.h"
+
+#include "Ability/Effects/AttributeEffect.h"
+
 
 //////////////////////////////////////////////////////////////////////////
 // AActionPortfolioCharacter
@@ -57,13 +68,16 @@ AActionPortfolioCharacter::AActionPortfolioCharacter()
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 
 	AbilitySystem = CreateDefaultSubobject<UActionPFAbilitySystemComponent>(TEXT("AbilitySystem"));
-	AttributeSet = CreateDefaultSubobject<UActionPFAttributeSet>(TEXT("AttributeSet"));
+	AbilitySystem->SetIsReplicated(true);
 
+	AttributeSet = CreateDefaultSubobject<UCharacterAttributeSet>(TEXT("AttributeSet"));
+	AbilitySystem->AddAttributeSetSubobject<UCharacterAttributeSet>(AttributeSet);
 
+	SetReplicates(true);
 
 	PrimaryActorTick.bCanEverTick = true;
 
-	bDestroyOnDie = true;
+	bAutoDestroyOnDie = true;
 }
 
 EDataValidationResult AActionPortfolioCharacter::IsDataValid(TArray<FText>& ValidationErrors)
@@ -71,9 +85,9 @@ EDataValidationResult AActionPortfolioCharacter::IsDataValid(TArray<FText>& Vali
 	EDataValidationResult SuperResult = Super::IsDataValid(ValidationErrors);
 	EDataValidationResult Result = EDataValidationResult::Valid;
 
-	for (int Idx = 0; Idx < CharacterAbilities.Num(); Idx++)
+	for (int Idx = 0; Idx < StartupAbilities.Num(); Idx++)
 	{
-		if (!CharacterAbilities[Idx].Class)
+		if (!StartupAbilities[Idx])
 		{
 			ValidationErrors.Add(FText::FromString(FString::Printf(TEXT("Idx {%d} Ability Class Is Null"), Idx)));
 			Result = EDataValidationResult::Invalid;
@@ -84,6 +98,13 @@ EDataValidationResult AActionPortfolioCharacter::IsDataValid(TArray<FText>& Vali
 	return SuperResult == EDataValidationResult::Valid ? Result : SuperResult;
 }
 
+void AActionPortfolioCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	
+}
+
 UAbilitySystemComponent* AActionPortfolioCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystem;
@@ -92,17 +113,19 @@ UAbilitySystemComponent* AActionPortfolioCharacter::GetAbilitySystemComponent() 
 
 void AActionPortfolioCharacter::CheckInAir()
 {
+	if(GetLocalRole() != ROLE_Authority) return;
+
 	bool bIsInAirNew = GetCharacterMovement()->IsFalling() || GetCharacterMovement()->IsFlying();
 
 	if (!(bIsInAirNew ^ IsInAir())) return;
 
 	if (bIsInAirNew)
 	{
-		AbilitySystem->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.IsInAir"));
+		AbilitySystem->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.IsInAir"), 1);
 	}
 	else
 	{
-		AbilitySystem->SetLooseGameplayTagCount(FGameplayTag::RequestGameplayTag("State.Etc.IsInAir"), 0);
+		AbilitySystem->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.IsInAir"), 1);
 	}
 }
 
@@ -116,106 +139,97 @@ bool AActionPortfolioCharacter::IsDown() const
 	return AbilitySystem->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Etc.Down"));
 }
 
-void AActionPortfolioCharacter::InitializeAttributes()
+void AActionPortfolioCharacter::AddStartupAbilities()
 {
-	ensure(IsValid(AbilitySystem));
+	if (GetLocalRole() != ROLE_Authority || bStartupAbilitiesGiven) return;
+	bStartupAbilitiesGiven = true;
 
-	if (!DefaultAttributes)
-	{
-		PFLOG(Warning, TEXT("Can't find DefaultAttributes for %s. fill DefaultAttributes."), *GetName());
-		return;
+	for (auto& StartupAbility : StartupAbilities) {
+		FGameplayAbilitySpecHandle TempHandle = AbilitySystem->GiveAbility(FGameplayAbilitySpec(StartupAbility, 1, -1, this));
 	}
-
-	UGameplayEffect* NewAttributeEffect = NewObject<UGameplayEffect>(this, DefaultAttributes);
-
-	AttributeSet->InitializeStatus(1, NewAttributeEffect);
-}
-
-void AActionPortfolioCharacter::AddCharacterAbilities()
-{
-	if(AbilitySystem->bCharacterAbilitiesGiven) return;
-
-	for (auto& AbilityStruct : CharacterAbilities) {
-		FGameplayAbilitySpecHandle TempHandle = AbilitySystem->GiveAbility(FGameplayAbilitySpec(AbilityStruct.Class, AbilityStruct.Level, -1, this));
-		if(TempHandle.IsValid()) OnAddedAbility(TempHandle);
-	}
-
-	AbilitySystem->bCharacterAbilitiesGiven = true;
 }
 
 void AActionPortfolioCharacter::AddStartupEffects()
 {
-	if(AbilitySystem->bStartupEffectsApplied) return;
-
+	if (GetLocalRole() != ROLE_Authority || bStartupEffectsAdded) return;
+	bStartupEffectsAdded = true;
 
 	FGameplayEffectContextHandle EffectContext = AbilitySystem->MakeEffectContext();
 	EffectContext.AddSourceObject(this);
 
-	for (TSubclassOf<UGameplayEffect> GameplayEffect : StartupEffects)
+	//StartUp Effects 적용
+	for (const TSubclassOf<UGameplayEffect>& GameplayEffect : StartupEffects)
 	{
-		FGameplayEffectSpecHandle NewHandle = AbilitySystem->MakeOutgoingSpec(GameplayEffect, GetCharacterLevel(), EffectContext);
+		FGameplayEffectSpecHandle NewHandle = AbilitySystem->MakeOutgoingSpec(GameplayEffect, 1, EffectContext);
 		if (NewHandle.IsValid())
 		{
-			FActiveGameplayEffectHandle ActiveGEHandle = AbilitySystem->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), AbilitySystem);
+			FActiveGameplayEffectHandle ActiveGEHandle = AbilitySystem->ApplyGameplayEffectSpecToSelf(*NewHandle.Data.Get());
 		}
 	}
-
-	AbilitySystem->bStartupEffectsApplied = true;
 }
 
-void AActionPortfolioCharacter::ClearCharacterAbilities()
+void AActionPortfolioCharacter::InitializeAttributes()
 {
-	if(GetLocalRole() != ROLE_Authority || !AbilitySystem->bCharacterAbilitiesGiven) return;
+	const UCharacterDataManager* DataManager = UCharacterDataManager::GetCharacterDataManager();
 
-	for (auto& CharAbilityClass : CharacterAbilities)
+	const FCharacterAttribute* CharacterData = DataManager->GetCharacterData(GetCharacterCode());
+	check(CharacterData);
+
+	FGameplayEffectContextHandle ContextHandle = AbilitySystem->MakeEffectContext();
+	
+	FGameplayEffectSpec EffectSpec(GetDefault<UAttributeEffect_Base>(), ContextHandle, 1);
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetCharacterLevelName(), CharacterData->Level);
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetMaxHealthName(), CharacterData->MaxHealth);
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetHealthRegenName(), CharacterData->HealthRegen);
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetMaxStaminaName(), CharacterData->MaxStamina);
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetStaminaRegenName(), CharacterData->StaminaRegen);
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetAttackPName(), CharacterData->AttackP);
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetDefensePName(), CharacterData->DefenseP);
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetFireResistanceName(), CharacterData->FireResistance);
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetIceResistanceName(), CharacterData->IceResistance);
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetElectricResistanceName(), CharacterData->ElectricResistance);
+
+	AbilitySystem->ApplyGameplayEffectSpecToSelf(EffectSpec);
+}
+
+
+
+
+void AActionPortfolioCharacter::ClearStartupAbilities()
+{
+	if(GetLocalRole() != ROLE_Authority || !bStartupAbilitiesGiven) return;
+
+	for (auto& StartupAbility : StartupAbilities)
 	{
-		AbilitySystem->ClearAbilityWithClass(CharAbilityClass.Class);
+		AbilitySystem->ClearAbilityWithClass(StartupAbility);
+	}
+}
+
+void AActionPortfolioCharacter::ClearStartupEffects()
+{
+	if (GetLocalRole() != ROLE_Authority || !bStartupEffectsAdded) return;
+
+	AbilitySystem->RemoveActiveEffects(
+				FGameplayEffectQuery(
+					FActiveGameplayEffectQueryCustomMatch::CreateUObject
+					(this, &AActionPortfolioCharacter::ConditionRemoveStartupEffects) ) );
+}
+
+bool AActionPortfolioCharacter::ConditionRemoveStartupEffects(const FActiveGameplayEffect& ActiveEffect)
+{
+	const UGameplayEffect* InEffect =  ActiveEffect.Spec.Def.Get();
+
+	if(InEffect == GetDefault<UCharacterRegenEffect>()) return true;
+
+	for (auto& StartupEffectClass : StartupEffects)
+	{
+		if(InEffect == StartupEffectClass.GetDefaultObject()) return true;
 	}
 
-	AbilitySystem->bCharacterAbilitiesGiven = false;
+	return false;
 }
 
-void AActionPortfolioCharacter::OnActiveGameplayEffectAddedCallback(UAbilitySystemComponent* Target, const FGameplayEffectSpec& SpecApplied, FActiveGameplayEffectHandle ActiveHandle)
-{
-	//PFLOG(Warning, TEXT("수정필요"));
-}
 
-void AActionPortfolioCharacter::OnRemoveGameplayEffectCallback(const FActiveGameplayEffect& EffectRemoved)
-{
-	//PFLOG(Warning, TEXT("수정필요"));
-
-}
-
-void AActionPortfolioCharacter::InitializeAttributeChangedDelegate()
-{
-	AbilitySystem->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetHealthAttribute()).AddUObject(this, &AActionPortfolioCharacter::OnHealthChanged);
-	AbilitySystem->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMaxHealthAttribute()).AddUObject(this, &AActionPortfolioCharacter::OnMaxHealthChanged);
-}
-
-void AActionPortfolioCharacter::OnHealthChanged(const FOnAttributeChangeData& Data)
-{
-	//PFLOG(Warning, TEXT("수정필요"));
-}
-
-void AActionPortfolioCharacter::OnMaxHealthChanged(const FOnAttributeChangeData& Data)
-{
-	//PFLOG(Warning, TEXT("수정필요"));
-
-}
-
-void AActionPortfolioCharacter::InitializeAbilitySystem()
-{
-	AbilitySystem->InitAbilityActorInfo(this, this);
-
-	AbilitySystem->OnActiveGameplayEffectAddedDelegateToSelf.AddUObject(this, &AActionPortfolioCharacter::OnActiveGameplayEffectAddedCallback);
-	AbilitySystem->OnAnyGameplayEffectRemovedDelegate().AddUObject(this, &AActionPortfolioCharacter::OnRemoveGameplayEffectCallback);
-
-	InitializeAttributeChangedDelegate();
-
-	InitializeAttributes();
-	AddStartupEffects();
-	AddCharacterAbilities();
-}
 
 int32 AActionPortfolioCharacter::GetCharacterLevel() const
 {
@@ -255,13 +269,14 @@ void AActionPortfolioCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
-	InitializeAbilitySystem();
-	InitializeMovement();
-
-	if (LockOnStateWidgetClass)
+	if (GetLocalRole() == ENetRole::ROLE_Authority)
 	{
-		LockOnStateWidget = CreateWidget<ULockOnStateWidget>(GetWorld(), LockOnStateWidgetClass, "LockOnStateWidget");
+		InitializeAttributes();
+		AddStartupEffects();
+		AddStartupAbilities();
 	}
+
+	InitializeMovement();
 }
 
 void AActionPortfolioCharacter::Tick(float DeltaSeconds)
@@ -275,47 +290,45 @@ void AActionPortfolioCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
+
 }
-
-
-
 
 
 void AActionPortfolioCharacter::Landed(const FHitResult& Hit)
 {
-	FGameplayEventData Payload;
-	Payload.Instigator = this;
-	
-	AbilitySystem->HandleGameplayEvent(FGameplayTag::RequestGameplayTag("CommonEvent.OnLanded"), &Payload);
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		FGameplayEventData Payload;
+		Payload.Instigator = this;
+
+		FGameplayEffectContextHandle EventContextHandle = AbilitySystem->MakeEffectContext();
+		EventContextHandle.AddHitResult(Hit, true);
+		Payload.ContextHandle = EventContextHandle;
+
+		AbilitySystem->HandleGameplayEvent(FGameplayTag::RequestGameplayTag("CommonEvent.OnLanded"), &Payload);
+	}
 
 	Super::Landed(Hit);
 }
 
+USceneComponent* AActionPortfolioCharacter::GetDefaultAttachComponent() const
+{
+	return GetMesh();
+}
+
+void AActionPortfolioCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+	TeamId = NewTeamID;
+}
+
 FGenericTeamId AActionPortfolioCharacter::GetGenericTeamId() const
 {
-	IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>(GetController());
-	if (TeamAgent) {
-		return TeamAgent->GetGenericTeamId();
-	}
-	else {
-		return FGenericTeamId::NoTeam;
-	}
+	return TeamId;
 }
 
 void AActionPortfolioCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-
-	if (AActionPFPlayerController* PlayerController = Cast<AActionPFPlayerController>(NewController))
-	{
-		SetGenericTeamId(1);
-	}
-	else
-	{
-		SetGenericTeamId(2);
-	}
-
-	AbilitySystem->InitAbilityActorInfo(this, this);
 }
 
 void AActionPortfolioCharacter::InitializeMovement()
@@ -345,74 +358,58 @@ bool AActionPortfolioCharacter::CanBasicAct() const
 	return !GetAbilitySystemComponent()->HasAnyMatchingGameplayTags(CheckTags);
 }
 
-void AActionPortfolioCharacter::AttachComponentToCharacter(USceneComponent* InComponent, const FAttachmentTransformRules& AttachmentRules, const FName& SocketName)
+UActionPFAnimInstance* AActionPortfolioCharacter::GetAnimInstance() const
 {
-	InComponent->AttachToComponent(GetMesh(), AttachmentRules, SocketName);
-}
-
-UAnimMontage* AActionPortfolioCharacter::GetRigidityAnim(float RigidityTime, const FHitResult* HitResult) const
-{
-	if (HitResult != nullptr)
-	{
-	}
-
-	return HitReactionAnimations.Front;
+	return Cast<UActionPFAnimInstance>( GetMesh()->GetAnimInstance());
 }
 
 
-
-void AActionPortfolioCharacter::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+void AActionPortfolioCharacter::DestroyCharacter()
 {
-	if (bDestroyOnDie && !bInterrupted) {
-		Destroy();
-	}
+	Destroy();
 }
 
-void AActionPortfolioCharacter::CharacterDie()
+
+void AActionPortfolioCharacter::CharacterDie(const FGameplayEffectModCallbackData& Data)
 {
 	if(IsCharacterDie()) return;
+
+	OnCharacterDie(Data);
 
 	const FGameplayTag DeathTag = FGameplayTag::RequestGameplayTag("State.Etc.Death");
 	AbilitySystem->AddLooseGameplayTag(DeathTag);
 
 	FGameplayEventData EventData;
+	EventData.ContextHandle = Data.EffectSpec.GetEffectContext();
 	EventData.Instigator = this;
 	EventData.Target = this;
 	EventData.EventTag = DeathTag;
 	AbilitySystem->HandleGameplayEvent(DeathTag, &EventData);
 
-	if(OnCharacterDie.IsBound())
+	UActionPFAnimInstance* AnimInstance = GetAnimInstance();
+	if (UAnimMontage* DeathAnim = AnimInstance->GetAnimMontageByTag("Animation.Death"))
 	{
-		OnCharacterDie.Broadcast(this);
-		OnCharacterDie.Clear();
+		AnimInstance->Montage_Play(DeathAnim);
 	}
-	
-	if (HitReactionAnimations.Death != nullptr)
-	{
-		FOnMontageEnded DeathMontageEnded;
-		DeathMontageEnded.BindUObject(this, &AActionPortfolioCharacter::OnDeathMontageEnded);
 
-		GetMesh()->GetAnimInstance()->Montage_Play(HitReactionAnimations.Death);
-		GetMesh()->GetAnimInstance()->Montage_SetEndDelegate(DeathMontageEnded, HitReactionAnimations.Death);
-	}
-	else if(bDestroyOnDie)
-	{
-		Destroy();
-	}
-	
-}
 
-void AActionPortfolioCharacter::OnDamageEvent(float DamageAmount, AActor* DamageInstigator)
-{
-	if (OnDamagedDel.IsBound())
+	if(OnCharacterDieDelegate.IsBound())
 	{
-		OnDamagedDel.Broadcast(DamageAmount, DamageInstigator);
+		OnCharacterDieDelegate.Broadcast(this);
 	}
-}
 
-void AActionPortfolioCharacter::OnAttackEvent(float DamageAmount, AActor* Target)
-{
-	
+	if (bAutoDestroyOnDie)
+	{
+		if (0 < DestroyTime)
+		{
+			FTimerHandle TimerHandle;
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &AActionPortfolioCharacter::DestroyCharacter, DestroyTime, false);
+		}
+		else
+		{
+			DestroyCharacter();
+		}
+	}
 }
 
 

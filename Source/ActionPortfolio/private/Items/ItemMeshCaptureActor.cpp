@@ -41,34 +41,8 @@ void AItemMeshCaptureActor::Tick(float DeltaTime)
 	ItemMesh->AddRelativeRotation(FRotator(0, RotateSpeed * DeltaTime, 0));
 }
 
-void AItemMeshCaptureActor::SetItemMesh(TSoftObjectPtr<class UStaticMesh> NewItemMesh)
+void AItemMeshCaptureActor::SetItemMesh(UStaticMesh* NewItemMesh)
 {
-	FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
-
-	if (MeshStreamingHandle.IsValid())
-	{
-		MeshStreamingHandle->CancelHandle();
-		MeshStreamingHandle.Reset();
-	}
-
-	if (NewItemMesh.IsNull())
-	{
-		ItemMesh->SetStaticMesh(nullptr);
-	}
-	else if(NewItemMesh.IsValid())
-	{
-		OnCompleteLoadMesh(NewItemMesh);
-	}
-	else
-	{
-		ItemMesh->SetStaticMesh(nullptr);
-
-		MeshStreamingHandle = Streamable.RequestAsyncLoad(NewItemMesh.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this, &AItemMeshCaptureActor::OnCompleteLoadMesh, NewItemMesh));
-	}
-}
-
-void AItemMeshCaptureActor::OnCompleteLoadMesh(TSoftObjectPtr<class UStaticMesh> NewItemMesh)
-{
-	ItemMesh->SetStaticMesh(NewItemMesh.Get());
+	ItemMesh->SetStaticMesh(NewItemMesh);
 }
 

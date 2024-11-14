@@ -11,43 +11,39 @@
  * 
  */
 
+ DECLARE_MULTICAST_DELEGATE_OneParam(FOnSetAbilityInSlot, UAbilitySlot*);
+
 UCLASS(BlueprintType, Blueprintable, DefaultToInstanced, EditInlineNew, Abstract)
 class ACTIONPORTFOLIO_API UAbilitySlot : public UObject
 {
 	GENERATED_BODY()
 	
+public:
+	UAbilitySlot();
+	UAbilitySlot(FName InSlotType);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Ability")
 	TSubclassOf<class UActionPFGameplayAbility> AbilityClass;
 
-	TSharedPtr<class SAbilityIcon> AbilityIcon;
-
-	TWeakPtr<class SAbilitySlot> SlotSlate;
-
-	TSubclassOf<UActionPFGameplayAbility> TempAbilityClass;
+private:
+	FOnSetAbilityInSlot OnSetAbilityDel;
+	FName SlotType;
 
 protected:
-	virtual bool PreSetAbilityClass(TSubclassOf<class UActionPFGameplayAbility> InClass);
+	virtual bool CanSetAbilityClass(TSubclassOf<class UActionPFGameplayAbility> InClass);
 	virtual void PostSetAbilityClass() {}
 
 public:
+	FName GetSlotType() const {return SlotType;}
+
 	void SetAbilityClass(TSubclassOf<class UActionPFGameplayAbility> InClass);
 
-	const TSharedPtr<SAbilityIcon>& GetAbilityIcon() const {return AbilityIcon;}
-	virtual void BringAbilityIcon();
+	virtual void SlotDropTo(UAbilitySlot* To) {}
 
 public:
-	virtual bool CanChangeSlotFrom(UAbilitySlot* From) const;
-	virtual bool CanChangeSlotTo(UAbilitySlot* To) const;
+	FOnSetAbilityInSlot& GetAbilityChangedDelegate() {return OnSetAbilityDel;}
 
-	virtual void ChangeSlotWithOther(UAbilitySlot* Other);
-	virtual void ApplyChangeSlot();
-
-	virtual void ClearSlot();
-
-	TSubclassOf<UActionPFGameplayAbility> GetAbilityClass() const { return AbilityClass; }
-
-	virtual void LinkAbilitySlotSlate(const TSharedPtr<SAbilitySlot>& InSlot);
+	TSubclassOf<UActionPFGameplayAbility> GetAbilityInSlot() const { return AbilityClass; }
 };
 

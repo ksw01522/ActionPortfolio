@@ -12,14 +12,15 @@
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Ability/Tasks/AbilityTask_GrantTags.h"
 
+#include "Character/ActionPortfolioCharacter.h"
+#include "Character/ActionPFAnimInstance.h"
+
 URigidityEventData::URigidityEventData()
 {
 	RigidityTime = 0;
-	HitResult = nullptr;
-	RigidityAnim = nullptr;
 }
 
-UAbility_Rigidity::UAbility_Rigidity()
+UAbility_Rigidity::UAbility_Rigidity() : RigidityAnim(nullptr)
 {
 	FGameplayTag RigidityTag = FGameplayTag::RequestGameplayTag("State.Etc.Rigidity");
 
@@ -33,6 +34,8 @@ UAbility_Rigidity::UAbility_Rigidity()
 	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Down"));
 	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag("State.Etc.Death"));
 }
+
+
 
 void UAbility_Rigidity::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
@@ -51,7 +54,7 @@ void UAbility_Rigidity::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	URigidityEventData* RigidityData = Cast<URigidityEventData>(TriggerEventData->OptionalObject);
 	check(RigidityData);
 
-	RemainTime = RigidityData->RigidityTime;
+	RemainTime = RigidityData->GetRigidityTime();
 
 	if (RemainTime <= 0)
 	{
@@ -64,31 +67,36 @@ void UAbility_Rigidity::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	CustomTick->OnCustomTickEvent.AddDynamic(this, &UAbility_Rigidity::RigidityTick);
 	CustomTick->ReadyForActivation();
 
-	//Play Animation
-	UAnimMontage* RigidityAnim = RigidityData->RigidityAnim;
-	if (RigidityAnim == nullptr)
-	{
-		ICustomAbilityHelperInterface* Helper = Cast<ICustomAbilityHelperInterface>(ActorInfo->AvatarActor);
-		RigidityAnim = Helper->GetRigidityAnim(RemainTime, RigidityData->HitResult);
-	}
 
-	check(RigidityAnim);
-
-	UAbilityTask_PlayMontageAndWait* PlayAnim = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, "RigidityAnim", RigidityAnim);
-	PlayAnim->OnCompleted.AddDynamic(this, &UAbility_Rigidity::OnRigidityMontageEnd);
-	PlayAnim->ReadyForActivation();
+	PlayRigidityAnim(RigidityData->GetAnimTag());
 
 	//Check In Air
 	FGameplayTag IsInAirTag = FGameplayTag::RequestGameplayTag("State.Etc.IsInAir");
 	
 	if (bool bIsInAir = ActorInfo->AbilitySystemComponent->HasMatchingGameplayTag(IsInAirTag))
 	{
-		IsInAirWithRigidity();
+		RigidityInAir();
 	}
 	else
 	{
 		ActorInfo->AbilitySystemComponent->RegisterGameplayTagEvent(IsInAirTag).AddUObject(this, &UAbility_Rigidity::WaitIsInAirInRigidity);
 	}
+}
+
+void UAbility_Rigidity::PlayRigidityAnim(const FGameplayTag InTag)
+{
+	AActionPortfolioCharacter* PFChar = Cast<AActionPortfolioCharacter>(GetAvatarActorFromActorInfo());
+	if(PFChar == nullptr) return;
+
+	UActionPFAnimInstance* AnimInst = PFChar->GetAnimInstance();
+	if(AnimInst == nullptr) return;
+			
+	RigidityAnim = AnimInst->GetAnimMontageByTag(InTag);
+	if(RigidityAnim == nullptr) return;
+
+	UAbilityTask_PlayMontageAndWait* PlayAnim = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, "RigidityAnim", RigidityAnim);
+	PlayAnim->OnCompleted.AddDynamic(this, &UAbility_Rigidity::OnRigidityMontageEnd);
+	PlayAnim->ReadyForActivation();
 }
 
 void UAbility_Rigidity::WaitIsInAirInRigidity(const FGameplayTag IsInAirTag, int TagCount)
@@ -99,7 +107,7 @@ void UAbility_Rigidity::WaitIsInAirInRigidity(const FGameplayTag IsInAirTag, int
 
 	ASC->UnregisterGameplayTagEvent(DelegateHandle, IsInAirTag);
 
-	IsInAirWithRigidity();
+	RigidityInAir();
 }
 
 
@@ -128,7 +136,6 @@ void UAbility_Rigidity::RigidityTick(float DeltaTime)
 
 	FGameplayTag IsInAirTag = FGameplayTag::RequestGameplayTag("State.Etc.IsInAir");
 	bool bIsInAir = GetCurrentActorInfo()->AbilitySystemComponent->HasMatchingGameplayTag(IsInAirTag);
-	FString TestString = bIsInAir ? "In Air" : "On Ground";
 
 	if (RemainTime <= 1.5 && bIsInAir)
 	{ 
@@ -141,10 +148,9 @@ void UAbility_Rigidity::RigidityTick(float DeltaTime)
 	}
 }
 
-void UAbility_Rigidity::IsInAirWithRigidity()
+void UAbility_Rigidity::RigidityInAir()
 {
 	UAbilitySystemComponent* ASC = GetCurrentActorInfo()->AbilitySystemComponent.Get();
-	FGameplayTag IsInAirTag = FGameplayTag::RequestGameplayTag("State.Etc.IsInAir");
 
 	MontageJumpToSection("Air");
 
@@ -176,17 +182,23 @@ void UAbility_Rigidity::OnRigidityMontageEnd()
 	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, false);
 }
 
-FGameplayAbilitySpecHandle UAbility_Rigidity::RigidityToTarget(TSubclassOf<UAbility_Rigidity> InClass, UAbilitySystemComponent* SourceASC, UAbilitySystemComponent* TargetASC, float InTime, const FHitResult* HitResult, UAnimMontage* InAnim)
+FGameplayAbilitySpecHandle UAbility_Rigidity::RigidityToTarget(UAbilitySystemComponent* SourceASC, UAbilitySystemComponent* TargetASC, const FRigidityData& InData)
 {
+	if (InData.RigidityClass.GetDefaultObject() == nullptr || InData.RigidityTime <= 0)
+	{
+		return FGameplayAbilitySpecHandle();
+	}
+
 	URigidityEventData* RigidityData = NewObject<URigidityEventData>();
-	RigidityData->RigidityTime = InTime;
-	RigidityData->HitResult = HitResult;
+	RigidityData->InitRigidityData(InData);
+
 	FGameplayEventData RigidityEventData;
 	RigidityEventData.OptionalObject = RigidityData;
 	RigidityEventData.Instigator = SourceASC->GetAvatarActor();
 	RigidityEventData.Target = TargetASC->GetAvatarActor();
 
-	FGameplayAbilitySpec AbilitySpec(InClass, 1, -1, SourceASC);
+	FGameplayAbilitySpec AbilitySpec(InData.RigidityClass, 1, -1, SourceASC);
 
 	return TargetASC->GiveAbilityAndActivateOnce(AbilitySpec, &RigidityEventData);
 }
+

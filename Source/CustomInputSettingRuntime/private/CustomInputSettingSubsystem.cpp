@@ -170,14 +170,17 @@ void UCustomInputSettingSubsystem::OnChangedMappingEvent(const FName& Code, cons
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(Controller->GetLocalPlayer()))
 		{
 			Subsystem->RemovePlayerMappedKey(Code);
-			Subsystem->AddPlayerMappedKey(Code, NewKey);
+
+			FModifyContextOptions Options;
+			Options.bForceImmediately = true;
+			Subsystem->AddPlayerMappedKey(Code, NewKey, Options);
 		}
 	}
 
 	if(OnChangedMappingDel.IsBound()) OnChangedMappingDel.Broadcast(Code, NewKey);
 }
 
-FDelegateHandle UCustomInputSettingSubsystem::AddOnChangedMappingEvent(const TDelegate<void(const FName&, const FKey&)> InDel)
+FDelegateHandle UCustomInputSettingSubsystem::AddOnChangedMappingEvent(const TDelegate<void(const FName&, const FKey&)>& InDel)
 {
 	return OnChangedMappingDel.Add(InDel);
 }
@@ -210,6 +213,9 @@ void UCustomInputSettingSubsystem::ResetCustomMapping(UPlayerMappableInputConfig
 			{
 				Subsystem->RemovePlayerMappedKey(ResetCode);
 			}
+			FModifyContextOptions Options;
+			Options.bForceImmediately = true;
+			Subsystem->RequestRebuildControlMappings(Options);
 		}
 	}
 	

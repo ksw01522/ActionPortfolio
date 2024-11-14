@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Items/Euipment/EquipmentAbility.h"
+#include "Items/Equipment/EquipmentAbility.h"
 #include "TestEquipmentAbility.generated.h"
 
 /**

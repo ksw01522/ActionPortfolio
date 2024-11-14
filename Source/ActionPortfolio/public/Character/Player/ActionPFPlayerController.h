@@ -7,6 +7,7 @@
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "GenericTeamAgentInterface.h"
+#include "GameplayEffectExtension.h"
 #include "ActionPFPlayerController.generated.h"
 
 /**
@@ -38,7 +39,12 @@ class ACTIONPORTFOLIO_API AActionPFPlayerController : public APlayerController, 
 
 
 	AActionPFPlayerController();
+	virtual ~AActionPFPlayerController();
 
+#if WITH_EDITOR
+protected:
+	virtual EDataValidationResult IsDataValid(TArray<FText>& ValidationErrors) override;
+#endif
 	///////////// Override
 protected:
 	virtual void Tick(float DeltaSeconds) override;
@@ -48,6 +54,8 @@ protected:
 
 	virtual void OnPossess(APawn* aPawn) override;
 	virtual void OnUnPossess() override;
+
+	virtual void SetPawn(APawn* InPawn) override;
 
 
 ///////////////////입력
@@ -61,34 +69,42 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UPlayerMappableInputConfig> ControllerInput;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UPlayerMappableInputConfig> DefaultCharacterInput;
 protected:
 	virtual void SetupInputComponent() override;
 
+
+
+////////////////// Main UI
 private:
-	TArray<TSharedRef<SWidget>> FocusedWidgetStack;
-	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class UWidget_PlayerMainUI> MainUIClass;
+
+	UPROPERTY()
+	TObjectPtr<class UWidget_PlayerMainUI> MainUI;
+
+
 public:
-	void AddCustomFocuseWidget(SWidget& InWidget, bool bSaveToStack = true);
-	void AddCustomFocuseWidget(TSharedRef<SWidget> InWidget, bool bSaveToStack = true);
-
-	void RemoveCustomFocuseWidgetStack();
-
-///////////////////메뉴 위젯
-private:
-	UPROPERTY(Transient)
-	TObjectPtr<UWidget_PlayerMainUI> PlayerMainUI;
+	UFUNCTION(BlueprintPure)
+	UWidget_PlayerMainUI* GetMainUI() const { return MainUI; }
 
 	int MainUIHideCount = 0;
+
+private:
+	virtual void CreateWidgets();
+
+private:
+	void CreateMainUI(int ZOrder);
+
+private:
+	void RemoveMainUI();
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player|UI")
 	void HideMainUI();
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player|UI")
 	void DisplayMainUI();
-
-	UWidget_PlayerMainUI* GetPlayerMainUI() const { return PlayerMainUI; }
-	
-	void SetPlayerMainUI(UWidget_PlayerMainUI* InMainUI);
 
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UserWidget", meta = (AllowPrivateAccess = "true"))
@@ -97,6 +113,8 @@ private:
 	UPROPERTY()
 	TObjectPtr<UUserWidget> MenuWidget;
 	
+	void CreateMenuWidget(int ZOrder);
+
 	UFUNCTION(BlueprintCallable, Category = "ActionPF|Player")
 	void OpenMenu();
 
@@ -113,10 +131,8 @@ public:
 private:
 	FGenericTeamId TeamID;
 public:
-	/** Assigns Team Agent to given TeamID */
 	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
 
-	/** Retrieve team identifier in form of FGenericTeamId */
 	virtual FGenericTeamId GetGenericTeamId() const { return TeamID; }
 
 ///////////////////////// Interaction //////////////////////////
@@ -166,7 +182,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<UUserWidget_PlayerInventory> InventoryWidget;
 
-	void CreateInventorySlate();
+	void CreateInventoryWidget(int ZOrder);
 
 	void OpenInventory();
 
@@ -213,7 +229,13 @@ public:
 
 
 ////////////////// IAbilitySystemComponent //////////////////////
+public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	class UCharacterStatusComponent* GetStatusComponent() const;
+
+public:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+public:
+	void OnChangeGoldByEffect(const FGameplayEffectModCallbackData& Data);
 };

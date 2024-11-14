@@ -1,9 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+Ôªø// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Character/Player/ActionPFPlayerController.h"
 #include "ActionPortfolio.h"
-#include "ActionPortfolioInstance.h"
+#include "Instance/ActionPortfolioInstance.h"
 
 #include "Interaction/InteractionType/InteractionSystemComponent_NPC.h"
 #include "Interaction/InteractionType/SNPCInteractWidget.h"
@@ -15,7 +15,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "Character/Player/Widget_PlayerMainUI.h"
 #include "Character/Player/PlayerDialogueMCComponent.h"
 
 #include "Blueprint/UserWidget.h"
@@ -43,7 +42,19 @@
 #include "Character/Player/Widget/UserWidget_PlayerInventory.h"
 #include "Items/Widget/InventoryWidget.h"
 
-AActionPFPlayerController::AActionPFPlayerController()
+#include "Character/Player/Widget/Widget_PlayerMainUI.h"
+#include "Ability/Widget/AbilitySlotWidget.h"
+#include "Character/Player/Ability/SkillHotKeyWindow.h"
+#include "Ability/Slot/AbilitySlot_HotKey.h"
+
+#include "Net/UnrealNetwork.h"
+
+#include "UI/NotificationWindow.h"
+
+#include "Ability/Effects/GameplayEffect_Bounty.h"
+
+
+AActionPFPlayerController::AActionPFPlayerController() : MainUI(nullptr)
 {
 	PlayerDialogueMC = CreateDefaultSubobject<UPlayerDialogueMCComponent>("PlayerDialogueMC");
 
@@ -53,6 +64,24 @@ AActionPFPlayerController::AActionPFPlayerController()
 	bDrawTraceInteractionLine = true;
 #endif
 }
+
+AActionPFPlayerController::~AActionPFPlayerController()
+{
+	UCustomInputSettingSubsystem* CISS = UCustomInputSettingSubsystem::GetInstance();
+	if (CISS)
+	{
+		
+	}
+}
+
+#if WITH_EDITOR
+EDataValidationResult AActionPFPlayerController::IsDataValid(TArray<FText>& ValidationErrors)
+{
+	EDataValidationResult Result = Super::IsDataValid(ValidationErrors);
+
+	return Result;
+}
+#endif
 
 void AActionPFPlayerController::Tick(float DeltaSeconds)
 {
@@ -68,6 +97,7 @@ void AActionPFPlayerController::OnPossess(APawn* aPawn)
 {
 	Super::OnPossess(aPawn);
 
+	PFLOG(Warning, TEXT(""));
 	APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(aPawn);
 	if (!IsValid(PlayerChar)) return;
 
@@ -76,8 +106,6 @@ void AActionPFPlayerController::OnPossess(APawn* aPawn)
 
 void AActionPFPlayerController::OnUnPossess()
 {
-	PlayerMainUI = nullptr;
-
 	EmptyInteractions();
 
 	APawn* PossessedPawn = GetPawn();
@@ -85,6 +113,11 @@ void AActionPFPlayerController::OnUnPossess()
 		PossessedPawn->Tags.Remove(FName("PlayerCharacter"));
 	}
 	Super::OnUnPossess();
+}
+
+void AActionPFPlayerController::SetPawn(APawn* InPawn)
+{
+	Super::SetPawn(InPawn);
 }
 
 void AActionPFPlayerController::SetupInputComponent()
@@ -103,7 +136,15 @@ void AActionPFPlayerController::SetupInputComponent()
 
 		UCustomInputSettingSubsystem::GetInstance()->RegisterAffectedController(this);
 
-		GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>()->AddPlayerMappableConfig(ControllerInput);
+		if (UEnhancedInputLocalPlayerSubsystem* ILPS = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+		{
+			FModifyContextOptions Option;
+			Option.bForceImmediately = true;
+
+			ILPS->AddPlayerMappableConfig(ControllerInput);
+			ILPS->AddPlayerMappableConfig(DefaultCharacterInput, Option);
+		}
+
 	}
 }
 
@@ -120,22 +161,17 @@ void AActionPFPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetGenericTeamId(1);
+	CreateWidgets();
 
-	//∞„ƒ°∞‘ µ… InteractionµÈ¿« øπªÛ √÷¥Î∞≥ºˆ∏∏≈≠ πÃ∏Æ ∏ﬁ∏∏Æ ¿‚±‚ : «— Actorø° ø©∑Ø∞≥¿« ªÛ»£¿€øÎ¿Ã ¿÷¿ª ºˆµµ ¿÷¿∏¥œ
-	PrevTracedInteractionActors.Reserve(4);
-	TracedInteractionActors.Reserve(4);
-	FocusedInteractions.Reserve(2);
+	//Í≤πÏπòÍ≤å Îê† InteractionÎì§Ïùò ÏòàÏÉÅ ÏµúÎåÄÍ∞úÏàòÎßåÌÅº ÎØ∏Î¶¨ Î©îÎ™®Î¶¨ Ïû°Í∏∞ : Ìïú ActorÏóê Ïó¨Îü¨Í∞úÏùò ÏÉÅÌò∏ÏûëÏö©Ïù¥ ÏûàÏùÑ ÏàòÎèÑ ÏûàÏúºÎãà
+	if (GetLocalPlayer() != nullptr)
+	{
+		PrevTracedInteractionActors.Reserve(4);
+		TracedInteractionActors.Reserve(4);
+		FocusedInteractions.Reserve(2);
 
-	ChangeGameInputMode();
-
-	MenuWidget = CreateWidget(this, MenuWidgetClass, "PlayerMenu");
-	MenuWidget->AddToViewport(10);
-	MenuWidget->SetVisibility(ESlateVisibility::Collapsed);
-
-	CreateInventorySlate();
-
-	Inventory->AddItemByCode("Test", 1);
+		Inventory->AddItemByCode("Test", 1);
+	}
 }
 
 
@@ -146,57 +182,43 @@ void AActionPFPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID
 {
 	if (TeamID != NewTeamID) {
 		TeamID = NewTeamID;
+		if (IGenericTeamAgentInterface* TAI = Cast<IGenericTeamAgentInterface>(GetPawn()))
+		{
+			TAI->SetGenericTeamId(TeamID);
+		}
 	}
 }
 
 
 
-void AActionPFPlayerController::AddCustomFocuseWidget(SWidget& InWidget, bool bSaveToStack)
+
+
+void AActionPFPlayerController::CreateMainUI(int ZOrder)
 {
-	TSharedRef<SWidget> Shared = InWidget.AsShared();
-
-	AddCustomFocuseWidget(Shared, bSaveToStack);
+	if (MainUI = CreateWidget<UWidget_PlayerMainUI>(this, MainUIClass, "MainUI"))
+	{
+		MainUI->AddToViewport(ZOrder);
+	}
 }
 
-void AActionPFPlayerController::AddCustomFocuseWidget(TSharedRef<SWidget> InWidget, bool bSaveToStack)
+
+void AActionPFPlayerController::RemoveMainUI()
 {
-	FInputModeUIOnly UIInputMode;
-	UIInputMode.SetWidgetToFocus(InWidget);
+	if(MainUI == nullptr) return;
 
-	bShowMouseCursor = true;
-	SetInputMode(UIInputMode);
+	MainUI->RemoveFromParent();
+	MainUI = nullptr;
 
-	if (bSaveToStack)
-	{
-		FocusedWidgetStack.Add(MoveTemp(InWidget));
-	}
 }
 
-void AActionPFPlayerController::RemoveCustomFocuseWidgetStack()
-{
-	if(FocusedWidgetStack.IsEmpty()) return;
 
-	FocusedWidgetStack.Pop();
-
-	if (FocusedWidgetStack.IsEmpty())
-	{
-		ChangeGameInputMode();
-	}
-	else
-	{
-		FInputModeUIOnly UIInputMode;
-		UIInputMode.SetWidgetToFocus(FocusedWidgetStack.Last());
-
-		SetInputMode(UIInputMode);
-	}
-}
 
 void AActionPFPlayerController::HideMainUI()
 {
 	MainUIHideCount++;
 	if (0 < MainUIHideCount)
 	{
-		PlayerMainUI->SetVisibility(ESlateVisibility::Hidden);
+		MainUI->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
 
@@ -205,28 +227,20 @@ void AActionPFPlayerController::DisplayMainUI()
 	MainUIHideCount--;
 	if (MainUIHideCount <= 0)
 	{
-		PlayerMainUI->SetVisibility(ESlateVisibility::Visible);
+		MainUI->SetVisibility(ESlateVisibility::Visible);
 	}
 }
 
-void AActionPFPlayerController::SetPlayerMainUI(UWidget_PlayerMainUI* InMainUI)
+
+
+void AActionPFPlayerController::CreateMenuWidget(int ZOrder)
 {
-	PlayerMainUI = InMainUI;
-
-	if (PlayerMainUI)
+	if (MenuWidget = CreateWidget(this, MenuWidgetClass, "PlayerMenu"))
 	{
-		if (0 < MainUIHideCount)
-		{
-			PlayerMainUI->SetVisibility(ESlateVisibility::Collapsed);
-		}
-		else
-		{
-			PlayerMainUI->SetVisibility(ESlateVisibility::Visible);
-		}
+		MenuWidget->AddToViewport(ZOrder);
+		MenuWidget->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
-
-
 
 void AActionPFPlayerController::OpenMenu()
 {
@@ -296,7 +310,7 @@ void AActionPFPlayerController::TraceInteractions()
 	PrevTracedInteractionActors = TracedInteractionActors;
 	TracedInteractionActors.Empty();
 
-	//Trace∏¶ ¿ß«— ∏≈∞≥∫ØºˆµÈ
+	//TraceÎ•º ÏúÑÌïú Îß§Í∞úÎ≥ÄÏàòÎì§
 	static const float TraceDistance = 300;
 	TArray<FHitResult> HitResults;
 	FVector TraceStart = PlayerPawn->GetActorLocation();
@@ -309,7 +323,7 @@ void AActionPFPlayerController::TraceInteractions()
 
 	TArray<AActor*> TracedActors;
 	
-	//Traceø° ∞…∏∞ ActorµÈ¿Ã ¿÷¿ª Ω√ø° ªÛ»£¿€øÎƒƒ∆˜≥Õ∆Æ∞° ¿÷¥¬¡ˆ √º≈©
+	//TraceÏóê Í±∏Î¶∞ ActorÎì§Ïù¥ ÏûàÏùÑ ÏãúÏóê ÏÉÅÌò∏ÏûëÏö©Ïª¥Ìè¨ÎÑåÌä∏Í∞Ä ÏûàÎäîÏßÄ Ï≤¥ÌÅ¨
 	for (const auto& HitResult : HitResults)
 	{
 		AActor* TracedActor = HitResult.GetActor();
@@ -335,14 +349,14 @@ void AActionPFPlayerController::TraceInteractions()
 	}
 #endif
 
-	//∫ÒæÓ¿÷¥¬¡ˆ √º≈©
+	//ÎπÑÏñ¥ÏûàÎäîÏßÄ Ï≤¥ÌÅ¨
 	if (TracedActors.IsEmpty())
 	{
 		OnChangedFocusedInteractionActor();
 		return;
 	}
 
-	//¿ÃπÃ ¿÷¥¯ æ◊≈ÕµÈ √ﬂ∞°
+	//Ïù¥ÎØ∏ ÏûàÎçò Ïï°ÌÑ∞Îì§ Ï∂îÍ∞Ä
 	for (auto& PrevTracedActor : PrevTracedInteractionActors)
 	{
 		if (TracedActors.Contains(PrevTracedActor))
@@ -351,7 +365,7 @@ void AActionPFPlayerController::TraceInteractions()
 		}
 	}
 	
-	//ªı∑ŒøÓ æ◊≈ÕµÈ √ﬂ∞°
+	//ÏÉàÎ°úÏö¥ Ïï°ÌÑ∞Îì§ Ï∂îÍ∞Ä
 	for (auto& TracedActor : TracedActors)
 	{
 		if (!TracedInteractionActors.Contains(TracedActor))
@@ -407,14 +421,16 @@ void AActionPFPlayerController::InteractFocusedInteraction()
 
 
 
-void AActionPFPlayerController::CreateInventorySlate()
+void AActionPFPlayerController::CreateInventoryWidget(int ZOrder)
 {
 	InventoryWidget = CreateWidget<UUserWidget_PlayerInventory>(this, InventoryWidgetClass, "PlayerInventory");
-
+	//InventoryWidget->AddToViewport(ZOrder);
+	InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void AActionPFPlayerController::OpenInventory()
 {
+	InventoryWidget->SetVisibility(ESlateVisibility::Visible);
 	InventoryWidget->AddToViewport(10);
 	InventoryWidget->GetInventoryWidget()->SetUserFocus(this);
 	
@@ -424,6 +440,7 @@ void AActionPFPlayerController::OpenInventory()
 void AActionPFPlayerController::CloseInventory()
 {
 	InventoryWidget->RemoveFromParent();
+	//InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
 
 	ChangeGameInputMode();
 }
@@ -520,9 +537,9 @@ void AActionPFPlayerController::ClearLockOnTarget()
 
 UAbilitySystemComponent* AActionPFPlayerController::GetAbilitySystemComponent() const
 {
-	if(IAbilitySystemInterface* PawnASI = Cast<IAbilitySystemInterface>(GetPawn()))
+	if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(GetPawn()))
 	{
-		return PawnASI->GetAbilitySystemComponent();
+		return ASI->GetAbilitySystemComponent();
 	}
 
 	return nullptr;
@@ -536,6 +553,38 @@ UCharacterStatusComponent* AActionPFPlayerController::GetStatusComponent() const
 	}
 
 	return nullptr;
+}
+
+
+void AActionPFPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
+
+void AActionPFPlayerController::OnChangeGoldByEffect(const FGameplayEffectModCallbackData& Data)
+{
+	if (Data.EffectSpec.Def == GetDefault<UGameplayEffect_Bounty>() && Data.EvaluatedData.ModifierOp == EGameplayModOp::Additive)
+	{
+		if (MainUI)
+		{
+			MainUI->GainGold(Data.EvaluatedData.Magnitude);
+		}
+	}
+
+
+}
+
+void AActionPFPlayerController::CreateWidgets()
+{
+	if(!IsLocalController()) return;
+
+	const int ZOrder_MainUI = 0;
+	const int ZOrder_Menu = 100;
+	const int ZOrder_Inventory = 10;
+
+	CreateMainUI(ZOrder_MainUI);
+	CreateMenuWidget(ZOrder_Menu);
+	CreateInventoryWidget(ZOrder_Inventory);
 }
 
 void AActionPFPlayerController::PressLockOnAction()

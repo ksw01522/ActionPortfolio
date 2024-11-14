@@ -38,6 +38,8 @@ enum class EItemType : uint8
 	Material,
 };
 
+ENUM_RANGE_BY_FIRST_AND_LAST(EItemType, EItemType::Equipment, EItemType::Material);
+
 UENUM(BlueprintType)
 enum class EItemGrade : uint8
 {
@@ -50,24 +52,24 @@ enum class EItemGrade : uint8
 	Epic
 };
 
+ENUM_RANGE_BY_FIRST_AND_LAST(EItemGrade, EItemGrade::Common, EItemGrade::Epic);
 
-ENUM_RANGE_BY_FIRST_AND_LAST(EItemType, EItemType::Equipment, EItemType::Material);
 
 USTRUCT(BlueprintType)
 struct ACTIONPORTFOLIO_API FItemData_Base : public FTableRowBase
 {
 	GENERATED_BODY()
 
-	FItemData_Base() : ItemType(EItemType::None), Grade(EItemGrade::Common), ItemClass(), Name(), Description(), Icon(nullptr), Price(0), StackSize(1)
+	FItemData_Base() : ItemType(EItemType::None), Grade(EItemGrade::Common), Name(), Description(), Price(0), StackSize(1)
 	{}
 
-	FItemData_Base(EItemType NewType) : ItemType(NewType), Name(), Description(), Icon(nullptr), Price(0), StackSize(1)
+	FItemData_Base(EItemType NewType) : ItemType(NewType), Name(), Description(), Price(0), StackSize(1)
 	{}
 
-	FItemData_Base(EItemType NewType, int NewStackSize) : ItemType(NewType), Name(), Description(), Icon(nullptr), Price(0), StackSize(NewStackSize)
+	FItemData_Base(EItemType NewType, int NewStackSize) : ItemType(NewType), Name(), Description(), Price(0), StackSize(NewStackSize)
 	{}
 
-	FItemData_Base(EItemType NewType, int NewStackSize, TSubclassOf<UItemBase> NewItemClass) : ItemType(NewType), ItemClass(NewItemClass), Name(), Description(), Icon(nullptr), Price(0), StackSize(NewStackSize)
+	FItemData_Base(EItemType NewType, int NewStackSize, TSubclassOf<UItemBase> NewItemClass) : ItemType(NewType), Name(), Description(), Price(0), StackSize(NewStackSize)
 	{}
 
 	virtual ~FItemData_Base() {}
@@ -79,28 +81,18 @@ struct ACTIONPORTFOLIO_API FItemData_Base : public FTableRowBase
 	EItemGrade Grade;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemBase")
-	TSubclassOf<UItemBase> ItemClass;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemBase")
 	FName Name;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemBase")
 	FString Description;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemBase")
-	TSoftObjectPtr<UMaterialInterface> Icon;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemBase")
-	TSoftObjectPtr<UStaticMesh> ItemMesh;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemBase")
 	int Price;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemBase")
-	bool bStackable;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemBase", meta = (ClampMin = 0, ClampMax = 255, EditCondition = "bStackable"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ItemBase", meta = (ClampMin = 1, ClampMax = 255, EditCondition = "bStackable"))
 	int StackSize;
+
+	virtual TSubclassOf<class UItemBase> GetItemClass() const;
 };
 
 UCLASS(Abstract, BlueprintType)
@@ -109,7 +101,9 @@ class ACTIONPORTFOLIO_API UItemBase : public UObject
 	GENERATED_BODY()
 	
 public:
-	UItemBase() : bInitialized(false)
+	friend class UItemManagerSubsystem;
+
+	UItemBase() : Icon(nullptr), ItemMesh(nullptr)
 	{}
 	virtual ~UItemBase(){}
 
@@ -124,23 +118,24 @@ private:
 
 	FString Description;
 
-	TSoftObjectPtr<UMaterialInterface> Icon;
+	TObjectPtr<UTexture2D> Icon;
 
-	TSoftObjectPtr<UStaticMesh> ItemMesh;
+	TObjectPtr<UStaticMesh> ItemMesh;
 
 	int Price;
-
-	bool bStackable;
 
 	int StackSize;
 
 	int Count;
 
 protected:
-	bool bInitialized;
+	virtual void InitializeItem(const FName& NewItemCode, const FItemData_Base* Data, TArray<FText>& OutErroMsgs);
+
+	void SetItemIcon(UTexture2D* NewIcon) { Icon = NewIcon; }
+
+	void SetItemMesh(UStaticMesh* NewMesh) { ItemMesh = NewMesh; }
 
 public:
-	virtual void InitializeItem(const FName& NewItemCode, const FItemData_Base* Data);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
 	FName GetItemCode() const { return ItemCode; }
@@ -158,10 +153,10 @@ public:
 	virtual FString GetItemDescription() const { return Description; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
-	TSoftObjectPtr<UMaterialInterface> GetIconMaterial() const {return Icon;}
+	UTexture2D* GetItemIcon() const {return Icon;}
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
-	TSoftObjectPtr<UStaticMesh> GetItemMesh() const {return ItemMesh;}
+	UStaticMesh* GetItemMesh() const {return ItemMesh;}
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
 	int GetPrice() const {return Price; }
@@ -169,7 +164,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
 	int GetStackSize() const {return StackSize;}
 
-	bool IsStackableItem() const {return bStackable;}
+	bool IsStackableItem() const {return 1 < StackSize;}
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Item")
 	int GetCount() const {return Count;}
@@ -188,126 +183,6 @@ public:
 	virtual bool IsSame(const UItemBase* Other) const;
 };
 
-UENUM(BlueprintType)
-enum class EEquipmentPart : uint8
-{
-	None = 0 UMETA(Hidden),
-	Body,
-	Pants,
-	Head,
-	Arm,
-	Foot
-};
-
-ENUM_RANGE_BY_FIRST_AND_LAST(EEquipmentPart, EEquipmentPart::Body, EEquipmentPart::Foot);
-
-UCLASS(Blueprintable)
-class ACTIONPORTFOLIO_API UItemBase_Equipment : public UItemBase
-{
-	GENERATED_BODY()
-
-public:
-	UItemBase_Equipment()
-	{};
-
-private:
-	TSubclassOf<UEquipmentAbility> EquipmentAbility;
-
-	EEquipmentPart EquipmentPart;
-
-	float MaxHP;
-
-	float MaxStamina;
-
-	float AttackP;
-
-	float DefenseP;
-
-protected:
-	virtual void InitializeItem(const FName& NewItemCode, const FItemData_Base* Data) override;
-
-public:
-	virtual bool IsSame(const UItemBase* Other) const override;
-
-	EEquipmentPart GetEquipmentPart() const {return EquipmentPart;}
-
-	virtual UGameplayEffect* MakeAddStatusEffect() const;
-
-	virtual bool CanEquipItem(class UActionPFAbilitySystemComponent* ASC) const;
-
-	TSubclassOf<UEquipmentAbility> GetEquipmentAbility() const { return EquipmentAbility;}
-};
-
-USTRUCT(BlueprintType)
-struct FItemData_Equipment : public FItemData_Base
-{
-	GENERATED_BODY()
-
-	FItemData_Equipment() : FItemData_Base(EItemType::Equipment, 1, UItemBase_Equipment::StaticClass()), MaxHP(0), MaxStamina(0), AttackP(0), DefenseP(0)
-	{}
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
-	TSubclassOf<UEquipmentAbility> EquipmentAbility;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
-	EEquipmentPart EquipmentPart;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
-	float MaxHP;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
-	float MaxStamina;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
-	float AttackP;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
-	float DefenseP;
-};
-
-
-
-UCLASS(Blueprintable)
-class ACTIONPORTFOLIO_API UItemBase_Consumption : public UItemBase
-{
-	GENERATED_BODY()
-
-
-protected:
-	//virtual void InitializeItem(const FName& NewItemCode, const FItemData_Base* Data) override;
-
-};
-
-USTRUCT(BlueprintType)
-struct FItemData_Consumption : public FItemData_Base
-{
-	GENERATED_BODY()
-
-	FItemData_Consumption() : FItemData_Base(EItemType::Consumption, 99, UItemBase_Consumption::StaticClass())
-	{}
-
-};
-
-
-
-UCLASS(Blueprintable)
-class ACTIONPORTFOLIO_API UItemBase_Material : public UItemBase
-{
-	GENERATED_BODY()
-
-protected:
-	//virtual void InitializeItem(const FName& NewItemCode, const FItemData_Base* Data) override;
-
-};
-
-USTRUCT(BlueprintType)
-struct FItemData_Material : public FItemData_Base
-{
-	GENERATED_BODY()
-
-	FItemData_Material() : FItemData_Base(EItemType::Material, 99, UItemBase_Material::StaticClass())
-	{}
-};
 
 class UStaticMesh;
 class UBoxComponent;

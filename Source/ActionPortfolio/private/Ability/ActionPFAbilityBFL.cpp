@@ -7,6 +7,7 @@
 #include "ActionPortfolio.h"
 #include "AbilitySystemGlobals.h"
 #include "Ability/AbilitySlot.h"
+#include "Ability/Effects/Damage/DamageEffect.h"
 
 FGameplayEventData UActionPFAbilityBFL::MakeEventDataForAbility(AActor* instigator, TArray<AActor*> TargetArray)
 {
@@ -32,21 +33,4 @@ UActionPFAbilitySystemComponent* UActionPFAbilityBFL::GetAbilitySystemComponent(
 	if(ASI == nullptr) return nullptr;
 
 	return Cast<UActionPFAbilitySystemComponent>(ASI->GetAbilitySystemComponent());
-}
-
-bool UActionPFAbilityBFL::TryChangeAbilitySlot(UAbilitySlot* From, UAbilitySlot* To)
-{
-	if(From == nullptr || To == nullptr) return false;
-
-	bool bCanChange = From->CanChangeSlotTo(To) && To->CanChangeSlotFrom(From);
-	if (bCanChange)
-	{
-		From->ChangeSlotWithOther(To);
-		To->ChangeSlotWithOther(From);
-
-		From->ApplyChangeSlot();
-		To->ApplyChangeSlot();
-	}
-
-	return bCanChange;
 }

@@ -4,7 +4,7 @@
 #include "Character/Player/PlayerDialogueMCComponent.h"
 #include "Dialogue/Slate/DialogueSlate.h"
 #include "DialogueNode.h"
-#include "ActionPortfolioInstance.h"
+#include "Instance/ActionPortfolioInstance.h"
 #include "ActionPortfolio.h"
 #include "Interaction/InteractionType/SNPCInteractWidget.h"
 #include "Widgets/Layout/SConstraintCanvas.h"
@@ -67,16 +67,16 @@ void UPlayerDialogueMCComponent::OnEnterDialogue()
 {
 	GEngine->GameViewport->AddViewportWidgetContent(DefaultDialogueSlate.ToSharedRef(), 110);
 
-	GetOwner<AActionPFPlayerController>()->AddCustomFocuseWidget(*DefaultDialogueSlate.Get());
+	//GetOwner<AActionPFPlayerController>()->AddCustomFocuseWidget(*DefaultDialogueSlate.Get());
 
 	TryEnterNextNode(GetCurrentNode()->GetNextDialogueNodes()[0]);
 }
 
 void UPlayerDialogueMCComponent::OnExitDialogue(bool bIsCancelled)
 {
-	GetOwner<AActionPFPlayerController>()->RemoveCustomFocuseWidgetStack();
+	//GetOwner<AActionPFPlayerController>()->RemoveCustomFocuseWidgetStack();
 
-	GEngine->GameViewport->RemoveViewportWidgetContent(DefaultDialogueSlate.ToSharedRef());
+	//GEngine->GameViewport->RemoveViewportWidgetContent(DefaultDialogueSlate.ToSharedRef());
 }
 
 

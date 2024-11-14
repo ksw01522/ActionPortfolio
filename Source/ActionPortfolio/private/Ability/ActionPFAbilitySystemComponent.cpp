@@ -6,7 +6,8 @@
 #include "Character/ActionPortfolioCharacter.h"
 #include "AbilitySystemGlobals.h"
 #include "ActionPortfolio.h"
-
+#include "Ability/Widget/SAbilityIcon.h"
+#include "Ability/Widget/StateIconWidget.h"
 
 
 UActionPFAbilitySystemComponent::UActionPFAbilitySystemComponent()
@@ -14,9 +15,43 @@ UActionPFAbilitySystemComponent::UActionPFAbilitySystemComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
+void UActionPFAbilitySystemComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (GetWorld()->GetNetMode() == ENetMode::NM_DedicatedServer)
+	{
+		bSuppressGameplayCues = true;
+	}
+}
+
+void UActionPFAbilitySystemComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+}
+
 bool UActionPFAbilitySystemComponent::IsGenericEventInputBound(int32 InputID) const
 {
 	return GenericEventInputDelegate.Contains(InputID) && GenericEventInputDelegate[InputID].IsBound();
+}
+
+void UActionPFAbilitySystemComponent::OnTagUpdated(const FGameplayTag& Tag, bool TagExists)
+{
+	/*ENetMode NetMode = GetWorld()->GetNetMode();
+	FString NetModeName = NetMode == ENetMode::NM_Client ? "Client" : "Server";
+
+	int TagCount = GetTagCount(Tag);
+
+	PFLOG(Warning, TEXT("%s : %s Count : %d"), *NetModeName, *Tag.ToString(), TagCount);*/
+
+}
+
+void UActionPFAbilitySystemComponent::OnRemoveAbility(FGameplayAbilitySpec& AbilitySpec)
+{
+	Super::OnRemoveAbility(AbilitySpec);
+
+
 }
 
 void UActionPFAbilitySystemComponent::ClearAbilityWithClass(TSubclassOf<class UGameplayAbility> InAbilityClass)
@@ -179,11 +214,103 @@ void UActionPFAbilitySystemComponent::AbilityLocalInputReleased(int32 InputID)
 	Super::AbilityLocalInputReleased(InputID);
 }
 
+void UActionPFAbilitySystemComponent::AbilityLocalInputPressedByClass(const TSubclassOf<UActionPFGameplayAbility>& InClass)
+{
+	const UGameplayAbility* const InAbilityCDO = InClass.GetDefaultObject();
+	if(InAbilityCDO == nullptr) return;
+
+	ABILITYLIST_SCOPE_LOCK();
+	for (FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
+	{
+		if (Spec.Ability == InAbilityCDO)
+		{
+			Spec.InputPressed = true;
+			if (Spec.IsActive())
+			{
+				if (Spec.Ability->bReplicateInputDirectly && IsOwnerActorAuthoritative() == false)
+				{
+					ServerSetInputPressed(Spec.Handle);
+				}
+
+				AbilitySpecInputPressed(Spec);
+
+				// Invoke the InputPressed event. This is not replicated here. If someone is listening, they may replicate the InputPressed event to the server.
+				InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec.Handle, Spec.ActivationInfo.GetActivationPredictionKey());
+			}
+			else
+			{
+				// Ability is not active, so try to activate it
+				TryActivateAbility(Spec.Handle);
+			}
+		}
+	}
+}
+
+void UActionPFAbilitySystemComponent::AbilityLocalInputReleassedByClass(const TSubclassOf<UActionPFGameplayAbility>& InClass)
+{
+	const UGameplayAbility* const InAbilityCDO = InClass.GetDefaultObject();
+	if (InAbilityCDO == nullptr) return;
+
+	ABILITYLIST_SCOPE_LOCK();
+	for (FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
+	{
+		if (Spec.Ability == InAbilityCDO)
+		{
+			Spec.InputPressed = false;
+			if (Spec.IsActive())
+			{
+				if (Spec.Ability->bReplicateInputDirectly && IsOwnerActorAuthoritative() == false)
+				{
+					ServerSetInputReleased(Spec.Handle);
+				}
+
+				AbilitySpecInputReleased(Spec);
+
+				InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, Spec.ActivationInfo.GetActivationPredictionKey());
+			}
+
+		}
+	}
+}
+
 FGenericEventInputDelegate& UActionPFAbilitySystemComponent::GetGenericEventInputDelegate(int32 InputID)
 {
 	return GenericEventInputDelegate.FindOrAdd(InputID);
 }
 
+
+void UActionPFAbilitySystemComponent::AddStateIcon(const FGameplayTag& InTag, TSubclassOf<UStateIconWidget> InWidgetClass, const FSlateBrush& InBrush)
+{
+	for (auto& IconStruct : StateIconArray)
+	{
+		if (IconStruct.StateTag == InTag)
+		{
+			return;
+		}
+	}
+
+	StateIconArray.Emplace(InTag, InWidgetClass, InBrush);
+	OnNewOrRemovedStateIcon.Broadcast(InTag, InWidgetClass, InBrush, true);
+}
+
+void UActionPFAbilitySystemComponent::RemoveStateIcon(const FGameplayTag& InTag)
+{
+	for (int i = 0; i < StateIconArray.Num(); i++)
+	{
+		if (StateIconArray[i].StateTag != InTag) { continue; }
+		
+		FGameplayTag TempTag = StateIconArray[i].StateTag;
+		TSubclassOf<UStateIconWidget> TempWidgetClass = StateIconArray[i].WidgetClass;
+		FSlateBrush TempBrush = StateIconArray[i].ImageBrush;
+
+		StateIconArray.RemoveAt(i);
+
+		OnNewOrRemovedStateIcon.Broadcast(TempTag, TempWidgetClass, TempBrush, false);
+
+		return;
+	}
+
+}
 
 
 

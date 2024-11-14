@@ -23,13 +23,26 @@ AEnemyAIController::AEnemyAIController()
 	PrimaryActorTick.bCanEverTick = true;
 
 	ConstructPerceptionSystem();
+
+	SetGenericTeamId(2);
+}
+
+void AEnemyAIController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+	if (GetGenericTeamId() != NewTeamID)
+	{
+		Super::SetGenericTeamId(NewTeamID);
+		if (IGenericTeamAgentInterface* PawnGTAI = Cast<IGenericTeamAgentInterface>(GetPawn()))
+		{
+			PawnGTAI->SetGenericTeamId(NewTeamID);
+		}
+	}
 }
 
 void AEnemyAIController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetGenericTeamId(2);
 
 }
 
@@ -38,7 +51,7 @@ void AEnemyAIController::ConstructPerceptionSystem()
 	AIPerception = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("Perception Component"));
 	SetPerceptionComponent(*AIPerception);
 
-	//½Ã¾ß
+	//ï¿½Ã¾ï¿½
 	Sight_Config = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("Sight Config"));
 	Sight_Config->SightRadius = 1400.f;
 	Sight_Config->LoseSightRadius = Sight_Config->SightRadius + 400.f;
@@ -113,7 +126,7 @@ void AEnemyAIController::OnHostileTargetDetected(AActor* NewTarget)
 	if(!IsValid(NewTarget)) return;
 
 #if WITH_EDITOR
-	PFLOG(Warning, TEXT("Add Hostile Target Name : %s"), *NewTarget->GetFName().ToString());
+	//PFLOG(Warning, TEXT("Add Hostile Target Name : %s"), *NewTarget->GetFName().ToString());
 #endif
 
 	DetectedHostileTargets.AddUnique(NewTarget);
@@ -125,7 +138,7 @@ void AEnemyAIController::OnHostileTargetDetected(AActor* NewTarget)
 	else
 	{
 #if WITH_EDITOR
-		PFLOG(Warning, TEXT("Focus Hostile Target Name : %s"), *NewTarget->GetFName().ToString());
+		//PFLOG(Warning, TEXT("Focus Hostile Target Name : %s"), *NewTarget->GetFName().ToString());
 #endif
 
 		GetBlackboardComponent()->SetValueAsObject(FocusedHostileTargetKey, NewTarget);
@@ -152,9 +165,9 @@ void AEnemyAIController::FocusOtherTarget()
 		GetBlackboardComponent()->SetValueAsObject(FocusedHostileTargetKey, DetectedHostileTargets[RandIdx].Get());
 		
 		#if WITH_EDITOR
-		if (DetectedHostileTargets[RandIdx].IsValid()) {
+		/*if (DetectedHostileTargets[RandIdx].IsValid()) {
 			PFLOG(Warning,TEXT("Focus Hostile Target : %s."), *DetectedHostileTargets[RandIdx]->GetFName().ToString());
-		}
+		}*/
 		#endif
 	}
 }

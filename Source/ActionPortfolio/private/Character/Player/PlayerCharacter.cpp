@@ -29,21 +29,33 @@
 #include "Ability/Widget/SAbilitySlot.h"
 #include "Ability/Widget/SAbilityIcon.h"
 #include "Character/Player/Ability/SkillHotKeyWindow.h"
-#include "Character/Player/Widget_PlayerMainUI.h"
 #include "Ability/Widget/AbilitySlotWidget.h"
 #include "Misc/DataValidation.h"
-#include "Ability/Slot/AbilitySlotWithInput.h"
+#include "Ability/Slot/AbilitySlot_HotKey.h"
 
 #include "PlayerMappableInputConfig.h"
 #include "CustomInputSettingSubsystem.h"
+#include "Items/ItemDataAsset.h"
+
+#include "Engine/AssetManager.h"
+#include "Instance/CharacterDataManager.h"
+#include "Ability/Effects/AttributeEffect.h"
+#include "Ability/ActionPFAttributeSet.h"
 
 APlayerCharacter::APlayerCharacter()
 {
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
-	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
+	CameraBoom->SetRelativeLocationAndRotation(FVector(0, 0, -70), FRotator(-40, 90, 0));
+	CameraBoom->TargetArmLength = 1800.0f; // The camera follows at this distance behind the character	
+	//CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
+	CameraBoom->bDoCollisionTest = false;
+
+	CameraBoom->bUsePawnControlRotation = false;
+	CameraBoom->bInheritYaw = false;
+	CameraBoom->bInheritRoll = false;
+	CameraBoom->bInheritPitch = false;
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -52,117 +64,40 @@ APlayerCharacter::APlayerCharacter()
 
 	CSC = CreateDefaultSubobject<UCharacterStatusComponent>(TEXT("CharacterStatus"));
 
-	MainUI = nullptr;
-}
+	UActionPFAbilitySystemComponent* ASC = Cast<UActionPFAbilitySystemComponent>(GetAbilitySystemComponent());
+	ASC->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
-void APlayerCharacter::TryCreateMainUI()
-{
-	AActionPFPlayerController* PlayerController = GetController<AActionPFPlayerController>();
-
-	PreCreateMainUI();
-
-	MainUI = CreateWidget<UWidget_PlayerMainUI>(PlayerController, MainUIClass, "CharacterMainUI");
-	if (MainUI)
-	{
-		MainUI->GetSkillHotkeyWindow()->SetOwnerCharacter(this);
-
-		PostCreateMainUI();
-
-		MainUI->AddToViewport(0);
-
-		PlayerController->SetPlayerMainUI(MainUI);
-	}
-
-	
+	SetGenericTeamId(1);
 }
 
 
 
 
-void APlayerCharacter::TryRemoveMainUI()
+
+void APlayerCharacter::GetAbilityHotKeySlots(TArray<UAbilitySlot_HotKey*>& OutArray)
 {
-	if (MainUI == nullptr) return;
+	OutArray.Empty();
 
-	PreRemoveMainUI();
-
-	MainUI->RemoveFromParent();
-	MainUI->Destruct();
-	MainUI = nullptr;
-
-	PostRemoveMainUI();
-}
-
-void APlayerCharacter::OnAddedAbility(FGameplayAbilitySpecHandle Handle)
-{
-	if(!Handle.IsValid()) return;
-
-	UActionPFAbilitySystemComponent* System = static_cast<UActionPFAbilitySystemComponent*>(GetAbilitySystemComponent());
-	FGameplayAbilitySpec* Spec = System->FindAbilitySpecFromHandle(Handle);
-
-	UActionPFGameplayAbility* Ability = static_cast<UActionPFGameplayAbility*>(Spec->Ability.Get());
-	TSharedPtr<SAbilityIcon> IconPtr = Ability->CreateAbilityIcon();
-	IconPtr->LinkAbilitySystem(System);
-
-	EAbilityType Type = Ability->GetAbilityType();
-
-	if (Type == EAbilityType::Active)
+	for (auto& AbilityHotKeySlot : AbilityHotKeySlots)
 	{
-		AddedActiveAbilities.Add(FAddedPlayerAbilityStruct( Handle, Ability->GetClass(), IconPtr));
+		OutArray.Add(AbilityHotKeySlot);
 	}
-	else if(Type == EAbilityType::Passive)
-	{
-		AddedPassiveAbilities.Add(FAddedPlayerAbilityStruct(Handle, Ability->GetClass(), IconPtr));
-	}
-
-	AActionPFPlayerController* TempController = GetController<AActionPFPlayerController>();
-	UWidget_PlayerMainUI* PlayerMainUI = nullptr;
-	USkillHotKeyWindow* SkillWindow = nullptr;
-
-	if (TempController)
-	{
-		PlayerMainUI = TempController->GetPlayerMainUI();
-		if (PlayerMainUI)
-		{
-			SkillWindow = PlayerMainUI->GetSkillHotkeyWindow();
-		}
-	}
-
-	for (auto& InputAbilitySlot : AbilitiesWithInput)
-	{
-		if (Ability->GetClass() == InputAbilitySlot->GetAbilityClass())
-		{
-			Spec->InputID = InputAbilitySlot->GetInputID();
-		}
-	}
-}
-
-
-const TSharedPtr<SAbilityIcon>& APlayerCharacter::GetGivenAbilityIcon(TSubclassOf<UActionPFGameplayAbility> InAbilityClass) const
-{
-	for (const auto& AddedActiveAbility : AddedActiveAbilities)
-	{
-		if(AddedActiveAbility.AbilityClass == InAbilityClass){
-			return AddedActiveAbility.Icon;
-		}
-	}
-
-	for (const auto& AddedPassiveAbility : AddedPassiveAbilities)
-	{
-		if (AddedPassiveAbility.AbilityClass == InAbilityClass) return AddedPassiveAbility.Icon;
-	}
-
-	return SAbilityIcon::GetEmptyIcon();
 }
 
 void APlayerCharacter::BeginPlay()
 {
+	PFLOG(Warning, TEXT(""));
 	Super::BeginPlay();
+	
+	GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(UPlayerAttributeSet::GetPlayerLevelAttribute())
+		.AddUObject(this, &APlayerCharacter::OnPlayerLevelChanged);
 
-	for (auto& InputAbilitySlot : AbilitiesWithInput)
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
 	{
-		InputAbilitySlot->SetOwnerPlayer(this);
-	}
+		ASC->GenericConfirmInputID = 0;
 
+		ASC->GenericCancelInputID = 1;
+	}
 }
 
 void APlayerCharacter::Tick(float DeltaSeconds)
@@ -175,113 +110,67 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	if (AActionPFPlayerController* PlayerController = Cast<AActionPFPlayerController>(NewController))
-	{
-		PlayerController->GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>()->AddPlayerMappableConfig(CharacterInputConfig);
-		
-		TryCreateMainUI();
-
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			
-
-			for (auto& AbilityWithInput : AbilitiesWithInput)
-			{
-				const FName& KeyboardMappingKey = AbilityWithInput->GetKeyboardMappingKey();
-				const FName& GamepadMappingKey = AbilityWithInput->GetGamepadMappingKey();
-
-				FKey KeyboardKey = Subsystem->GetPlayerMappedKey(KeyboardMappingKey);
-				if (!KeyboardKey.IsValid())
-				{
-					KeyboardKey = CharacterInputConfig->GetMappingByName(KeyboardMappingKey).Key;
-				}
-
-				FKey GamepadKey = Subsystem->GetPlayerMappedKey(GamepadMappingKey);
-				if (!GamepadKey.IsValid())
-				{
-					GamepadKey = CharacterInputConfig->GetMappingByName(GamepadMappingKey).Key;
-				}
-
-
-				AbilityWithInput->SetHotKeysDirect(KeyboardKey, GamepadKey);
-			}
-		}
-	}
 }
 
 void APlayerCharacter::UnPossessed()
 {
-	if (AActionPFPlayerController* PlayerController = Cast<AActionPFPlayerController>(Controller))
-	{
-		PlayerController->GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>()->RemovePlayerMappableConfig(CharacterInputConfig);
-	
-		TryRemoveMainUI();
-	}
-
 	Super::UnPossessed();
 }
 
-void APlayerCharacter::LinkSkillHotKeyWindow(USkillHotKeyWindow* SkillWindow)
-{
-	if(SkillWindow == nullptr) return;
 
-	for (auto& InputAbilitySlot : AbilitiesWithInput)
+void APlayerCharacter::AddStartupAbilities()
+{
+	Super::AddStartupAbilities();
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
 	{
-		UAbilitySlotWidget* TempSlot = SkillWindow->GetAbilitySlot(InputAbilitySlot->GetInputID());
-		if (TempSlot != nullptr)
+		if (FGameplayAbilitySpec* WeakAttackSpec = ASC->FindAbilitySpecFromClass(WeakAttackClass))
 		{
-			InputAbilitySlot->LinkAbilitySlotSlate(TempSlot->GetSlotSlate().ToSharedRef());
+			WeakAttackSpec->InputID = 0;
+		}
+
+		if (FGameplayAbilitySpec* StrongAttackSpec = ASC->FindAbilitySpecFromClass(StrongAttackClass))
+		{
+			StrongAttackSpec->InputID = 1;
 		}
 	}
+}
+
+void APlayerCharacter::InitializeAttributes()
+{
+	bool bFoundStartLevel;
+	float StartLevel = GetAbilitySystemComponent()->GetGameplayAttributeValue(UPlayerAttributeSet::GetPlayerLevelAttribute(), bFoundStartLevel);
+
+	PFLOG(Warning, TEXT("Start Level : %.1f"), StartLevel);
+	OnPlayerLevelChanged(bFoundStartLevel ? StartLevel : 1);
 
 }
+
+
 
 #if WITH_EDITOR
 
 EDataValidationResult APlayerCharacter::IsDataValid(TArray<FText>& ValidationErrors)
 {
 	EDataValidationResult Result = Super::IsDataValid(ValidationErrors);
-	
-	if(Result == EDataValidationResult::NotValidated) return Result;
 
-	TSet<int> TempKeys;
-	TSet<int> ErrorKeys;
-	bool bExistNullAbilityWithInputOBJ = false;
-
-	for (auto& AbilityWithInput : AbilitiesWithInput)
+	for (int I = 0 ; I < AbilityHotKeySlots.Num(); I++)
 	{
-		if (AbilityWithInput == nullptr) {
-			bExistNullAbilityWithInputOBJ = true;
-			continue;
-		}
-
-		bool bIsAlready = false;
-
-		TempKeys.Add(AbilityWithInput->GetInputID(), &bIsAlready);
-		if (bIsAlready)
+		if (AbilityHotKeySlots[I]->GetHotKeyAction() == nullptr)
 		{
-			ErrorKeys.Add(AbilityWithInput->GetInputID(), nullptr);
+			Result = EDataValidationResult::Invalid;
+
+			ValidationErrors.Add(FText::FromString(FString::Printf(TEXT("Hot Key Action Is null : %d"), I)));
 		}
 	}
 
-	if (bExistNullAbilityWithInputOBJ)
-	{
-		ValidationErrors.Add(FText::FromString(FString::Printf(TEXT("Exist None AbilityWithInput Object."))));
-	}
-
-	for (int& ErrorKey : ErrorKeys)
-	{
-		ValidationErrors.Add(FText::FromString(FString::Printf(TEXT("{%d} Exist 2 or more."), ErrorKey)));
-	}
-
-	return ErrorKeys.IsEmpty() && !bExistNullAbilityWithInputOBJ ? Result : EDataValidationResult::Invalid;
+	return Result;
 }
+
 
 void APlayerCharacter::PostCDOCompiled(const FPostCDOCompiledContext& Context)
 {
 	Super::PostCDOCompiled(Context);
-
-	AbilitiesWithInput.Sort([](const UAbilitySlotWithInput& A, const UAbilitySlotWithInput& B) -> bool { return A.GetInputID() < B.GetInputID(); });
 }
 
 void APlayerCharacter::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -290,7 +179,9 @@ void APlayerCharacter::PostEditChangeProperty(FPropertyChangedEvent& PropertyCha
 }
 
 
+
 #endif
+
 
 
 
@@ -299,32 +190,44 @@ void APlayerCharacter::PostEditChangeProperty(FPropertyChangedEvent& PropertyCha
 
 void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
-	// Set up action bindings
-	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
-		//Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
+	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
+	check(EnhancedInputComponent);
 
-		//Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
+	AActionPFPlayerController* PlayerController = GetController<AActionPFPlayerController>();
+	check(PlayerController);
 
-		for (auto& AbilityWhitInput : AbilitiesWithInput)
-		{
-			check(AbilityWhitInput->GetAbilityInputAction() != nullptr);
-
-			EnhancedInputComponent->BindAction(AbilityWhitInput->GetAbilityInputAction(), ETriggerEvent::Started, this, &APlayerCharacter::PressInputAbility, AbilityWhitInput->GetInputID());
-			EnhancedInputComponent->BindAction(AbilityWhitInput->GetAbilityInputAction(), ETriggerEvent::Completed, this, &APlayerCharacter::ReleaseInputAbility, AbilityWhitInput->GetInputID());
-		}
-
-		
+	if (OptionalInputConfig != nullptr)
+	{
+		FModifyContextOptions Option;
+		Option.bForceImmediately = true;
+		PlayerController->GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>()->AddPlayerMappableConfig(OptionalInputConfig, Option);
 	}
 
+	//Moving
+	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
+
+	//Looking 일단 필요없음
+	//EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
+
+	EnhancedInputComponent->BindAction(WeakAttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::PressInputAbilityID, 0);
+	EnhancedInputComponent->BindAction(WeakAttackAction, ETriggerEvent::Completed, this, &APlayerCharacter::ReleaseInputAbilityID, 0);
+
+	EnhancedInputComponent->BindAction(StrongAttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::PressInputAbilityID, 1);
+	EnhancedInputComponent->BindAction(StrongAttackAction, ETriggerEvent::Completed, this, &APlayerCharacter::ReleaseInputAbilityID, 1);
+
+	for (auto& HotKeySlot : AbilityHotKeySlots)
+	{
+		UInputAction* InputAction = HotKeySlot->GetHotKeyAction();
+		check(InputAction);
+
+		EnhancedInputComponent->BindAction(InputAction, ETriggerEvent::Triggered, this, &APlayerCharacter::PressInputAbility, HotKeySlot.Get());
+		EnhancedInputComponent->BindAction(InputAction, ETriggerEvent::Completed, this, &APlayerCharacter::ReleaseInputAbility, HotKeySlot.Get());
+	}
 }
 
 void APlayerCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
-
-	
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
@@ -334,21 +237,28 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
+
+	//if (Controller != nullptr)
+	//{
+	//	// find out which way is forward
+	//	const FRotator Rotation = Controller->GetControlRotation();
+	//	const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+	//	// get forward vector
+	//	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+
+	//	// get right vector 
+	//	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+	//	// add movement 
+	//	AddMovementInput(ForwardDirection, MovementVector.Y);
+	//	AddMovementInput(RightDirection, MovementVector.X);
+	//}
+
 	if (Controller != nullptr)
 	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-
-		// get right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
-		// add movement 
-		AddMovementInput(ForwardDirection, MovementVector.Y);
-		AddMovementInput(RightDirection, MovementVector.X);
+		AddMovementInput(FVector::XAxisVector, -MovementVector.X);
+		AddMovementInput(FVector::YAxisVector, MovementVector.Y);
 	}
 }
 
@@ -365,17 +275,69 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void APlayerCharacter::PressInputAbility(const FInputActionValue& Value, int ID)
+void APlayerCharacter::PressInputAbility(const FInputActionValue& Value, UAbilitySlot_HotKey* HotKey)
 {
-#if WITH_EDITOR
-	PFLOG(Warning, TEXT("Press : %d"), ID);
-#endif
-	GetAbilitySystemComponent()->PressInputID(ID);
+	UActionPFAbilitySystemComponent* ASC = StaticCast<UActionPFAbilitySystemComponent*>(GetAbilitySystemComponent());
+	ASC->AbilityLocalInputPressedByClass(HotKey->GetAbilityInSlot());
 }
 
-void APlayerCharacter::ReleaseInputAbility(const FInputActionValue& Value, int ID)
+void APlayerCharacter::ReleaseInputAbility(const FInputActionValue& Value, UAbilitySlot_HotKey* HotKey)
 {
-	GetAbilitySystemComponent()->ReleaseInputID(ID);
+	UActionPFAbilitySystemComponent* ASC = StaticCast<UActionPFAbilitySystemComponent*>(GetAbilitySystemComponent());
+	ASC->AbilityLocalInputReleassedByClass(HotKey->GetAbilityInSlot());
+}
+
+void APlayerCharacter::PressInputAbilityID(const FInputActionValue& Value, int ID)
+{
+	UActionPFAbilitySystemComponent* ASC = StaticCast<UActionPFAbilitySystemComponent*>(GetAbilitySystemComponent());
+	ASC->PressInputID(ID);
+}
+
+void APlayerCharacter::ReleaseInputAbilityID(const FInputActionValue& Value, int ID)
+{
+	UActionPFAbilitySystemComponent* ASC = StaticCast<UActionPFAbilitySystemComponent*>(GetAbilitySystemComponent());
+	ASC->ReleaseInputID(ID);
 }
 
 
+#define ADD_SET_ATTRIBUTE_PLAYER(PropertyName)\
+{\
+	FRealCurve * FindedCurve = PlayerCurveTable->FindCurve(FName(TempName + #PropertyName), ""); \
+	FKeyHandle FindedKeyHandle = FindedCurve->FindKey(NewLevel); \
+	float FindedValue = FindedCurve->GetKeyValue(FindedKeyHandle); \
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::Get##PropertyName##Name(), FindedValue);\
+}
+
+void APlayerCharacter::OnPlayerLevelChanged(const FOnAttributeChangeData& ChangeData)
+{
+	OnPlayerLevelChanged(ChangeData.NewValue);
+}
+
+void APlayerCharacter::OnPlayerLevelChanged(float NewLevel)
+{
+	const UCharacterDataManager* DataManager = UCharacterDataManager::GetCharacterDataManager();
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+
+	const UCurveTable* PlayerCurveTable = DataManager->GetPlayerDataTable();
+
+	FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
+
+	FString TempName = GetCharacterCode().ToString() + ".";
+
+	FGameplayEffectSpec EffectSpec(GetDefault<UAttributeEffect_Base>(), ContextHandle, 1);
+
+	EffectSpec.SetSetByCallerMagnitude(UCharacterAttributeSet::GetCharacterLevelName(), NewLevel);
+
+	ADD_SET_ATTRIBUTE_PLAYER(MaxHealth)
+	ADD_SET_ATTRIBUTE_PLAYER(HealthRegen)
+	ADD_SET_ATTRIBUTE_PLAYER(MaxStamina)
+	ADD_SET_ATTRIBUTE_PLAYER(StaminaRegen)
+	ADD_SET_ATTRIBUTE_PLAYER(AttackP)
+	ADD_SET_ATTRIBUTE_PLAYER(DefenseP)
+	ADD_SET_ATTRIBUTE_PLAYER(FireResistance)
+	ADD_SET_ATTRIBUTE_PLAYER(IceResistance)
+	ADD_SET_ATTRIBUTE_PLAYER(ElectricResistance)
+
+	ASC->ApplyGameplayEffectSpecToSelf(EffectSpec);
+}
+#undef ADD_SET_ATTRIBUTE_PLAYER

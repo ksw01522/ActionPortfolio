@@ -3,51 +3,102 @@
 
 #include "Ability/Widget/AbilitySlotWidget.h"
 #include "Ability/Widget/SAbilitySlot.h"
+#include "Ability/AbilitySlot.h"
 
 TSharedRef<SWidget> UAbilitySlotWidget::RebuildWidget()
 {
 	return 
-	SAssignNew(AbilitySlot, SAbilitySlot)
+	SAssignNew(SlotSlate, SAbilitySlot)
+	.LinkSlot(LinkedSlot.Get())
 	.BackgroundBrush(&BackgroundBrush)
 	.SlotSize(SlotSize);
 }
 
 void UAbilitySlotWidget::ReleaseSlateResources(bool bReleaseChildren)
 {
+	SlotSlate.Reset();
+
 	Super::ReleaseSlateResources(bReleaseChildren);
-	AbilitySlot.Reset();
 }
 
 void UAbilitySlotWidget::SynchronizeProperties()
 {
 	Super::SynchronizeProperties();
 
-	if (AbilitySlot.IsValid())
+	if (SlotSlate.IsValid())
 	{
-		AbilitySlot->SetSlotSize(SlotSize);
+		SlotSlate->SetSlotSize(SlotSize);
+		SlotSlate->SetAbilityIcon(AbilityIcon);
 	}
 }
 
 #if WITH_ACCESSIBILITY
 TSharedPtr<SWidget> UAbilitySlotWidget::GetAccessibleWidget() const
 {
-	return AbilitySlot;
+	return SlotSlate;
 }
 
 #endif
 
-void UAbilitySlotWidget::SetAbilityIcon(const TSharedPtr<class SAbilityIcon>& InIcon)
+
+void UAbilitySlotWidget::LinkAbilitySlot(UAbilitySlot* InSlot)
 {
-	if (AbilitySlot.IsValid())
+	if(InSlot == LinkedSlot.Get()) return;
+
+	LinkedSlot = InSlot;
+
+	if (SlotSlate.IsValid())
 	{
-		AbilitySlot->SetAbilityIcon(InIcon);
+		SlotSlate->LinkAbilitySlot(LinkedSlot.Get());
 	}
 }
 
+void UAbilitySlotWidget::SetAbilityIcon(const TSharedPtr<SAbilityIcon>& InIcon)
+{
+	if(AbilityIcon == InIcon) return;
+
+	AbilityIcon = InIcon;
+
+	if (SlotSlate.IsValid())
+	{
+		SlotSlate->SetAbilityIcon(AbilityIcon);
+	}
+}
+
+SAbilityIcon* UAbilitySlotWidget::GetAbilityIcon() const
+{
+	return AbilityIcon.Get();
+}
+
+
 TSharedRef<SWidget> UAbilityHotKeySlotWidget::RebuildWidget()
 {
-	return 
-	SAssignNew(AbilitySlot, SAbilitySlot_HotKey)
-	.BackgroundBrush(GetBackgroundBrush())
-	.SlotSize(GetSlotSize());
+	return
+		SAssignNew(SlotSlate, SAbilitySlot_HotKey)
+		.BackgroundBrush(GetBackgroundBrush())
+		.SlotSize(GetSlotSize())
+		.HotKey_Keyboard(HotKey_Keyboard)
+		.HotKey_Gamepad(HotKey_Gamepad);
+}
+
+void UAbilityHotKeySlotWidget::SetHotKey_Keyboard(const FKey& InKey)
+{
+	if(HotKey_Keyboard == InKey) return;
+
+	HotKey_Keyboard = InKey;
+	if (SlotSlate.IsValid())
+	{
+		StaticCastSharedPtr<SAbilitySlot_HotKey>(SlotSlate)->SetHotKeyKeyboard(HotKey_Keyboard);
+	}
+}
+
+void UAbilityHotKeySlotWidget::SetHotKey_Gamepad(const FKey& InKey)
+{
+	if(HotKey_Gamepad == InKey) return;
+
+	HotKey_Gamepad = InKey;
+	if (SlotSlate.IsValid())
+	{
+		StaticCastSharedPtr<SAbilitySlot_HotKey>(SlotSlate)->SetHotKeyGamepad(HotKey_Gamepad);
+	}
 }

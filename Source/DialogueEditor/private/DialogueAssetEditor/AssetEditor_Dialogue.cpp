@@ -27,7 +27,7 @@
 #include "AutoLayout/ForceDirectedLayoutStrategy_DE.h"
 
 #include "DialogueEditor.h"
-#
+
 
 
 #define LOCTEXT_NAMESPACE "AssetEditor_Dialogue"
@@ -364,7 +364,7 @@ void FAssetEditor_Dialogue::CreateCommandList()
 	// Can't use CreateSP here because derived editor are already implementing TSharedFromThis<FAssetEditorToolkit>
 	// however it should be safe, since commands are being used only within this editor
 	// if it ever crashes, this function will have to go away and be reimplemented in each derived class
-
+	
 	GraphEditorCommands->MapAction(FEditorCommands_Dialogue::Get().DialogueSettings,
 		FExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::GraphSettings),
 		FCanExecuteAction::CreateRaw(this, &FAssetEditor_Dialogue::CanGraphSettings));
@@ -407,6 +407,7 @@ void FAssetEditor_Dialogue::CreateCommandList()
 		FExecuteAction::CreateSP(this, &FAssetEditor_Dialogue::OnRenameNode),
 		FCanExecuteAction::CreateSP(this, &FAssetEditor_Dialogue::CanRenameNodes)
 	);
+	
 }
 
 TSharedPtr<SGraphEditor> FAssetEditor_Dialogue::GetCurrGraphEditor() const

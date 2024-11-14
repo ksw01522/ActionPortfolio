@@ -92,7 +92,6 @@ private:
 	TSharedPtr<SImage> BackgroundImage;
 
 	TSharedPtr<SImage> IconImage;
-	TSoftObjectPtr<UMaterialInterface> IconMaterial;
 	FSlateBrush IconBrush;
 
 	TSharedPtr<SImage> FrameImage;
@@ -106,10 +105,11 @@ public:
 	//TSharedRef<SImage> GetFrameImage() const { return FrameImage.ToSharedRef(); }
 
 private:
-	void UpdateSlotSlate(TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade, int NewCount);
+	void UpdateSlotSlate(UTexture2D* NewImage, EItemGrade ItemGrade, int NewCount);
 	void ClearSlotSlate();
 
-	void SetItemIcon(TSoftObjectPtr<UMaterialInterface> NewImage, EItemGrade ItemGrade);
+	void SetItemIcon(UTexture2D* NewImage, EItemGrade ItemGrade);
+
 	void SetIconFrame(EItemGrade ItemGrade);
 	void SetCount(int NewCount);
 

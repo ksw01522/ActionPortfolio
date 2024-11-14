@@ -6,9 +6,6 @@
 #include "Ability/ActionPFAbilitySystemComponent.h"
 #include "Ability/ActionPFAbilityBFL.h"
 
-#include "Items/Euipment/EquipmentAbility.h"
-#include "Ability/ActionPFAttributeSet.h"
-
 #include "Items/ItemManagerSubsystem.h"
 #include "Items/ItemWorldSubsystem.h"
 
@@ -25,28 +22,17 @@
 #include "Character/Player/ActionPFPlayerController.h"
 
 
-void UItemBase::InitializeItem(const FName& NewItemCode, const FItemData_Base* Data)
+void UItemBase::InitializeItem(const FName& NewItemCode, const FItemData_Base* Data, TArray<FText>& OutErroMsgs)
 {
 	if(Data == nullptr || NewItemCode.IsNone()) return;
-	if (bInitialized) {
-		PFLOG(Error, TEXT("Already Initialized Item"));
-		return;
-	}
 
 	ItemCode = NewItemCode;
 	ItemType = Data->ItemType;
 	Grade = Data->Grade;
 	Name = Data->Name;
 	Description = Data->Description;
-	Icon = Data->Icon;
-	ItemMesh = Data->ItemMesh;
 	Price = Data->Price;
-	bStackable = Data->bStackable;
 	StackSize = Data->StackSize;
-
-	if(!bStackable) Count = 1;
-
-	bInitialized = true;
 }
 
 void UItemBase::AddCount(int InCount)
@@ -69,7 +55,7 @@ void UItemBase::SetCount(int InCount)
 
 bool UItemBase::CanStackableWithOther(const UItemBase* Target) const
 {
-	bool bResult = Target != nullptr && bStackable &&Target->GetItemCode() == GetItemCode();
+	bool bResult = Target != nullptr && IsStackableItem() && Target->GetItemCode() == GetItemCode();
 	return bResult;
 }
 
@@ -79,84 +65,6 @@ bool UItemBase::IsSame(const UItemBase* Other) const
 
 	return GetItemCode() == Other->GetItemCode();
 }
-
-
-bool UItemBase_Equipment::CanEquipItem(UActionPFAbilitySystemComponent* ASC) const
-{
-	return EquipmentAbility.GetDefaultObject()->DoesAbilitySatisfyTagRequirements(*ASC);
-}
-
-bool UItemBase_Equipment::IsSame(const UItemBase* Other) const
-{
-	return this == Other;
-}
-
-
-UGameplayEffect* UItemBase_Equipment::MakeAddStatusEffect() const
-{
-	//기본 스테이터스 증가 Effect 만들기
-	//기본 설정
-	UGameplayEffect* AddStatusEffect = NewObject<UGameplayEffect>(GetTransientPackage(), FName(TEXT("AddStatusEffect")));
-	AddStatusEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
-	AddStatusEffect->Modifiers.SetNum(4);
-
-	//MaxHP설정
-	FGameplayModifierInfo& MaxHPInfo = AddStatusEffect->Modifiers[0];
-	MaxHPInfo.Attribute = UActionPFAttributeSet::GetMaxHealthAttribute();
-	MaxHPInfo.ModifierOp = EGameplayModOp::Additive;
-	MaxHPInfo.ModifierMagnitude = FScalableFloat(MaxHP);
-
-	//MaxStamina
-	FGameplayModifierInfo& MaxStaminaInfo = AddStatusEffect->Modifiers[1];
-	MaxStaminaInfo.Attribute = UActionPFAttributeSet::GetMaxStaminaAttribute();
-	MaxStaminaInfo.ModifierOp = EGameplayModOp::Additive;
-	MaxStaminaInfo.ModifierMagnitude = FScalableFloat(MaxStamina);
-
-	//AttackP
-	FGameplayModifierInfo& AttackPInfo = AddStatusEffect->Modifiers[2];
-	AttackPInfo.Attribute = UActionPFAttributeSet::GetAttackPAttribute();
-	AttackPInfo.ModifierOp = EGameplayModOp::Additive;
-	AttackPInfo.ModifierMagnitude = FScalableFloat(AttackP);
-
-	//DefenseP
-	FGameplayModifierInfo& DefensePInfo = AddStatusEffect->Modifiers[3];
-	DefensePInfo.Attribute = UActionPFAttributeSet::GetDefensePAttribute();
-	DefensePInfo.ModifierOp = EGameplayModOp::Additive;
-	DefensePInfo.ModifierMagnitude = FScalableFloat(DefenseP);
-
-	return AddStatusEffect;
-}
-
-
-void UItemBase_Equipment::InitializeItem(const FName& NewItemCode, const FItemData_Base* Data)
-{
-	if (Data == nullptr || NewItemCode.IsNone()) return;
-	if (bInitialized) {
-		PFLOG(Error, TEXT("Already Initialized Item"));
-		return;
-	}
-	const FItemData_Equipment* EquipmentData = static_cast<const FItemData_Equipment*>(Data);
-	if (EquipmentData == nullptr)
-	{
-		PFLOG(Error, TEXT("EquipmentData Can't Initialized By FItemData_Base"));
-		return;
-	}
-
-	Super::InitializeItem(NewItemCode, Data);
-
-	EquipmentAbility = EquipmentData->EquipmentAbility;
-
-	EquipmentPart = EquipmentData->EquipmentPart;
-
-	MaxHP = EquipmentData->MaxHP;
-
-	MaxStamina = EquipmentData->MaxStamina;
-
-	AttackP = EquipmentData->AttackP;
-
-	DefenseP = EquipmentData->DefenseP;
-}
-
 
 ///////////////////////////////////////// 드랍 아이템 ///////////////////////////////////
 ADroppedItem::ADroppedItem() : DroppedItem(nullptr), MagnetizedTarget(nullptr)
@@ -288,12 +196,13 @@ void ADroppedItem::SetDroppedItem(UItemBase* NewData)
 
 	DroppedItem = NewData;
 
-	if (DroppedItem->GetItemMesh().IsValid())
+	if (DroppedItem->GetItemMesh())
 	{
 		OnReadyDropItem();
 	}
 	else
 	{
+		/*
 		TWeakObjectPtr<ADroppedItem> WeakThis(this);
 
 		FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
@@ -302,7 +211,7 @@ void ADroppedItem::SetDroppedItem(UItemBase* NewData)
 			
 			WeakThis->OnReadyDropItem();
 			WeakThis->MeshStreamingHandle.Reset();
-		}));
+		}));*/
 	}
 }
 
@@ -355,7 +264,7 @@ void ADroppedItem::OnReadyDropItem()
 {
 	if(!IsValidDropItem()){ return; }
 
-	ItemMeshComponent->SetStaticMesh(DroppedItem->GetItemMesh().Get());
+	ItemMeshComponent->SetStaticMesh(DroppedItem->GetItemMesh());
 
 	SetActorHiddenInGame(false);
 
@@ -451,4 +360,9 @@ void ADroppedItem::MagnetizedComplete()
 void ADroppedItem::SetItemCount(int NewCount)
 {
 	DroppedItem->SetCount(NewCount);
+}
+
+TSubclassOf<UItemBase> FItemData_Base::GetItemClass() const
+{
+	return TSubclassOf<UItemBase>();
 }

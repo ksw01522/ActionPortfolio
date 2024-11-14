@@ -26,13 +26,6 @@ ACharacterBoss::ACharacterBoss()
 	}
 
 
-
-	static ConstructorHelpers::FClassFinder<UGameplayEffect> BossDefaultAttribute(TEXT("/Game/ActionPFCharacter/Enemies/Boss/Ability/DefaultAttribute_Boss.DefaultAttribute_Boss_C"));
-	if (BossDefaultAttribute.Succeeded())
-	{
-		DefaultAttributes = BossDefaultAttribute.Class;
-	}
-
 	static ConstructorHelpers::FClassFinder<UGameplayEffect> BossDefaultEffect(TEXT("/Game/ActionPFCharacter/Enemies/Boss/Ability/DefaultEffect_Boss.DefaultEffect_Boss_C"));
 	if (BossDefaultEffect.Succeeded()) {
 		StartupEffects.Add(BossDefaultEffect.Class);

@@ -9,18 +9,44 @@
 /**
  * 
  */
+USTRUCT(BlueprintType)
+struct FRigidityData
+{
+	GENERATED_BODY()
+	FRigidityData(){}
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee|Rigidity")
+	TSubclassOf<class UAbility_Rigidity> RigidityClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee|Rigidity")
+	float RigidityTime;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Meelee|Rigidity", meta = (Categories = "Animation.Rigidity"))
+	FGameplayTag RigidityAnimTag;
+};
+
 UCLASS(BlueprintType)
 class ACTIONPORTFOLIO_API URigidityEventData : public UObject
 {
 	GENERATED_BODY()
-public:
+
 	URigidityEventData();
 
+private:
 	float RigidityTime;
 
-	const FHitResult* HitResult;
+	FGameplayTag AnimTag;
 
-	UAnimMontage* RigidityAnim;
+public:	
+	void InitRigidityData(const FRigidityData& InData)
+	{
+		RigidityTime = InData.RigidityTime;
+		AnimTag = InData.RigidityAnimTag;
+	}
+
+	float GetRigidityTime() const { return RigidityTime; }
+
+	FGameplayTag GetAnimTag() const { return AnimTag; }
 };
 
 UCLASS()
@@ -34,6 +60,11 @@ private:
 	float RemainTime;
 
 	FDelegateHandle DelegateHandle;
+
+	UAnimMontage* RigidityAnim;
+
+private:
+	void PlayRigidityAnim(const FGameplayTag InTag);
 
 protected:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
@@ -53,12 +84,12 @@ public:
 	UFUNCTION()
 	void RigidityTick(float DeltaTime);
 
-	void IsInAirWithRigidity();
+	void RigidityInAir();
 
 	void CharacterDown();
 
 	UFUNCTION()
 	void OnRigidityMontageEnd();
 
-	static FGameplayAbilitySpecHandle RigidityToTarget(TSubclassOf<UAbility_Rigidity> InClass, UAbilitySystemComponent* SourceASC, UAbilitySystemComponent* TargetASC, float InTime, const FHitResult* HitResult = nullptr, UAnimMontage* InAnim = nullptr);
+	static FGameplayAbilitySpecHandle RigidityToTarget( UAbilitySystemComponent* SourceASC, UAbilitySystemComponent* TargetASC, const FRigidityData& InData);
 };

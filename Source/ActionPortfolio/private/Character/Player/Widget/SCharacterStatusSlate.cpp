@@ -3,7 +3,7 @@
 
 #include "Character/Player/Widget/SCharacterStatusSlate.h"
 #include "SlateOptMacros.h"
-#include "Items/ItemBase.h"
+#include "Items/Equipment/Item_Equipment.h"
 #include "Items/Widget/SItemSlot.h"
 #include "Widgets/Text/STextBlock.h"
 #include "AbilitySystemComponent.h"
@@ -239,54 +239,54 @@ void SCharacterStatusSlate::BindStatusComponent(UCharacterStatusComponent* Targe
 		UAbilitySystemComponent* ASC = BindedStatus->GetAbilitySystemComponent();
 		check(ASC);
 
-		FGameplayAttribute HPAT = UActionPFAttributeSet::GetHealthAttribute();
+		FGameplayAttribute HPAT = UCharacterAttributeSet::GetHealthAttribute();
 		FDelegateHandle HPHandle = ASC->GetGameplayAttributeValueChangeDelegate(HPAT).AddSP(this, &SCharacterStatusSlate::OnHPValueChanged);
 		Handles.Emplace(HPAT, MoveTemp(HPHandle));
 		bool bFound = false;
 		CurrentHP = ASC->GetGameplayAttributeValue(HPAT, bFound);
 
-		FGameplayAttribute MaxHPAT = UActionPFAttributeSet::GetMaxHealthAttribute();
+		FGameplayAttribute MaxHPAT = UCharacterAttributeSet::GetMaxHealthAttribute();
 		FDelegateHandle MaxHPHandle = ASC->GetGameplayAttributeValueChangeDelegate(MaxHPAT).AddSP(this, &SCharacterStatusSlate::OnMaxHPValueChanged);
 		MaxHP = ASC->GetGameplayAttributeValue(MaxHPAT, bFound);
 		Handles.Emplace(MaxHPAT, MoveTemp(MaxHPHandle));
 		UpdateHPText();
 
-		FGameplayAttribute StaminaAT = UActionPFAttributeSet::GetStaminaAttribute();
+		FGameplayAttribute StaminaAT = UCharacterAttributeSet::GetStaminaAttribute();
 		FDelegateHandle StaminaHandle = ASC->GetGameplayAttributeValueChangeDelegate(StaminaAT).AddSP(this, &SCharacterStatusSlate::OnStaminaValueChanged);
 		Handles.Emplace(StaminaAT, MoveTemp(StaminaHandle));
 		CurrentStamina = ASC->GetGameplayAttributeValue(StaminaAT, bFound);
 
-		FGameplayAttribute MaxStaminaAT = UActionPFAttributeSet::GetMaxStaminaAttribute();
+		FGameplayAttribute MaxStaminaAT = UCharacterAttributeSet::GetMaxStaminaAttribute();
 		FDelegateHandle MaxStaminaHandle = ASC->GetGameplayAttributeValueChangeDelegate(MaxStaminaAT).AddSP(this, &SCharacterStatusSlate::OnMaxStaminaValueChanged);
 		Handles.Emplace(MaxStaminaAT, MoveTemp(MaxStaminaHandle));
 		MaxStamina = ASC->GetGameplayAttributeValue(MaxStaminaAT, bFound);
 		UpdateStaminaText();
 
-		FGameplayAttribute AttackAT = UActionPFAttributeSet::GetAttackPAttribute();
+		FGameplayAttribute AttackAT = UCharacterAttributeSet::GetAttackPAttribute();
 		FDelegateHandle AttackHandle = ASC->GetGameplayAttributeValueChangeDelegate(AttackAT).AddSP(this, &SCharacterStatusSlate::OnAttackValueChanged);
 		Handles.Emplace(AttackAT, MoveTemp(AttackHandle));
 		float AttackP = ASC->GetGameplayAttributeValue(AttackAT, bFound);
 		SetAttackText(AttackP);
 
-		FGameplayAttribute DefenseAT = UActionPFAttributeSet::GetDefensePAttribute();
+		FGameplayAttribute DefenseAT = UCharacterAttributeSet::GetDefensePAttribute();
 		FDelegateHandle DefenseHandle = ASC->GetGameplayAttributeValueChangeDelegate(DefenseAT).AddSP(this, &SCharacterStatusSlate::OnDefenseValueChanged);
 		Handles.Emplace(DefenseAT, MoveTemp(DefenseHandle));
 		float DefenseP = ASC->GetGameplayAttributeValue(DefenseAT, bFound);
 		SetDefenseText(DefenseP);
 
-		FGameplayAttribute FireResistanceAT = UActionPFAttributeSet::GetFireResistanceAttribute();
+		FGameplayAttribute FireResistanceAT = UCharacterAttributeSet::GetFireResistanceAttribute();
 		FDelegateHandle FireResistanceHandle = ASC->GetGameplayAttributeValueChangeDelegate(FireResistanceAT).AddSP(this, &SCharacterStatusSlate::OnFireResistanceValueChanged);
 		Handles.Emplace(FireResistanceAT, MoveTemp(FireResistanceHandle));
 		float FireR = ASC->GetGameplayAttributeValue(FireResistanceAT, bFound);
 		SetFireResistanceText(FireR);
 
-		FGameplayAttribute IceResistanceAT = UActionPFAttributeSet::GetIceResistanceAttribute();
+		FGameplayAttribute IceResistanceAT = UCharacterAttributeSet::GetIceResistanceAttribute();
 		FDelegateHandle IceResistanceHandle = ASC->GetGameplayAttributeValueChangeDelegate(IceResistanceAT).AddSP(this, &SCharacterStatusSlate::OnIceResistanceValueChanged);
 		Handles.Emplace(IceResistanceAT, MoveTemp(IceResistanceHandle));
 		float IceR = ASC->GetGameplayAttributeValue(IceResistanceAT, bFound);
 		SetIceResistanceText(IceR);
 
-		FGameplayAttribute ElectricResistanceAT = UActionPFAttributeSet::GetElectricResistanceAttribute();
+		FGameplayAttribute ElectricResistanceAT = UCharacterAttributeSet::GetElectricResistanceAttribute();
 		FDelegateHandle ElectricResistanceHandle = ASC->GetGameplayAttributeValueChangeDelegate(ElectricResistanceAT).AddSP(this, &SCharacterStatusSlate::OnElectricResistanceValueChanged);
 		Handles.Emplace(ElectricResistanceAT, MoveTemp(ElectricResistanceHandle));
 		float ElectricR = ASC->GetGameplayAttributeValue(ElectricResistanceAT, bFound);

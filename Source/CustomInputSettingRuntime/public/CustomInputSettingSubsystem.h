@@ -66,9 +66,8 @@ protected:
 
 	virtual void Deinitialize() override;
 
-//기본적인 것
 private:
-	TWeakObjectPtr<class APlayerController> Controller;
+	TWeakObjectPtr< APlayerController> Controller;
 
 ////////////////////// 키 설정 ///////////////////
 private:
@@ -103,7 +102,7 @@ private:
 	void OnChangedMappingEvent(const FName& Code, const FKey& NewKey);
 
 public:
-	FDelegateHandle AddOnChangedMappingEvent(const TDelegate<void (const FName&, const FKey&)> InDel);
+	FDelegateHandle AddOnChangedMappingEvent(const TDelegate<void (const FName&, const FKey&)>& InDel);
 	void RemoveOnChangedMappingEvent(FDelegateHandle& Handle);
 
 //Reset

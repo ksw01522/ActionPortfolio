@@ -15,7 +15,11 @@ class ACTIONPORTFOLIO_API UAbilitySlotWidget : public UWidget
 	GENERATED_BODY()
 	
 protected:
-	TSharedPtr<class SAbilitySlot> AbilitySlot;
+	TSharedPtr<class SAbilitySlot> SlotSlate;
+
+	TWeakObjectPtr<class UAbilitySlot> LinkedSlot;
+
+	TSharedPtr<class SAbilityIcon> AbilityIcon;
 
 private:
 	UPROPERTY(EditAnywhere, Category = "Style", meta = (AllowPrivateAccess = "true"))
@@ -47,9 +51,11 @@ protected:
 #endif
 
 public:
-	TSharedPtr<SAbilitySlot> GetSlotSlate() const { return AbilitySlot; }
+	TSharedPtr<SAbilitySlot> GetSlotSlate() const { return SlotSlate; }
+	void LinkAbilitySlot(UAbilitySlot* InSlot);
 
-	void SetAbilityIcon(const TSharedPtr<class SAbilityIcon>& InIcon);
+	void SetAbilityIcon(const TSharedPtr<SAbilityIcon>& InIcon);
+	SAbilityIcon* GetAbilityIcon() const;
 };
 
 
@@ -58,8 +64,14 @@ class ACTIONPORTFOLIO_API UAbilityHotKeySlotWidget : public UAbilitySlotWidget
 {
 	GENERATED_BODY()
 
-
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 
+private:
+	FKey HotKey_Keyboard;
+	FKey HotKey_Gamepad;
+
+public:
+	void SetHotKey_Keyboard(const FKey& InKey);
+	void SetHotKey_Gamepad(const FKey& InKey);
 };

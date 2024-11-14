@@ -54,5 +54,6 @@ private:
 	TObjectPtr<class AItemMeshCaptureActor> ItemMeshCaptureActor;
 
 public:
-	void SetCaptureItemMesh(TSoftObjectPtr<UStaticMesh> InMesh);
+	void SetCaptureItemMesh(UStaticMesh* InMesh);
+
 };

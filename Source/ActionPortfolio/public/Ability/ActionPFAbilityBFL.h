@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "GameplayTagContainer.h"
+#include "Ability/Effects/Damage/DamageEffect.h"
 #include "ActionPFAbilityBFL.generated.h"
 
 /**
@@ -18,13 +19,9 @@ class ACTIONPORTFOLIO_API UActionPFAbilityBFL : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 	
 public:
-	UFUNCTION(BlueprintCallable, Category = "Ability|ActionPF")
+	UFUNCTION(BlueprintPure, Category = "Ability|ActionPF")
 	static FGameplayEventData MakeEventDataForAbility(AActor* instigator, TArray<AActor*> TargetArray);
 
-	UFUNCTION(BlueprintCallable, Category = "Ability|ActionPF")
+	UFUNCTION(BlueprintPure, Category = "Ability|ActionPF")
 	static UActionPFAbilitySystemComponent* GetAbilitySystemComponent(AActor* Target);
-
-	UFUNCTION(BlueprintCallable, Category = "Ability|Slot")
-	static bool TryChangeAbilitySlot(class UAbilitySlot* From, UAbilitySlot* To);
-
 };
